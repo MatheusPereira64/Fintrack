@@ -1,9 +1,14 @@
 # Script para rodar o FinTrack no Android (Windows)
 # Configura JAVA_HOME, ANDROID_HOME e PATH automaticamente
 
-$env:JAVA_HOME    = "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot"
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-$env:PATH         = "$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator;$env:JAVA_HOME\bin;$env:PATH"
+$env:JAVA_HOME       = "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot"
+$env:ANDROID_HOME    = "$env:LOCALAPPDATA\Android\Sdk"
+$env:GRADLE_USER_HOME = "C:\gradle"
+$env:PATH            = "$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator;$env:JAVA_HOME\bin;$env:PATH"
+
+if (-not (Test-Path $env:GRADLE_USER_HOME)) {
+  New-Item -ItemType Directory -Path $env:GRADLE_USER_HOME -Force | Out-Null
+}
 
 Set-Location $PSScriptRoot
 
