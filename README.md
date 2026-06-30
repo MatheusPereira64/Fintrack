@@ -1,97 +1,129 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# FinTrack — Monitor Financeiro Inteligente
 
-# Getting Started
+App Android nativo em React Native que monitora automaticamente suas finanças via notificações bancárias.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Como funciona
 
-## Step 1: Start Metro
+1. O app solicita permissão de **Acesso a Notificações** do Android
+2. Quando chega uma notificação do seu banco (Nubank, Inter, Itaú, etc.), o `NotificationListenerService` a captura
+3. O parser identifica o tipo de transação, valor e banco
+4. A transação é registrada automaticamente no banco SQLite local
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+| Camada | Tecnologia |
+|---|---|
+| Framework | React Native CLI 0.86 |
+| Linguagem | TypeScript |
+| Navegação | React Navigation 7 |
+| Estado | Zustand 5 |
+| Banco local | SQLite (react-native-sqlite-storage) |
+| Preferências | AsyncStorage |
+| UI | React Native Paper + componentes customizados |
+| Animações | Reanimated 4 + Gesture Handler |
+| Nativo Android | NotificationListenerService (Java) |
 
-```sh
-# Using npm
-npm start
+## Bancos suportados
 
-# OR using Yarn
-yarn start
+- Nubank
+- Banco Inter
+- Itaú
+- Bradesco
+- Banco do Brasil
+- Santander
+- C6 Bank
+- Caixa Econômica
+- Mercado Pago
+- PicPay
+- Next, Neon, PagBank, Original e outros
+
+## Estrutura do projeto
+
+```
+src/
+├── models/         # Tipos TypeScript (tipos de domínio)
+├── theme/          # Cores, tipografia, tema claro/escuro
+├── database/
+│   ├── db.ts                  # Inicialização SQLite + migrations
+│   └── repositories/          # CRUD por entidade
+├── store/          # Stores Zustand (estado global)
+├── services/       # InsightService, ExportService
+├── navigation/     # Configuração do React Navigation
+├── hooks/          # useTheme e outros hooks
+├── components/     # MetricCard, TransactionItem, AccountCard
+├── utils/          # currency.ts, date.ts
+├── constants/      # banks.ts
+└── modules/
+    ├── dashboard/
+    ├── transactions/
+    ├── accounts/
+    ├── notifications/
+    │   ├── parsers/    # Parser por banco (Nubank, Inter, Itaú...)
+    │   ├── services/   # BankRegistry, NotificationParser
+    │   └── hooks/      # useNotificationListener
+    ├── goals/
+    ├── budget/
+    ├── insights/
+    ├── settings/
+    └── onboarding/
+
+android/
+└── app/src/main/java/com/fintrackapp/notification/
+    ├── FinTrackNotificationService.java  # Serviço nativo Android
+    ├── NotificationModule.java           # Bridge React Native ↔ Java
+    └── NotificationPackage.java          # Registro do módulo
 ```
 
-## Step 2: Build and run your app
+## Como executar
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Pré-requisitos
+- Android Studio instalado
+- JDK 17+
+- Android SDK 34+
+- Emulador ou dispositivo físico
 
-### Android
+### Instalação
 
-```sh
-# Using npm
-npm run android
+```bash
+# Instalar dependências
+npm install
 
-# OR using Yarn
-yarn android
+# Executar no Android
+npx react-native run-android
 ```
 
-### iOS
+### Permissão de Notificações
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+1. Abra o app e siga o onboarding
+2. Toque em "Conceder acesso às notificações"
+3. Na tela de Configurações do Android, ative o FinTrack
+4. Volte ao app
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+## Adicionando suporte a novos bancos
 
-```sh
-bundle install
+1. Crie um parser em `src/modules/notifications/parsers/NovoBancoParser.ts`
+2. Implemente a interface `BankParser` com o método `parse(title, body, packageName)`
+3. Registre no `BankRegistry.ts` com o `packageName` correto
+4. Adicione o `packageName` no array `BANK_PACKAGES` em `FinTrackNotificationService.java`
+
+## Arquitetura do parser
+
 ```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
+Notificação Android
+       ↓
+FinTrackNotificationService.java (nativo)
+       ↓ emit evento
+NotificationModule.java (bridge)
+       ↓ NativeEventEmitter
+useNotificationListener.ts (React Native)
+       ↓
+NotificationParser.ts
+       ↓ lookup packageName
+BankRegistry.ts
+       ↓ chama parser específico
+NubankParser.ts / InterParser.ts / etc.
+       ↓ regex extrai dados
+TransactionRepository.ts (SQLite)
+       ↓
+Zustand Store → UI atualizada
 ```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
