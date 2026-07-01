@@ -1,15 +1,18 @@
-import React, { memo } from 'react';
+﻿import React, { memo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, StatusBar,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme }          from '../../../hooks/useTheme';
 import { useGoalStore }      from '../../../store/goalStore';
 import { useBudgetStore }    from '../../../store/budgetStore';
+import { AppHeader }         from '../../../components/AppHeader';
+import { Icon }              from '../../../components/Icon';
+import type { AppIconName }  from '../../../components/Icon';
 
 interface MenuItem {
-  icon:     string;
+  icon:     AppIconName;
   label:    string;
   subtitle: string;
   route:    string;
@@ -18,18 +21,20 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { icon: '🎯', label: 'Metas',          subtitle: 'Acompanhe seus objetivos financeiros', route: 'Goals'         },
-  { icon: '📊', label: 'Orçamentos',     subtitle: 'Controle seus limites de gastos',      route: 'Budget'        },
-  { icon: '💡', label: 'Insights',       subtitle: 'Análise automática das suas finanças', route: 'Insights'      },
-  { icon: '🔔', label: 'Notificações',   subtitle: 'Alertas e avisos do sistema',          route: 'Notifications' },
-  { icon: '🏷️', label: 'Categorias',     subtitle: 'Gerencie e crie categorias',           route: 'Categories'    },
-  { icon: '⚙️', label: 'Configurações',  subtitle: 'Tema, notificações e exportação',      route: 'Settings'      },
+  { icon: 'goal',     label: 'Metas',         subtitle: 'Acompanhe seus objetivos financeiros', route: 'Goals',         color: '#059669' },
+  { icon: 'budget',   label: 'Orçamentos',    subtitle: 'Controle seus limites de gastos',      route: 'Budget',        color: '#D97706' },
+  { icon: 'insights', label: 'Insights',      subtitle: 'Análise automática das suas finanças', route: 'Insights',      color: '#7C3AED' },
+  { icon: 'bell',     label: 'Notificações',  subtitle: 'Alertas e avisos do sistema',          route: 'Notifications', color: '#2563EB' },
+  { icon: 'category', label: 'Categorias',    subtitle: 'Gerencie e crie categorias',           route: 'Categories',    color: '#0891B2' },
+  { icon: 'settings', label: 'Configurações', subtitle: 'Tema, notificações e exportação',      route: 'Settings',      color: '#6B7280' },
+  { icon: 'import',   label: 'Importar extrato', subtitle: 'Importe OFX ou CSV do seu banco', route: 'Import',        color: '#059669' },
 ];
 
 const MenuRow = memo(function MenuRow({
   item, onPress,
 }: { item: MenuItem; onPress: () => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <TouchableOpacity
@@ -56,7 +61,7 @@ const MenuRow = memo(function MenuRow({
         justifyContent: 'center', alignItems: 'center',
         marginRight: spacing.md,
       }]}>
-        <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+        <Icon name={item.icon} size={22} color={item.color ?? colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typography.styles.titleSmall, { color: colors.text }]}>{item.label}</Text>
@@ -77,13 +82,14 @@ const MenuRow = memo(function MenuRow({
           </Text>
         </View>
       )}
-      <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+      <Icon name="forward" size={20} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 });
 
 export function MoreMenuScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { goals }   = useGoalStore();
   const { budgets } = useBudgetStore();
 
@@ -97,19 +103,7 @@ export function MoreMenuScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
-
-      {/* Header */}
-      <View style={[{
-        backgroundColor:   colors.header,
-        paddingTop:        Platform.OS === 'android' ? 48 : 56,
-        paddingHorizontal: spacing.base,
-        paddingBottom:     spacing.base,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-      }]}>
-        <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>Mais</Text>
-      </View>
+      <AppHeader title="Mais" />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}

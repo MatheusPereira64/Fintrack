@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Platform, StatusBar, Alert,
@@ -8,6 +9,7 @@ import { useSettingsStore } from '../../../store/settingsStore';
 
 export function PreferencesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { settings, updateSettings } = useSettingsStore();
 
   const [userName, setUserName]         = useState(settings.userName ?? '');
@@ -32,7 +34,7 @@ export function PreferencesScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Platform.OS === 'android' ? 48 : 56, paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
+      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ color: colors.primary }}>← Voltar</Text>
         </TouchableOpacity>

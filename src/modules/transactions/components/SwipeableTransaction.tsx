@@ -1,10 +1,14 @@
 import React, { memo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Animated as RNAnimated } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import Swipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useTheme }           from '../../../hooks/useTheme';
 import { TransactionItem }    from '../../../components/TransactionItem';
+import { Icon }               from '../../../components/Icon';
 import { Transaction }        from '../../../models/types';
 import { useTransactionStore } from '../../../store/transactionStore';
+
+const ACTION_WIDTH = 72;
+const ROW_HEIGHT   = 68;
 
 interface SwipeableTransactionProps {
   transaction: Transaction;
@@ -13,17 +17,12 @@ interface SwipeableTransactionProps {
   index?:      number;
 }
 
-/**
- * Envolve TransactionItem com ações de swipe:
- * - Arrastar para a esquerda → Excluir (vermelho)
- * - Arrastar para a direita  → Editar (azul)
- */
 export const SwipeableTransaction = memo(function SwipeableTransaction({
   transaction, onPress, onEdit, index = 0,
 }: SwipeableTransactionProps) {
-  const { colors, spacing, borderRadius } = useTheme();
+  const { colors, borderRadius } = useTheme();
   const deleteTransaction = useTransactionStore(s => s.deleteTransaction);
-  const swipeRef = useRef<Swipeable>(null);
+  const swipeRef = useRef<SwipeableMethods>(null);
 
   const handleDelete = useCallback(() => {
     Alert.alert(
@@ -48,88 +47,81 @@ export const SwipeableTransaction = memo(function SwipeableTransaction({
     onEdit(transaction);
   }, [transaction, onEdit]);
 
-  // ── Ação direita (excluir) ─────────────────────────────────────────────────
-  const renderRightActions = useCallback(
-    (progress: RNAnimated.AnimatedInterpolation<string | number>) => {
-      const translateX = progress.interpolate({
-        inputRange:  [0, 1],
-        outputRange: [80, 0],
-        extrapolate: 'clamp',
-      });
-      return (
-        <RNAnimated.View style={[styles.actionRight, { transform: [{ translateX }] }]}>
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={[styles.actionBtn, {
-              backgroundColor: colors.expense,
-              borderRadius:    borderRadius.lg,
-              marginLeft:      4,
-            }]}
-          >
-            <Text style={styles.actionIcon}>🗑️</Text>
-            <Text style={styles.actionLabel}>Excluir</Text>
-          </TouchableOpacity>
-        </RNAnimated.View>
-      );
-    },
-    [handleDelete, colors, borderRadius],
-  );
+  const renderRightActions = useCallback(() => (
+    <View style={styles.actionRight}>
+      <TouchableOpacity
+        onPress={handleDelete}
+        style={[styles.actionBtn, { backgroundColor: colors.expense }]}
+      >
+        <Icon name="delete" size={20} color="#FFF" />
+        <Text style={styles.actionLabel}>Excluir</Text>
+      </TouchableOpacity>
+    </View>
+  ), [handleDelete, colors.expense]);
 
-  // ── Ação esquerda (editar) ─────────────────────────────────────────────────
-  const renderLeftActions = useCallback(
-    (progress: RNAnimated.AnimatedInterpolation<string | number>) => {
-      const translateX = progress.interpolate({
-        inputRange:  [0, 1],
-        outputRange: [-80, 0],
-        extrapolate: 'clamp',
-      });
-      return (
-        <RNAnimated.View style={[styles.actionLeft, { transform: [{ translateX }] }]}>
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={[styles.actionBtn, {
-              backgroundColor: colors.info,
-              borderRadius:    borderRadius.lg,
-              marginRight:     4,
-            }]}
-          >
-            <Text style={styles.actionIcon}>✏️</Text>
-            <Text style={styles.actionLabel}>Editar</Text>
-          </TouchableOpacity>
-        </RNAnimated.View>
-      );
-    },
-    [handleEdit, colors, borderRadius],
-  );
+  const renderLeftActions = useCallback(() => (
+    <View style={styles.actionLeft}>
+      <TouchableOpacity
+        onPress={handleEdit}
+        style={[styles.actionBtn, { backgroundColor: colors.info }]}
+      >
+        <Icon name="edit" size={20} color="#FFF" />
+        <Text style={styles.actionLabel}>Editar</Text>
+      </TouchableOpacity>
+    </View>
+  ), [handleEdit, colors.info]);
 
   return (
-    <Swipeable
-      ref={swipeRef}
-      renderRightActions={renderRightActions}
-      renderLeftActions={renderLeftActions}
-      overshootRight={false}
-      overshootLeft={false}
-      friction={2}
-    >
-      <TransactionItem
-        transaction={transaction}
-        onPress={onPress}
-        index={index}
-      />
-    </Swipeable>
+    <View style={styles.wrapper}>
+      <Swipeable
+        ref={swipeRef}
+        renderRightActions={renderRightActions}
+        renderLeftActions={renderLeftActions}
+        overshootRight={false}
+        overshootLeft={false}
+        friction={2}
+        containerStyle={[styles.swipeContainer, { borderRadius: borderRadius.lg }]}
+        childrenContainerStyle={styles.childrenContainer}
+      >
+        <TransactionItem
+          transaction={transaction}
+          onPress={onPress}
+          index={index}
+        />
+      </Swipeable>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
-  actionRight: { justifyContent: 'center', alignItems: 'flex-start', paddingLeft: 4 },
-  actionLeft:  { justifyContent: 'center', alignItems: 'flex-end',   paddingRight: 4 },
-  actionBtn: {
+  wrapper: {
+    marginBottom: 4,
+    overflow:     'hidden',
+    borderRadius: 12,
+  },
+  swipeContainer: {
+    overflow: 'hidden',
+  },
+  childrenContainer: {
+    backgroundColor: 'transparent',
+  },
+  actionRight: {
+    width:          ACTION_WIDTH,
     justifyContent: 'center',
     alignItems:     'center',
-    width:          72,
-    height:         '100%' as any,
+  },
+  actionLeft: {
+    width:          ACTION_WIDTH,
+    justifyContent: 'center',
+    alignItems:     'center',
+  },
+  actionBtn: {
+    width:          ACTION_WIDTH,
+    height:         ROW_HEIGHT,
+    borderRadius:   12,
+    justifyContent: 'center',
+    alignItems:     'center',
     gap:            2,
   },
-  actionIcon:  { fontSize: 18 },
   actionLabel: { color: '#FFF', fontSize: 11, fontWeight: '600' },
 });

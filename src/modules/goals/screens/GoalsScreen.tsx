@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback, useMemo, useState, memo } from 'react';
+﻿import React, { useEffect, useCallback, useMemo, useState, memo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Modal, Alert, Platform, StatusBar,
@@ -25,6 +26,7 @@ const GoalCard = memo(function GoalCard({
   goal, onDelete,
 }: { goal: Goal; onDelete: (id: number) => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const progress  = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const remaining = goal.targetAmount - goal.currentAmount;
   const cat = GOAL_CATEGORIES.find(c => c.key === goal.category);
@@ -95,6 +97,7 @@ const GoalCard = memo(function GoalCard({
 
 export function GoalsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { goals, isLoading, loadGoals, addGoal, deleteGoal, getTotalProgress } = useGoalStore();
   const [showModal, setShowModal] = useState(false);
 
@@ -138,7 +141,7 @@ export function GoalsScreen({ navigation }: any) {
       {/* Header */}
       <View style={[styles.header, {
         backgroundColor: colors.header,
-        paddingTop: Platform.OS === 'android' ? 48 : 56,
+        paddingTop: Math.max(insets.top, 20),
         paddingHorizontal: spacing.base,
         paddingBottom: spacing.base,
         borderBottomWidth: 1, borderBottomColor: colors.borderLight,

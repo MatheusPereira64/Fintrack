@@ -54,10 +54,11 @@ export function formatTime(dateStr: string | Date): string {
 }
 
 export function formatMonthYear(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat('pt-BR', {
+  const raw = new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
     year:  'numeric',
   }).format(date);
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 export function formatShortMonth(date: Date = new Date()): string {

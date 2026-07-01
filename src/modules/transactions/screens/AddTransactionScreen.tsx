@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+﻿import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Platform, StatusBar, Alert, KeyboardAvoidingView,
+  ScrollView, Platform, Switch, Alert, KeyboardAvoidingView,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme }             from '../../../hooks/useTheme';
@@ -22,6 +23,7 @@ interface Props {
 
 export function AddTransactionScreen({ navigation, route }: Props) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
   const existing = route.params?.editTransaction;
 
   const { addTransaction, updateTransaction } = useTransactionStore();
@@ -88,21 +90,23 @@ export function AddTransactionScreen({ navigation, route }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
+        {/* AppHeader não usado aqui pois temos StatusBar personalizada */}
+        {(() => { const StatusBarComp = require('react-native').StatusBar; return <StatusBarComp barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />; })()}
 
         {/* Header */}
         <View style={[styles.header, {
           backgroundColor: colors.header,
-          paddingTop: Platform.OS === 'android' ? 48 : 56,
+          paddingTop: Math.max(insets.top, 20),
           paddingHorizontal: spacing.base,
           paddingBottom: spacing.base,
           borderBottomWidth: 1,
           borderBottomColor: colors.borderLight,
+          flexDirection: 'row', alignItems: 'center',
         }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: spacing.xs }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: spacing.xs, marginRight: spacing.sm }}>
             <Text style={[typography.styles.titleMedium, { color: colors.primary }]}>✕</Text>
           </TouchableOpacity>
-          <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+          <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1 }]}>
             {existing ? 'Editar transação' : 'Nova transação'}
           </Text>
           <TouchableOpacity
@@ -279,32 +283,28 @@ export function AddTransactionScreen({ navigation, route }: Props) {
 
           {/* Recorrente */}
           <Animated.View entering={FadeInDown.delay(300)}>
-            <TouchableOpacity
-              onPress={() => setIsRecurring(!isRecurring)}
-              style={[styles.recurringRow, {
-                backgroundColor: colors.card,
-                borderRadius: borderRadius.lg,
-                padding: spacing.base,
-                borderWidth: 1,
-                borderColor: isRecurring ? colors.primary : colors.borderLight,
-              }]}
-            >
-              <View style={[styles.recurringCheck, {
-                backgroundColor: isRecurring ? colors.primary : 'transparent',
-                borderColor: isRecurring ? colors.primary : colors.border,
-                borderRadius: borderRadius.sm,
-              }]}>
-                {isRecurring && <Text style={{ color: '#FFF', fontSize: 12 }}>✓</Text>}
-              </View>
-              <View style={{ flex: 1, marginLeft: spacing.md }}>
+            <View style={[styles.recurringRow, {
+              backgroundColor: colors.card,
+              borderRadius: borderRadius.lg,
+              padding: spacing.base,
+              borderWidth: 1,
+              borderColor: isRecurring ? colors.primary : colors.borderLight,
+            }]}>
+              <View style={{ flex: 1, marginRight: spacing.md }}>
                 <Text style={[typography.styles.bodyLarge, { color: colors.text }]}>
-                  🔁 Transação recorrente
+                  Repetir mensalmente
                 </Text>
                 <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Marque se esta transação se repete mensalmente
+                  Lançado automaticamente todo mês
                 </Text>
               </View>
-            </TouchableOpacity>
+              <Switch
+                value={isRecurring}
+                onValueChange={setIsRecurring}
+                trackColor={{ false: colors.borderLight, true: `${colors.primary}60` }}
+                thumbColor={isRecurring ? colors.primary : colors.border}
+              />
+            </View>
           </Animated.View>
         </ScrollView>
       </View>

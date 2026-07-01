@@ -3,9 +3,11 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Dimensions, Platform, NativeModules, StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../hooks/useTheme';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useAccountStore } from '../../../store/accountStore';
+import { Logo } from '../../../components/Logo';
 
 const { width } = Dimensions.get('window');
 const { NotificationModule } = NativeModules;
@@ -44,6 +46,7 @@ const STEPS = [
 
 export function OnboardingScreen() {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [userName, setUserName] = useState('');
@@ -90,9 +93,13 @@ export function OnboardingScreen() {
       {/* Conteúdo do step */}
       <View style={styles.content}>
         {/* Emoji grande */}
-        <View style={[styles.emojiContainer, { backgroundColor: colors.primaryLight, borderRadius: borderRadius.full }]}>
-          <Text style={styles.emoji}>{step.emoji}</Text>
-        </View>
+        {currentStep === 0 ? (
+          <Logo size={120} style={{ marginBottom: spacing.sm }} />
+        ) : (
+          <View style={[styles.emojiContainer, { backgroundColor: colors.primaryLight, borderRadius: borderRadius.full }]}>
+            <Text style={styles.emoji}>{step.emoji}</Text>
+          </View>
+        )}
 
         <Text style={[typography.styles.headlineLarge, { color: colors.text, textAlign: 'center', marginTop: spacing.xl }]}>
           {step.title}
@@ -162,7 +169,7 @@ export function OnboardingScreen() {
             backgroundColor: colors.primary,
             borderRadius: borderRadius.full,
             marginHorizontal: spacing.xl,
-            marginBottom: spacing['2xl'],
+            marginBottom: spacing.xl + Math.max(insets.bottom, 12),
             padding: spacing.base,
             ...shadows.lg,
           },

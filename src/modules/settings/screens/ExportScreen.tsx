@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Platform, StatusBar, Alert, Share,
@@ -11,6 +12,7 @@ import { formatMonthYear }     from '../../../utils/date';
 
 export function ExportScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { transactions, currentMonth } = useTransactionStore();
   const { accounts }                    = useAccountStore();
   const [exporting, setExporting]       = useState(false);
@@ -37,7 +39,7 @@ export function ExportScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Platform.OS === 'android' ? 48 : 56, paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
+      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ color: colors.primary }}>← Voltar</Text>
         </TouchableOpacity>

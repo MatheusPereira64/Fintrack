@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback, useState, memo } from 'react';
+﻿import React, { useEffect, useCallback, useState, memo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Modal, Alert, Platform, StatusBar, ScrollView,
@@ -14,6 +15,7 @@ const BudgetCard = memo(function BudgetCard({
   budget, onDelete,
 }: { budget: any; onDelete: (id: number) => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const percent = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
   const overBudget = percent > 100;
   const nearLimit  = percent > 80;
@@ -87,14 +89,19 @@ const BudgetCard = memo(function BudgetCard({
 
 export function BudgetScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { budgets, isLoading, loadBudgets, addBudget, deleteBudget, syncSpent } = useBudgetStore();
-  const { categories } = useCategoryStore();
+  const { categories, loadCategories } = useCategoryStore();
   const { currentMonth } = useTransactionStore();
 
   const [showModal, setShowModal] = useState(false);
   const [amount,    setAmount]    = useState('');
   const [catId,     setCatId]     = useState<number | undefined>();
   const [saving,    setSaving]    = useState(false);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   useEffect(() => {
     const init = async () => {
@@ -137,7 +144,7 @@ export function BudgetScreen({ navigation }: any) {
 
       <View style={[styles.header, {
         backgroundColor: colors.header,
-        paddingTop: Platform.OS === 'android' ? 48 : 56,
+        paddingTop: Math.max(insets.top, 20),
         paddingHorizontal: spacing.base,
         paddingBottom: spacing.base,
         borderBottomWidth: 1,

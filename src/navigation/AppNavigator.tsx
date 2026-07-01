@@ -1,16 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { createNativeStackNavigator }     from '@react-navigation/native-stack';
 import { createBottomTabNavigator }        from '@react-navigation/bottom-tabs';
 import { NavigationContainer }             from '@react-navigation/native';
 
-import { useTheme }       from '../hooks/useTheme';
+import { useTheme }        from '../hooks/useTheme';
+import { useTabBarInsets } from '../hooks/useTabBarInsets';
 import { useSettingsStore } from '../store/settingsStore';
+import { Icon } from '../components/Icon';
 
 // Stacks
 import { AppTabParamList, RootStackParamList, TransactionStackParamList, AccountStackParamList, MoreStackParamList } from './types';
-
-// Screens
 import { OnboardingScreen }      from '../modules/onboarding/screens/OnboardingScreen';
 import { DashboardScreen }       from '../modules/dashboard/screens/DashboardScreen';
 import { TransactionsScreen }    from '../modules/transactions/screens/TransactionsScreen';
@@ -26,6 +26,7 @@ import { PreferencesScreen }     from '../modules/settings/screens/PreferencesSc
 import { ExportScreen }          from '../modules/settings/screens/ExportScreen';
 import { MoreMenuScreen }        from '../modules/settings/screens/MoreMenuScreen';
 import { CategoriesScreen }     from '../modules/categories/screens/CategoriesScreen';
+import { ImportScreen }         from '../modules/settings/screens/ImportScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab       = createBottomTabNavigator<AppTabParamList>();
@@ -54,78 +55,89 @@ function MoreNavigator() {
       <MoreStack.Screen name="Preferences"   component={PreferencesScreen} />
       <MoreStack.Screen name="Export"        component={ExportScreen} />
       <MoreStack.Screen name="Categories"   component={CategoriesScreen} />
+      <MoreStack.Screen name="Import"        component={ImportScreen} />
     </MoreStack.Navigator>
   );
 }
 
-function TabIcon({ emoji, label, focused, color }: { emoji: string; label: string; focused: boolean; color: string }) {
+function TabLabel({ label, color }: { label: string; color: string }) {
   return (
-    <View style={tabStyles.iconWrapper}>
-      <Text style={[tabStyles.emoji, focused && { transform: [{ scale: 1.1 }] }]}>{emoji}</Text>
-      <Text style={[tabStyles.label, { color }]}>{label}</Text>
-    </View>
+    <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.75}
+      style={[tabStyles.label, { color }]}
+    >
+      {label}
+    </Text>
   );
 }
 
 function AppTabs() {
   const { colors } = useTheme();
+  const { bottom: bottomInset, tabBarHeight } = useTabBarInsets();
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor:   colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor:  colors.border,
-          paddingBottom:   Platform.OS === 'ios' ? 20 : 8,
-          paddingTop:      8,
-          height:          Platform.OS === 'ios' ? 80 : 64,
+          borderTopWidth:  1,
+          paddingBottom:   bottomInset,
+          paddingTop:      6,
+          height:          tabBarHeight,
         },
-        tabBarShowLabel: false,
+        tabBarItemStyle: {
+          paddingTop: 2,
+        },
+        tabBarIconStyle: {
+          marginBottom: -2,
+        },
+        tabBarShowLabel: true,
       }}
     >
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
         options={{
+          tabBarLabel: ({ color }) => <TabLabel label="Início" color={color} />,
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="🏠" label="Início" focused={focused} color={color} />
+            <Icon name={focused ? 'home-active' : 'home'} size={22} color={color} />
           ),
-          tabBarActiveTintColor:   colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
         }}
       />
       <Tab.Screen
         name="Transactions"
         component={TransactionNavigator}
         options={{
+          tabBarLabel: ({ color }) => <TabLabel label="Transações" color={color} />,
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="💸" label="Transações" focused={focused} color={color} />
+            <Icon name={focused ? 'transactions-active' : 'transactions'} size={22} color={color} />
           ),
-          tabBarActiveTintColor:   colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
         }}
       />
       <Tab.Screen
         name="Accounts"
         component={AccountsScreen}
         options={{
+          tabBarLabel: ({ color }) => <TabLabel label="Contas" color={color} />,
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="🏦" label="Contas" focused={focused} color={color} />
+            <Icon name={focused ? 'accounts-active' : 'accounts'} size={22} color={color} />
           ),
-          tabBarActiveTintColor:   colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
         }}
       />
       <Tab.Screen
         name="More"
         component={MoreNavigator}
         options={{
+          tabBarLabel: ({ color }) => <TabLabel label="Mais" color={color} />,
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon emoji="☰" label="Mais" focused={focused} color={color} />
+            <Icon name={focused ? 'more-active' : 'more'} size={22} color={color} />
           ),
-          tabBarActiveTintColor:   colors.tabBarActive,
-          tabBarInactiveTintColor: colors.tabBarInactive,
         }}
       />
     </Tab.Navigator>
@@ -150,16 +162,12 @@ export function AppNavigator() {
 }
 
 const tabStyles = StyleSheet.create({
-  iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  emoji: {
-    fontSize: 22,
-  },
   label: {
-    fontSize: 10,
+    fontSize:   11,
     fontWeight: '500',
+    textAlign:  'center',
+    width:      '100%',
+    maxWidth:   88,
+    alignSelf:  'center',
   },
 });

@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Platform, StatusBar,
 } from 'react-native';
-import { useTheme } from '../../../hooks/useTheme';
+import { useTheme }   from '../../../hooks/useTheme';
+import { AppHeader }  from '../../../components/AppHeader';
+import { AppButton }  from '../../../components/AppButton';
+import { Icon }       from '../../../components/Icon';
 import { getDatabase } from '../../../database/db';
 import { AppNotification } from '../../../models/types';
 import { formatDate }      from '../../../utils/date';
 
 export function NotificationsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const load = async () => {
@@ -37,27 +41,21 @@ export function NotificationsScreen({ navigation }: any) {
 
   useEffect(() => { load(); }, []);
 
-  const TYPE_ICONS: Record<string, string> = {
-    budget_alert:     '⚠️',
-    goal_milestone:   '🎯',
-    unusual_spending: '🚨',
-    transaction_auto: '🤖',
-    info:             'ℹ️',
-  };
+  const TYPE_ICONS = {
+    budget_alert:     'warning',
+    goal_milestone:   'goal',
+    unusual_spending: 'error',
+    transaction_auto: 'auto',
+    info:             'info',
+  } as const;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
-
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Platform.OS === 'android' ? 48 : 56, paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary }}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.titleLarge, { color: colors.text }]}>Notificações</Text>
-        <TouchableOpacity onPress={markAllRead}>
-          <Text style={[typography.styles.labelMedium, { color: colors.primary }]}>Lidas</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Notificações"
+        onBack={() => navigation.goBack()}
+        actions={[{ icon: 'check-circle', onPress: markAllRead }]}
+      />
 
       <FlatList
         data={notifications}
@@ -65,7 +63,7 @@ export function NotificationsScreen({ navigation }: any) {
         contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
         ListEmptyComponent={
           <View style={[styles.empty, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl }]}>
-            <Text style={{ fontSize: 40, textAlign: 'center' }}>🔔</Text>
+            <Icon name="bell" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
               Nenhuma notificação
             </Text>
@@ -83,9 +81,9 @@ export function NotificationsScreen({ navigation }: any) {
             borderLeftColor: colors.primary,
             ...shadows.sm,
           }]}>
-            <Text style={{ fontSize: 22, marginRight: spacing.sm }}>
-              {TYPE_ICONS[item.type] ?? 'ℹ️'}
-            </Text>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.primary}15`, justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm }}>
+              <Icon name={(TYPE_ICONS as any)[item.type] ?? 'info'} size={18} color={colors.primary} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
                 {item.title}

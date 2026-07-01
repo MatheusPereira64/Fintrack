@@ -2,15 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { getDatabase }          from './database/db';
-import { useSettingsStore }     from './store/settingsStore';
-import { useAccountStore }      from './store/accountStore';
-import { useCategoryStore }     from './store/categoryStore';
-import { useTransactionStore }  from './store/transactionStore';
-import { useBudgetStore }       from './store/budgetStore';
-import { useGoalStore }         from './store/goalStore';
-import { AppNavigator }         from './navigation/AppNavigator';
-import { Logger }               from './services/LoggerService';
+import { getDatabase }            from './database/db';
+import { useSettingsStore }       from './store/settingsStore';
+import { useAccountStore }        from './store/accountStore';
+import { useCategoryStore }       from './store/categoryStore';
+import { useTransactionStore }    from './store/transactionStore';
+import { useBudgetStore }         from './store/budgetStore';
+import { useGoalStore }           from './store/goalStore';
+import { AppNavigator }           from './navigation/AppNavigator';
+import { Logger }                 from './services/LoggerService';
+import { Logo }                   from './components/Logo';
+import { NotificationManager }    from './services/NotificationManager';
+import { RecurringService }       from './services/RecurringService';
 
 type BootstrapStatus = 'loading' | 'ready' | 'error';
 
@@ -51,7 +54,15 @@ export default function App() {
       // 4. Carrega totais mensais em background (não bloqueia a UI)
       loadMonthlyTotals();
 
+      // 5. Processa recorrências do mês atual em background
+      RecurringService.processCurrentMonth().then(n => {
+        if (n > 0) {
+          loadByMonth(now.getFullYear(), now.getMonth() + 1);
+        }
+      });
+
       Logger.info('App', 'Bootstrap concluído');
+      NotificationManager.start();
       setStatus('ready');
     } catch (err) {
       Logger.error('App', 'Falha no bootstrap', err);
@@ -63,7 +74,7 @@ export default function App() {
   if (status === 'loading') {
     return (
       <View style={styles.splash}>
-        <Text style={styles.splashLogo}>💳</Text>
+        <Logo size={96} />
         <Text style={styles.splashTitle}>FinTrack</Text>
         <ActivityIndicator color="#7C3AED" style={{ marginTop: 24 }} />
       </View>
@@ -88,10 +99,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   splash: {
-    flex: 1, backgroundColor: '#F5F3FF',
+    flex: 1, backgroundColor: '#120A24',
     justifyContent: 'center', alignItems: 'center',
   },
-  splashLogo:  { fontSize: 64, marginBottom: 8 },
-  splashTitle: { fontSize: 28, fontWeight: '700', color: '#7C3AED' },
+  splashTitle: { fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 12 },
   errorText:   { fontSize: 13, color: '#6B7280', marginTop: 8, paddingHorizontal: 32, textAlign: 'center' },
 });

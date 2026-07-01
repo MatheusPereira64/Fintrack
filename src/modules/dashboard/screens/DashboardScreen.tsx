@@ -4,13 +4,14 @@ import {
   RefreshControl, Platform, StatusBar,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTabBarInsets } from '../../../hooks/useTabBarInsets';
 
 import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
 import { useAccountStore }      from '../../../store/accountStore';
 import { useSettingsStore }     from '../../../store/settingsStore';
 import { useBudgetStore }       from '../../../store/budgetStore';
-import { useNotificationListener } from '../../notifications/hooks/useNotificationListener';
+import { NotificationManager, TransactionEvent } from '../../../services/NotificationManager';
 import { InsightService }       from '../../../services/InsightService';
 
 import { BalanceCard }    from '../components/BalanceCard';
@@ -23,6 +24,7 @@ import { formatCurrency }           from '../../../utils/currency';
 
 export function DashboardScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
+  const { bottom: tabBarBottom, top: safeTop } = useTabBarInsets();
 
   const {
     transactions, summary, currentMonth, categorySpending,
@@ -41,13 +43,18 @@ export function DashboardScreen({ navigation }: any) {
     [currentMonth],
   );
 
-  // ── Listener de notificações bancárias ────────────────────────────────────
-  useNotificationListener({
-    onTransactionDetected: useCallback((description: string, amount: number) => {
-      setToast({ message: description, amount });
-      setTimeout(() => setToast(null), 3000);
-    }, []),
-  });
+  // ── Observador do singleton de notificações ───────────────────────────────
+  const onTransaction = useCallback((ev: TransactionEvent) => {
+    setToast({ message: ev.description, amount: ev.amount });
+    loadByMonth(currentMonth.year, currentMonth.month);
+    loadAccounts();
+    setTimeout(() => setToast(null), 4000);
+  }, [currentMonth, loadByMonth, loadAccounts]);
+
+  useEffect(() => {
+    NotificationManager.addObserver(onTransaction);
+    return () => NotificationManager.removeObserver(onTransaction);
+  }, [onTransaction]);
 
   // ── Carregamento inicial ───────────────────────────────────────────────────
   useEffect(() => {
@@ -131,7 +138,10 @@ export function DashboardScreen({ navigation }: any) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: Platform.OS === 'android' ? 48 : 56, paddingBottom: 100 }}
+        contentContainerStyle={{
+          paddingTop: safeTop + (Platform.OS === 'android' ? 12 : 8),
+          paddingBottom: 88 + tabBarBottom,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}

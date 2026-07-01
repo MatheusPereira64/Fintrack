@@ -1,27 +1,34 @@
-import React, { useEffect, useCallback, useMemo, useState, memo } from 'react';
+﻿import React, { useEffect, useCallback, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, Platform, StatusBar,
+  Modal, Alert, ScrollView,
 } from 'react-native';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useTheme }       from '../../../hooks/useTheme';
 import { useAccountStore } from '../../../store/accountStore';
 import { AccountCard }    from '../../../components/AccountCard';
+import { AppHeader }      from '../../../components/AppHeader';
+import { AppButton }      from '../../../components/AppButton';
+import { Icon }           from '../../../components/Icon';
 import { AccountType }    from '../../../models/types';
 import { formatCurrency } from '../../../utils/currency';
 
-const ACCOUNT_TYPES: Array<{ key: AccountType; label: string; icon: string }> = [
-  { key: 'checking',    label: 'Conta Corrente', icon: '💳' },
-  { key: 'savings',     label: 'Poupança',       icon: '🏦' },
-  { key: 'credit_card', label: 'Cartão',         icon: '💰' },
-  { key: 'investment',  label: 'Investimentos',  icon: '📈' },
-  { key: 'wallet',      label: 'Carteira',       icon: '👛' },
+import type { AppIconName } from '../../../components/Icon';
+
+const ACCOUNT_TYPES: Array<{ key: AccountType; label: string; icon: AppIconName }> = [
+  { key: 'checking',    label: 'Conta Corrente', icon: 'card' },
+  { key: 'savings',     label: 'Poupança',       icon: 'savings' },
+  { key: 'credit_card', label: 'Cartão',         icon: 'credit-card' },
+  { key: 'investment',  label: 'Investimentos',  icon: 'investment' },
+  { key: 'wallet',      label: 'Carteira',       icon: 'wallet' },
 ];
 
 const COLORS = ['#7C3AED', '#DC2626', '#2563EB', '#16A34A', '#D97706', '#0891B2', '#EC4899', '#78716C'];
 
 export function AccountsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { accounts, totalBalance, isLoading, loadAccounts, addAccount, deleteAccount } = useAccountStore();
 
   const [showModal, setShowModal] = useState(false);
@@ -72,29 +79,11 @@ export function AccountsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
-
-      {/* Header */}
-      <View style={[styles.header, {
-        backgroundColor: colors.header,
-        paddingTop: Platform.OS === 'android' ? 48 : 56,
-        paddingHorizontal: spacing.base,
-        paddingBottom: spacing.base,
-        borderBottomWidth: 1, borderBottomColor: colors.borderLight,
-      }]}>
-        <View>
-          <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>Contas</Text>
-          <Text style={[typography.styles.bodyMedium, { color: colors.primary }]}>
-            Total: {formatCurrency(totalBalance)}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: borderRadius.full }]}
-        >
-          <Text style={{ color: '#FFF', fontSize: 20 }}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Contas"
+        subtitle={`Total: ${formatCurrency(totalBalance)}`}
+        actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
+      />
 
       <FlatList
         data={accounts}
@@ -110,7 +99,7 @@ export function AccountsScreen({ navigation }: any) {
             padding: spacing['3xl'],
             marginTop: spacing['2xl'],
           }]}>
-            <Text style={{ fontSize: 48, textAlign: 'center' }}>🏦</Text>
+            <Icon name="bank" size={48} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
               Nenhuma conta
             </Text>
@@ -135,109 +124,133 @@ export function AccountsScreen({ navigation }: any) {
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-              maxHeight: '85%',
-            }]}
-          >
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Nova conta
-            </Text>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <Animated.View
+              entering={SlideInDown.duration(300)}
+              style={[styles.sheet, {
+                backgroundColor: colors.card,
+                borderTopLeftRadius: borderRadius['2xl'],
+                borderTopRightRadius: borderRadius['2xl'],
+                padding: spacing.xl,
+                paddingBottom: Math.max(insets.bottom, 20),
+                maxHeight: '85%',
+              }]}
+            >
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
+                  Nova conta
+                </Text>
 
-            {[
-              { label: 'Nome *',        val: name,     setter: setName,     ph: 'Ex: Nubank, BB, Carteira' },
-              { label: 'Banco',         val: bankName, setter: setBankName, ph: 'Ex: Nubank, Itaú'         },
-              { label: 'Saldo inicial', val: balance,  setter: setBalance,  ph: '0,00', num: true          },
-            ].map((f, i) => (
-              <View key={i} style={{ marginBottom: spacing.md }}>
+                {[
+                  { label: 'Nome *',        val: name,     setter: setName,     ph: 'Ex: Nubank, BB, Carteira' },
+                  { label: 'Banco',         val: bankName, setter: setBankName, ph: 'Ex: Nubank, Itaú, Inter'  },
+                  { label: 'Saldo inicial', val: balance,  setter: setBalance,  ph: '0,00', num: true          },
+                ].map((f, i) => (
+                  <View key={i} style={{ marginBottom: spacing.md }}>
+                    <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                      {f.label}
+                    </Text>
+                    <TextInput
+                      value={f.val}
+                      onChangeText={f.setter as any}
+                      placeholder={f.ph}
+                      placeholderTextColor={colors.placeholder}
+                      keyboardType={f.num ? 'decimal-pad' : 'default'}
+                      style={[{
+                        backgroundColor: colors.inputBackground,
+                        borderRadius: borderRadius.lg,
+                        padding: spacing.md,
+                        color: colors.inputText,
+                      }, typography.styles.bodyMedium]}
+                    />
+                  </View>
+                ))}
+
+                {type === 'credit_card' && (
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                      Limite do cartão
+                    </Text>
+                    <TextInput
+                      value={limit}
+                      onChangeText={setLimit}
+                      placeholder="0,00"
+                      placeholderTextColor={colors.placeholder}
+                      keyboardType="decimal-pad"
+                      style={[{
+                        backgroundColor: colors.inputBackground,
+                        borderRadius: borderRadius.lg,
+                        padding: spacing.md,
+                        color: colors.inputText,
+                      }, typography.styles.bodyMedium]}
+                    />
+                  </View>
+                )}
+
                 <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                  {f.label}
+                  Tipo
                 </Text>
-                <TextInput
-                  value={f.val}
-                  onChangeText={f.setter as any}
-                  placeholder={f.ph}
-                  placeholderTextColor={colors.placeholder}
-                  keyboardType={f.num ? 'decimal-pad' : 'default'}
-                  style={[{
-                    backgroundColor: colors.inputBackground,
-                    borderRadius: borderRadius.lg,
-                    padding: spacing.md,
-                    color: colors.inputText,
-                  }, typography.styles.bodyMedium]}
-                />
-              </View>
-            ))}
+                <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }]}>
+                  {ACCOUNT_TYPES.map(t => {
+                    const sel = type === t.key;
+                    return (
+                      <TouchableOpacity
+                        key={t.key}
+                        onPress={() => setType(t.key)}
+                        style={[{
+                          backgroundColor: sel ? colors.primary : colors.surfaceVariant,
+                          borderRadius: borderRadius.full,
+                          paddingHorizontal: 12, paddingVertical: 7,
+                          flexDirection: 'row', alignItems: 'center', gap: 5,
+                        }]}
+                      >
+                        <Icon name={t.icon} size={14} color={sel ? '#FFF' : colors.textSecondary} />
+                        <Text style={[typography.styles.labelSmall, { color: sel ? '#FFF' : colors.textSecondary }]}>
+                          {t.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
-            {/* Tipo */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Tipo
-            </Text>
-            <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }]}>
-              {ACCOUNT_TYPES.map(t => (
-                <TouchableOpacity
-                  key={t.key}
-                  onPress={() => setType(t.key)}
-                  style={[{
-                    backgroundColor: type === t.key ? colors.primary : colors.surfaceVariant,
-                    borderRadius: borderRadius.full,
-                    paddingHorizontal: 12, paddingVertical: 6,
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                  }]}
-                >
-                  <Text style={{ fontSize: 14 }}>{t.icon}</Text>
-                  <Text style={[typography.styles.labelSmall, {
-                    color: type === t.key ? '#FFF' : colors.textSecondary,
-                  }]}>
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Cor */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Cor
-            </Text>
-            <View style={[{ flexDirection: 'row', gap: 8, marginBottom: spacing.xl }]}>
-              {COLORS.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => setColor(c)}
-                  style={[{
-                    width: 30, height: 30, borderRadius: 15,
-                    backgroundColor: c,
-                    borderWidth: color === c ? 3 : 0,
-                    borderColor: '#FFF',
-                    elevation: color === c ? 3 : 0,
-                  }]}
-                />
-              ))}
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => setShowModal(false)}
-                style={[{ flex: 1, backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.full, padding: 12 }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={saving}
-                style={[{ flex: 1, backgroundColor: colors.primary, borderRadius: borderRadius.full, padding: 12 }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : 'Criar'}
+                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                  Cor
                 </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+                <View style={[{ flexDirection: 'row', gap: 8, marginBottom: spacing.xl }]}>
+                  {COLORS.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      onPress={() => setColor(c)}
+                      style={[{
+                        width: 30, height: 30, borderRadius: 15,
+                        backgroundColor: c,
+                        borderWidth: color === c ? 3 : 0,
+                        borderColor: '#FFF',
+                        elevation: color === c ? 3 : 0,
+                      }]}
+                    />
+                  ))}
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <AppButton
+                    label="Cancelar"
+                    variant="secondary"
+                    onPress={() => setShowModal(false)}
+                    style={{ flex: 1 }}
+                  />
+                  <AppButton
+                    label="Criar conta"
+                    variant="primary"
+                    onPress={handleAdd}
+                    loading={saving}
+                    icon="check"
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </ScrollView>
+            </Animated.View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </View>
@@ -246,8 +259,6 @@ export function AccountsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  addBtn:    { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   empty:     { alignItems: 'center' },
   overlay:   { flex: 1, justifyContent: 'flex-end' },
   sheet:     {},

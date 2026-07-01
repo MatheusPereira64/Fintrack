@@ -4,6 +4,7 @@
  * identifica o banco, extrai a transação e persiste no SQLite.
  */
 import { getBankConfig, isKnownBank } from './BankRegistry';
+import { GenericBankParser } from '../parsers/GenericBankParser';
 import { ParsedTransaction } from '../../../models/types';
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
 import { AccountRepository }     from '../../../database/repositories/AccountRepository';
@@ -21,6 +22,7 @@ export interface ParseResult {
   success: boolean;
   transaction?: ParsedTransaction;
   transactionId?: number;
+  categoryId?: number;
   error?: string;
   ignored?: boolean;
 }
@@ -36,7 +38,9 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
   }
 
   const fullText = [raw.title, raw.text, raw.subText].filter(Boolean).join(' ');
-  const parsed = bankConfig.parser.parse(raw.title, fullText, raw.packageName);
+  const parsed =
+    bankConfig.parser.parse(raw.title, fullText, raw.packageName)
+    ?? GenericBankParser.parse(raw.title, fullText, raw.packageName);
 
   if (!parsed) {
     return { success: false, ignored: true };
@@ -72,7 +76,7 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
       sourceNotification: `${raw.title} | ${raw.text}`,
     });
 
-    return { success: true, transaction: parsed, transactionId: inserted.id };
+    return { success: true, transaction: parsed, transactionId: inserted.id, categoryId };
   } catch (error) {
     return {
       success: false,

@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback, useState, memo } from 'react';
+﻿import React, { useEffect, useCallback, useState, memo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Modal, Alert, Platform, StatusBar,
@@ -17,6 +18,7 @@ const CategoryRow = memo(function CategoryRow({
   category, onDelete,
 }: { category: Category; onDelete: (id: number) => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Animated.View entering={FadeInDown.duration(300)}>
@@ -61,6 +63,7 @@ const CategoryRow = memo(function CategoryRow({
 
 export function CategoriesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const { categories, loadCategories, addCategory, deleteCategory } = useCategoryStore();
 
   const [showModal, setShowModal] = useState(false);
@@ -104,7 +107,7 @@ export function CategoriesScreen({ navigation }: any) {
 
       <View style={[styles.header, {
         backgroundColor: colors.header,
-        paddingTop: Platform.OS === 'android' ? 48 : 56,
+        paddingTop: Math.max(insets.top, 20),
         paddingHorizontal: spacing.base,
         paddingBottom: spacing.base,
         borderBottomWidth: 1, borderBottomColor: colors.borderLight,

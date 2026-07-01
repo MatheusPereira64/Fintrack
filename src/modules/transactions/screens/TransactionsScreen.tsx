@@ -1,10 +1,11 @@
-import React, {
+﻿import React, {
   useEffect, useState, useCallback, useMemo, useRef,
 } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, RefreshControl, Platform, StatusBar, Modal,
-  ScrollView, Dimensions,
+  TextInput, RefreshControl, Modal,
+  ScrollView,
 } from 'react-native';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 
@@ -12,14 +13,16 @@ import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
 import { useCategoryStore }     from '../../../store/categoryStore';
 import { SwipeableTransaction } from '../components/SwipeableTransaction';
+import { AppHeader }            from '../../../components/AppHeader';
+import { IconButton }           from '../../../components/AppButton';
+import { Icon }                 from '../../../components/Icon';
+import type { AppIconName }     from '../../../components/Icon';
 import { Transaction }           from '../../../models/types';
 import {
   formatMonthYear, subtractMonths, addMonths,
   formatDate, groupByDate,
 } from '../../../utils/date';
 import { formatCurrency } from '../../../utils/currency';
-
-const { width } = Dimensions.get('window');
 
 type FilterType  = 'all' | 'income' | 'expense';
 type SortOrder   = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
@@ -40,6 +43,7 @@ const SORT_OPTIONS: Array<{ key: SortOrder; label: string }> = [
 
 export function TransactionsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const {
     transactions, isLoading, summary, currentMonth,
@@ -150,10 +154,10 @@ export function TransactionsScreen({ navigation }: any) {
     setShowFilters(false);
   };
 
-  const TYPE_FILTERS: Array<{ key: FilterType; label: string; color: string }> = [
+  const TYPE_FILTERS: Array<{ key: FilterType; label: string; icon?: AppIconName; color: string }> = [
     { key: 'all',     label: 'Todas',    color: colors.primary },
-    { key: 'income',  label: '📥 Receitas', color: colors.income },
-    { key: 'expense', label: '📤 Despesas', color: colors.expense },
+    { key: 'income',  label: 'Receitas', icon: 'income',  color: colors.income },
+    { key: 'expense', label: 'Despesas', icon: 'expense', color: colors.expense },
   ];
 
   const handleEdit = useCallback((tx: Transaction) => {
@@ -166,93 +170,62 @@ export function TransactionsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar
-        barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'}
-        backgroundColor={colors.header}
+      <AppHeader
+        title="Transações"
+        actions={[
+          { icon: 'sort',   onPress: () => setShowSort(true) },
+          { icon: 'filter', onPress: () => { setTempCat(advanced.categoryId); setTempBank(advanced.bankName ?? ''); setShowFilters(true); }, badge: hasActiveFilters },
+          { icon: 'add',    onPress: () => navigation.navigate('AddTransaction'), color: colors.primary },
+        ]}
       />
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View style={[styles.header, {
-        backgroundColor:  colors.header,
-        paddingTop:       Platform.OS === 'android' ? 48 : 56,
+      {/* ── Barra de ferramentas ───────────────────────────────────────────── */}
+      <View style={[styles.toolbar, {
+        backgroundColor: colors.header,
         paddingHorizontal: spacing.base,
-        paddingBottom:    spacing.base,
-        ...shadows.sm,
+        paddingBottom: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderLight,
       }]}>
-        {/* Título + botão adicionar */}
-        <View style={styles.headerRow}>
-          <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
-            Transações
-          </Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setShowSort(true)}
-              style={[styles.iconBtn, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.md }]}
-            >
-              <Text style={{ fontSize: 16 }}>⇅</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => { setTempCat(advanced.categoryId); setTempBank(advanced.bankName ?? ''); setShowFilters(true); }}
-              style={[styles.iconBtn, {
-                backgroundColor: hasActiveFilters ? `${colors.primary}20` : colors.surfaceVariant,
-                borderRadius:    borderRadius.md,
-                borderWidth:     hasActiveFilters ? 1 : 0,
-                borderColor:     colors.primary,
-              }]}
-            >
-              <Text style={{ fontSize: 16 }}>🔧</Text>
-              {hasActiveFilters && (
-                <View style={[styles.filterDot, { backgroundColor: colors.primary }]} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('AddTransaction')}
-              style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: borderRadius.full }]}
-            >
-              <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '600' }}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Seletor de mês */}
-        <View style={[styles.monthRow, { marginBottom: spacing.sm }]}>
-          <TouchableOpacity onPress={() => {
+        <View style={styles.monthRow}>
+          <IconButton name="back" onPress={() => {
             const prev = subtractMonths(currentDate, 1);
             loadByMonth(prev.getFullYear(), prev.getMonth() + 1);
-          }} style={styles.monthArrow}>
-            <Text style={{ color: colors.primary, fontSize: 22 }}>‹</Text>
-          </TouchableOpacity>
-          <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
+          }} color={colors.primary} />
+          <Text
+            style={[typography.styles.titleSmall, styles.monthLabel, { color: colors.text }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
             {formatMonthYear(currentDate)}
           </Text>
-          <TouchableOpacity onPress={() => {
+          <IconButton name="forward" onPress={() => {
             const next = addMonths(currentDate, 1);
             if (next <= new Date()) loadByMonth(next.getFullYear(), next.getMonth() + 1);
-          }} style={styles.monthArrow}>
-            <Text style={{ color: colors.primary, fontSize: 22 }}>›</Text>
-          </TouchableOpacity>
+          }} color={colors.primary} />
         </View>
 
-        {/* Pills de resumo */}
-        <View style={[styles.summaryRow, { gap: spacing.sm }]}>
+        <View style={[styles.summaryRow, { gap: spacing.sm, marginTop: spacing.sm }]}>
           {[
             { label: `↑ ${formatCurrency(summary.income)}`,  color: colors.income,   bg: colors.incomeBackground  },
             { label: `↓ ${formatCurrency(summary.expense)}`, color: colors.expense,  bg: colors.expenseBackground },
             { label: `= ${formatCurrency(summary.balance)}`, color: summary.balance >= 0 ? colors.income : colors.expense, bg: summary.balance >= 0 ? colors.incomeBackground : colors.expenseBackground },
           ].map((pill, i) => (
             <View key={i} style={[styles.pill, { backgroundColor: pill.bg, borderRadius: borderRadius.md }]}>
-              <Text style={[typography.styles.labelSmall, { color: pill.color }]}>{pill.label}</Text>
+              <Text style={[typography.styles.labelSmall, { color: pill.color }]} numberOfLines={1}>
+                {pill.label}
+              </Text>
             </View>
           ))}
         </View>
 
-        {/* Busca */}
         <View style={[styles.searchRow, {
           backgroundColor: colors.inputBackground,
           borderRadius:    borderRadius.lg,
           marginTop:       spacing.sm,
         }]}>
-          <Text style={{ fontSize: 14, marginLeft: spacing.sm }}>🔍</Text>
+          <Icon name="search" size={16} color={colors.placeholder} style={{ marginLeft: spacing.sm }} />
           <TextInput
             value={search}
             onChangeText={setSearch}
@@ -262,35 +235,50 @@ export function TransactionsScreen({ navigation }: any) {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} style={{ padding: spacing.sm }}>
-              <Text style={{ color: colors.textTertiary }}>✕</Text>
+              <Icon name="close" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Filtros de tipo */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.sm }}>
-          {TYPE_FILTERS.map(f => (
-            <TouchableOpacity
-              key={f.key}
-              onPress={() => setTypeFilter(f.key)}
-              style={[styles.typeChip, {
-                backgroundColor: typeFilter === f.key ? f.color : colors.surfaceVariant,
-                borderRadius: borderRadius.full,
-                marginRight: spacing.sm,
-              }]}
-            >
-              <Text style={[typography.styles.labelMedium, {
-                color: typeFilter === f.key ? '#FFF' : colors.textSecondary,
-              }]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={[styles.filterRow, { gap: spacing.sm }]}
+        >
+          {TYPE_FILTERS.map(f => {
+            const selected = typeFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                onPress={() => setTypeFilter(f.key)}
+                style={[styles.typeChip, {
+                  backgroundColor: selected ? f.color : colors.surfaceVariant,
+                  borderRadius: borderRadius.full,
+                }]}
+              >
+                {f.icon ? (
+                  <Icon
+                    name={f.icon}
+                    size={14}
+                    color={selected ? '#FFF' : colors.textSecondary}
+                    style={{ marginRight: 4 }}
+                  />
+                ) : null}
+                <Text style={[typography.styles.labelMedium, {
+                  color: selected ? '#FFF' : colors.textSecondary,
+                }]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
       {/* ── Lista de transações ──────────────────────────────────────────────── */}
       <FlatList
+        style={styles.list}
         data={sections}
         keyExtractor={(item, idx) => item.date || String(idx)}
         refreshControl={
@@ -313,7 +301,7 @@ export function TransactionsScreen({ navigation }: any) {
             padding:         spacing.xl,
             marginTop:       spacing['3xl'],
           }]}>
-            <Text style={{ fontSize: 48, textAlign: 'center' }}>💸</Text>
+            <Icon name="expense" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
               {search || hasActiveFilters ? 'Nenhuma transação encontrada' : 'Sem transações neste mês'}
             </Text>
@@ -363,6 +351,7 @@ export function TransactionsScreen({ navigation }: any) {
               borderTopLeftRadius:  borderRadius['2xl'],
               borderTopRightRadius: borderRadius['2xl'],
               padding: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 20),
             }]}
           >
             <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
@@ -402,6 +391,7 @@ export function TransactionsScreen({ navigation }: any) {
               borderTopLeftRadius:  borderRadius['2xl'],
               borderTopRightRadius: borderRadius['2xl'],
               padding: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 20),
             }]}
           >
             <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
@@ -551,19 +541,23 @@ export function TransactionsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container:     { flex: 1 },
-  header:        {},
-  headerRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn:       { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  filterDot:     { position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 3 },
-  addBtn:        { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  monthRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
-  monthArrow:    { padding: 4 },
-  summaryRow:    { flexDirection: 'row', justifyContent: 'center' },
-  pill:          { paddingHorizontal: 10, paddingVertical: 4 },
+  toolbar:       {},
+  list:          { flex: 1 },
+  monthRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  monthLabel:    { flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  summaryRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
+  pill:          { paddingHorizontal: 10, paddingVertical: 4, maxWidth: '33%' },
   searchRow:     { flexDirection: 'row', alignItems: 'center' },
   searchInput:   { flex: 1, paddingHorizontal: 8, paddingVertical: 10 },
-  typeChip:      { paddingHorizontal: 12, paddingVertical: 6 },
+  filterScroll:  { marginTop: 8, flexGrow: 0 },
+  filterRow:     { alignItems: 'center', paddingVertical: 2 },
+  typeChip:      {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 14,
+    paddingVertical:   8,
+    alignSelf:         'flex-start',
+  },
   empty:         { alignItems: 'center' },
   modalOverlay:  { flex: 1, justifyContent: 'flex-end' },
   bottomSheet:   {},

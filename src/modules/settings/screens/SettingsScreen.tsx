@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useMemo } from 'react';
+﻿import React, { useCallback, useState, useMemo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Platform, StatusBar, Switch, Alert, Modal,
@@ -13,7 +14,7 @@ import { ExportService }     from '../../../services/ExportService';
 import { Logger }            from '../../../services/LoggerService';
 import { getDatabase }       from '../../../database/db';
 
-import { Share } from 'react-native';
+import { Share, NativeModules } from 'react-native';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'pt-BR' | 'en-US';
@@ -25,6 +26,7 @@ interface SettingsGroupProps {
 
 function SettingsGroup({ title, children }: SettingsGroupProps) {
   const { colors, spacing, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ marginBottom: spacing.xl }}>
       <Text style={[
@@ -54,6 +56,7 @@ function SettingsRow({
   icon, title, subtitle, onPress, right, isDestructive, disabled, first, last,
 }: SettingsRowProps) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <TouchableOpacity
@@ -103,6 +106,7 @@ function SettingsRow({
 
 export function SettingsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
   const { settings, setTheme, setLanguage } = useSettingsStore();
   const { transactions }  = useTransactionStore();
   const { accounts }      = useAccountStore();
@@ -114,13 +118,12 @@ export function SettingsScreen({ navigation }: any) {
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleCheckPermission = useCallback(async () => {
-    const { NotificationModule } = require('../../../../android/app/src/main/java/com/fintrackapp/notification/NotificationModule');
-    // Na prática usa o bridge correto:
     try {
-      const { NativeModules } = require('react-native');
       const mod = NativeModules.NotificationModule;
       if (mod?.openNotificationSettings) {
-        mod.openNotificationSettings();
+        await mod.openNotificationSettings();
+      } else {
+        Alert.alert('Info', 'Vá em Configurações → Acesso a Notificações → FinTrack');
       }
     } catch {
       Alert.alert('Info', 'Vá em Configurações → Acesso a Notificações → FinTrack');
@@ -234,7 +237,7 @@ export function SettingsScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={[styles.header, {
-        paddingTop:       Platform.OS === 'android' ? 48 : 56,
+        paddingTop: Math.max(insets.top, 20),
         paddingHorizontal: spacing.base,
         paddingBottom:    spacing.base,
         backgroundColor:  colors.header,

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { formatDate, formatTime } from '../../../utils/date';
 export function TransactionDetailScreen({ route, navigation }: any) {
   const { transactionId } = route.params;
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const { transactions, deleteTransaction } = useTransactionStore();
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
@@ -67,7 +69,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
       {/* Header */}
       <View style={[styles.header, {
         backgroundColor: colors.header,
-        paddingTop: Platform.OS === 'android' ? 48 : 56,
+        paddingTop: Math.max(insets.top, 20),
         paddingHorizontal: spacing.base,
         paddingBottom: spacing.base,
         ...shadows.sm,

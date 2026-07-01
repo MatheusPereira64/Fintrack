@@ -43,6 +43,7 @@ export type MoreStackParamList = {
   Settings:         undefined;
   Preferences:      undefined;
   Export:           undefined;
+  Import:           undefined;
   Categories:       undefined;
 };
 

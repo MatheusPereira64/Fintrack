@@ -69,13 +69,20 @@ public class FinTrackNotificationService extends NotificationListenerService {
             Notification notification = sbn.getNotification();
             Bundle extras = notification.extras;
 
-            String title   = extras.getCharSequence(Notification.EXTRA_TITLE, "").toString();
+            // Concatena todos os campos de texto disponíveis
+            String title = extras.getCharSequence(Notification.EXTRA_TITLE, "").toString();
             String text    = extras.getCharSequence(Notification.EXTRA_TEXT, "").toString();
             String subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT, "").toString();
             String bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT, "").toString();
 
-            // Usa bigText se disponível (contém mais informações)
             String bodyText = bigText.isEmpty() ? text : bigText;
+            if (subText != null && !subText.isEmpty() && !bodyText.contains(subText)) {
+                bodyText = bodyText + " " + subText;
+            }
+            // Se o corpo estiver vazio, usa o título como fonte principal
+            if (bodyText.trim().isEmpty()) {
+                bodyText = title;
+            }
 
             JSONObject payload = new JSONObject();
             payload.put("packageName", packageName);

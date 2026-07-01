@@ -1,15 +1,13 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import {
-  VictoryBar, VictoryChart, VictoryAxis, VictoryGroup,
-  VictoryTheme, VictoryTooltip,
-} from 'victory-native';
+import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
 import { useTheme } from '../../../hooks/useTheme';
-import { formatCurrency } from '../../../utils/currency';
 
 const { width } = Dimensions.get('window');
 const CHART_WIDTH = width - 48;
+const CHART_HEIGHT = 180;
+const PADDING = { top: 10, right: 10, bottom: 30, left: 50 };
 
 interface MonthlyTotal {
   year:    number;
@@ -26,19 +24,53 @@ const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 export const SpendingChart = memo(function SpendingChart({ data }: SpendingChartProps) {
-  const { colors, spacing, borderRadius, typography, isDark } = useTheme();
+  const { colors, spacing, borderRadius, typography } = useTheme();
 
-  if (data.length === 0) return null;
+  const chart = useMemo(() => {
+    if (data.length === 0) return null;
 
-  const incomeData  = data.map((d, i) => ({ x: i + 1, y: d.income,  label: MONTH_SHORT[d.month - 1] }));
-  const expenseData = data.map((d, i) => ({ x: i + 1, y: d.expense, label: MONTH_SHORT[d.month - 1] }));
-  const labels      = data.map(d => MONTH_SHORT[d.month - 1]);
+    const plotW = CHART_WIDTH - 16 - PADDING.left - PADDING.right;
+    const plotH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
+    const maxVal = Math.max(
+      ...data.flatMap(d => [d.income, d.expense]),
+      1,
+    );
+    const groupW = plotW / data.length;
+    const barW = Math.min(8, groupW * 0.22);
+    const gap = 4;
 
-  const maxVal = Math.max(
-    ...data.map(d => d.income),
-    ...data.map(d => d.expense),
-    1,
-  );
+    const bars = data.flatMap((d, i) => {
+      const cx = PADDING.left + groupW * i + groupW / 2;
+      const incomeH = (d.income / maxVal) * plotH;
+      const expenseH = (d.expense / maxVal) * plotH;
+      const baseY = PADDING.top + plotH;
+      return [
+        {
+          key: `in-${i}`,
+          x: cx - barW - gap / 2,
+          y: baseY - incomeH,
+          h: incomeH,
+          color: colors.income,
+        },
+        {
+          key: `ex-${i}`,
+          x: cx + gap / 2,
+          y: baseY - expenseH,
+          h: expenseH,
+          color: colors.expense,
+        },
+      ];
+    });
+
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => ({
+      y: PADDING.top + plotH * (1 - t),
+      label: `R$${Math.round((maxVal * t) / 1000)}k`,
+    }));
+
+    return { bars, yTicks, plotW, plotH };
+  }, [colors.expense, colors.income, data]);
+
+  if (!chart) return null;
 
   return (
     <Animated.View entering={FadeInUp.delay(200).duration(500)} style={[
@@ -56,52 +88,61 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
       },
     ]}>
       <Text style={[typography.styles.titleSmall, { color: colors.text, marginBottom: spacing.sm }]}>
-        Últimos 6 meses
+        Ultimos 6 meses
       </Text>
 
-      <VictoryChart
-        width={CHART_WIDTH - 16}
-        height={180}
-        domainPadding={{ x: 20 }}
-        padding={{ top: 10, bottom: 30, left: 50, right: 10 }}
-      >
-        <VictoryAxis
-          tickValues={data.map((_, i) => i + 1)}
-          tickFormat={i => labels[i - 1] ?? ''}
-          style={{
-            axis:     { stroke: colors.border },
-            tickLabels: { fill: colors.textSecondary, fontSize: 10 },
-            grid:     { stroke: 'transparent' },
-          }}
-        />
-        <VictoryAxis
-          dependentAxis
-          tickFormat={v => `R$${(v / 1000).toFixed(0)}k`}
-          style={{
-            axis:     { stroke: colors.border },
-            tickLabels: { fill: colors.textSecondary, fontSize: 9 },
-            grid:     { stroke: colors.borderLight, strokeDasharray: '4,4' },
-          }}
-        />
-        <VictoryGroup offset={10}>
-          <VictoryBar
-            data={incomeData}
-            x="x" y="y"
-            style={{ data: { fill: colors.income, borderRadius: 4, rx: 4, ry: 4 } }}
-            cornerRadius={{ top: 4 }}
-            barWidth={8}
-          />
-          <VictoryBar
-            data={expenseData}
-            x="x" y="y"
-            style={{ data: { fill: colors.expense, borderRadius: 4, rx: 4, ry: 4 } }}
-            cornerRadius={{ top: 4 }}
-            barWidth={8}
-          />
-        </VictoryGroup>
-      </VictoryChart>
+      <Svg width={CHART_WIDTH - 16} height={CHART_HEIGHT}>
+        {chart.yTicks.map((tick, i) => (
+          <React.Fragment key={`grid-${i}`}>
+            <Line
+              x1={PADDING.left}
+              y1={tick.y}
+              x2={PADDING.left + chart.plotW}
+              y2={tick.y}
+              stroke={colors.borderLight}
+              strokeDasharray="4,4"
+            />
+            <SvgText
+              x={PADDING.left - 6}
+              y={tick.y + 4}
+              fontSize={9}
+              fill={colors.textSecondary}
+              textAnchor="end"
+            >
+              {tick.label}
+            </SvgText>
+          </React.Fragment>
+        ))}
 
-      {/* Legenda */}
+        {data.map((d, i) => {
+          const x = PADDING.left + (chart.plotW / data.length) * i + (chart.plotW / data.length) / 2;
+          return (
+            <SvgText
+              key={`lbl-${i}`}
+              x={x}
+              y={CHART_HEIGHT - 8}
+              fontSize={10}
+              fill={colors.textSecondary}
+              textAnchor="middle"
+            >
+              {MONTH_SHORT[d.month - 1]}
+            </SvgText>
+          );
+        })}
+
+        {chart.bars.map(bar => (
+          <Rect
+            key={bar.key}
+            x={bar.x}
+            y={bar.y}
+            width={8}
+            height={Math.max(bar.h, 0)}
+            rx={4}
+            fill={bar.color}
+          />
+        ))}
+      </Svg>
+
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.income }]} />

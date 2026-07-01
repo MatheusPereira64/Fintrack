@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, StatusBar,
+  StatusBar, ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
-import { useTransactionStore } from '../../../store/transactionStore';
-import { useCategoryStore }    from '../../../store/categoryStore';
 import { InsightService }      from '../../../services/InsightService';
 import { Insight }             from '../../../models/types';
 import { formatDate }          from '../../../utils/date';
@@ -24,20 +23,28 @@ const SEVERITY_ICONS: Record<string, string> = {
 
 export function InsightsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const { transactions, currentMonth } = useTransactionStore();
-  const { categories }                  = useCategoryStore();
-  const [insights, setInsights]         = useState<Insight[]>([]);
+  const insets = useSafeAreaInsets();
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    const generated = InsightService.generateInsights(transactions, categories);
-    setInsights(generated);
-  }, [transactions, categories]);
+    let active = true;
+    (async () => {
+      try {
+        const generated = await InsightService.generateAndSave();
+        if (active) setInsights(generated);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Platform.OS === 'android' ? 48 : 56, paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
+      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ color: colors.primary }}>← Voltar</Text>
         </TouchableOpacity>
@@ -46,7 +53,9 @@ export function InsightsScreen({ navigation }: any) {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}>
-        {insights.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
+        ) : insights.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl }]}>
             <Text style={{ fontSize: 40, textAlign: 'center' }}>📊</Text>
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
