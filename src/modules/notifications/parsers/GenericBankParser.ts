@@ -80,14 +80,18 @@ export const GenericBankParser: BankParser = {
     }
 
     // ── 5. Transferência recebida ─────────────────────────────────────────
-    if (includes(full, 'transferência recebida', 'ted recebido', 'doc recebido', 'crédito em conta',
+    if (includes(full, 'transferência recebida', 'transferencia recebida',
+                       'recebemos sua transferência', 'recebemos sua transferencia',
+                       'ted recebido', 'doc recebido', 'crédito em conta',
                        'depósito recebido', 'transfer received')) {
       return make('income', 'Transferência', v,
         `Transferência recebida${extractName(raw, 'de')}`, bankName, title, body);
     }
 
     // ── 6. Transferência enviada ──────────────────────────────────────────
-    if (includes(full, 'transferência enviada', 'transferência realizada', 'ted enviado',
+    if (includes(full, 'transferência enviada', 'transferencia enviada',
+                       'enviamos sua transferência', 'enviamos sua transferencia',
+                       'transferência realizada', 'ted enviado',
                        'doc enviado', 'transfer sent')) {
       return make('expense', 'Transferência', -v,
         `Transferência${extractName(raw, 'para')}`, bankName, title, body);
@@ -159,6 +163,24 @@ function make(
 }
 
 function deriveBankName(packageName: string, raw: string): string {
+  const byPackage: Record<string, string> = {
+    'com.nubank.nubank':              'Nubank',
+    'br.com.intermedium':             'Inter',
+    'com.bancointer.banking':         'Inter',
+    'com.itau':                       'Itaú',
+    'com.itau.empresas':              'Itaú',
+    'com.bradesco':                   'Bradesco',
+    'com.bradesco.prime':             'Bradesco',
+    'com.bb.android':                 'Banco do Brasil',
+    'com.santander.app':              'Santander',
+    'com.santander.way':              'Santander',
+    'br.com.c6bank.app':              'C6 Bank',
+    'br.gov.caixa.internet.smartphones': 'Caixa',
+    'com.mercadopago.wallet':         'Mercado Pago',
+    'com.picpay':                     'PicPay',
+  };
+  if (byPackage[packageName]) return byPackage[packageName];
+
   const knownNames = [
     'Nubank', 'Inter', 'Itaú', 'Bradesco', 'Banco do Brasil', 'Santander',
     'C6 Bank', 'Caixa', 'Mercado Pago', 'PicPay', 'Next', 'Neon',
