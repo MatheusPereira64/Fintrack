@@ -3,13 +3,18 @@ package com.fintrackapp.notification;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.text.TextUtils;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
 
 import javax.annotation.Nonnull;
 
@@ -87,9 +92,33 @@ public class NotificationModule extends ReactContextBaseJavaModule {
                 getReactApplicationContext(),
                 FinTrackNotificationService.class
             );
-            // O serviço é iniciado automaticamente pelo Android quando a permissão é concedida
-            // Esta chamada apenas notifica o JS que o pedido foi realizado
             promise.resolve(component.flattenToShortString());
+        } catch (Exception e) {
+            promise.reject("ERROR", e.getMessage());
+        }
+    }
+
+    /**
+     * Retorna apps bancários instalados cujo packageName está na lista monitorada.
+     */
+    @ReactMethod
+    public void getInstalledBankApps(Promise promise) {
+        try {
+            ReactApplicationContext context = getReactApplicationContext();
+            PackageManager pm = context.getPackageManager();
+            WritableArray result = Arguments.createArray();
+
+            for (ApplicationInfo info : pm.getInstalledApplications(PackageManager.GET_META_DATA)) {
+                String pkg = info.packageName;
+                if (!FinTrackNotificationService.BANK_PACKAGES.contains(pkg)) {
+                    continue;
+                }
+                WritableMap map = Arguments.createMap();
+                map.putString("packageName", pkg);
+                map.putString("label", pm.getApplicationLabel(info).toString());
+                result.pushMap(map);
+            }
+            promise.resolve(result);
         } catch (Exception e) {
             promise.reject("ERROR", e.getMessage());
         }

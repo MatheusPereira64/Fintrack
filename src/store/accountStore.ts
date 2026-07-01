@@ -1,18 +1,24 @@
 import { create } from 'zustand';
 import { Account, InsertAccount } from '../models/types';
 import { AccountRepository } from '../database/repositories/AccountRepository';
+import {
+  reconcileAccountBalance,
+  setInformedBalance,
+} from '../services/AccountBalanceService';
 
 interface AccountState {
-  accounts: Account[];
+  accounts:     Account[];
   totalBalance: number;
-  isLoading: boolean;
-  error: string | null;
+  isLoading:    boolean;
+  error:        string | null;
 
-  loadAccounts: () => Promise<void>;
-  addAccount: (data: InsertAccount) => Promise<Account>;
-  updateAccount: (id: number, data: Partial<InsertAccount>) => Promise<void>;
-  deleteAccount: (id: number) => Promise<void>;
+  loadAccounts:        () => Promise<void>;
+  addAccount:          (data: InsertAccount) => Promise<Account>;
+  updateAccount:       (id: number, data: Partial<InsertAccount & { informedBalance?: number }>) => Promise<void>;
+  deleteAccount:     (id: number) => Promise<void>;
   refreshTotalBalance: () => Promise<void>;
+  reconcileBalance:    (id: number, targetInformedBalance: number) => Promise<void>;
+  updateInformedBalance: (id: number, informedBalance: number) => Promise<void>;
 }
 
 export const useAccountStore = create<AccountState>((set, get) => ({
@@ -41,9 +47,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
 
   updateAccount: async (id, data) => {
     await AccountRepository.update(id, data);
-    const accounts = await AccountRepository.findAll();
-    set({ accounts });
-    await get().refreshTotalBalance();
+    await get().loadAccounts();
   },
 
   deleteAccount: async (id) => {
@@ -55,5 +59,15 @@ export const useAccountStore = create<AccountState>((set, get) => ({
   refreshTotalBalance: async () => {
     const totalBalance = await AccountRepository.totalBalance();
     set({ totalBalance });
+  },
+
+  reconcileBalance: async (id, targetInformedBalance) => {
+    await reconcileAccountBalance(id, targetInformedBalance);
+    await get().loadAccounts();
+  },
+
+  updateInformedBalance: async (id, informedBalance) => {
+    await setInformedBalance(id, informedBalance);
+    await get().loadAccounts();
   },
 }));

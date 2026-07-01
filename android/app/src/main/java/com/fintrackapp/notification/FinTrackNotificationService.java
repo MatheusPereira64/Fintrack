@@ -28,7 +28,7 @@ public class FinTrackNotificationService extends NotificationListenerService {
     private static final String EVENT_BANK_NOTIFICATION = "onBankNotification";
 
     // Package names dos bancos monitorados (mantido sincronizado com BankRegistry.ts)
-    private static final Set<String> BANK_PACKAGES = new HashSet<>(Arrays.asList(
+    static final Set<String> BANK_PACKAGES = new HashSet<>(Arrays.asList(
         "com.nubank.nubank",
         "br.com.intermedium",
         "com.bancointer.banking",

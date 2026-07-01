@@ -127,3 +127,29 @@ export function isKnownBank(packageName: string): boolean {
 }
 
 export const KNOWN_PACKAGE_NAMES = new Set(Object.keys(BANK_REGISTRY));
+
+export interface UniqueBank {
+  name:         string;
+  primaryColor: string;
+  packageNames: string[];
+}
+
+/** Lista de bancos únicos (sem duplicar Inter, Itaú etc.) */
+export function getUniqueBanks(): UniqueBank[] {
+  const map = new Map<string, UniqueBank>();
+  for (const config of Object.values(BANK_REGISTRY)) {
+    if (!map.has(config.name)) {
+      map.set(config.name, {
+        name:         config.name,
+        primaryColor: config.primaryColor,
+        packageNames: config.packageNames,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Normaliza nome de banco para comparação */
+export function normalizeBankName(name: string): string {
+  return name.toLowerCase().replace(/banco\s+/g, '').trim();
+}

@@ -8,6 +8,7 @@ export interface Account {
   name: string;
   type: AccountType;
   balance: number;
+  informedBalance?: number;
   limit?: number;
   color: string;
   bankName?: string;
@@ -19,6 +20,7 @@ export interface InsertAccount {
   name: string;
   type: AccountType;
   balance: number;
+  informedBalance?: number;
   limit?: number;
   color: string;
   bankName?: string;

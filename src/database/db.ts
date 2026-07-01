@@ -39,6 +39,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
 
   if (current < 1) { await migration001(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (1)'); }
   if (current < 2) { await migration002(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (2)'); }
+  if (current < 3) { await migration003(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (3)'); }
 }
 
 // ─── Migration 001 — Schema inicial ───────────────────────────────────────────
@@ -219,4 +220,15 @@ async function migration002(db: SQLiteDatabase): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_tx_bank ON transactions(bank_name)`,
   ];
   for (const sql of stmts) await db.executeSql(sql);
+}
+
+// ─── Migration 003 — Saldo informado ────────────────────────────────────────
+
+async function migration003(db: SQLiteDatabase): Promise<void> {
+  try {
+    await db.executeSql(`ALTER TABLE accounts ADD COLUMN informed_balance REAL`);
+  } catch {
+    // coluna já existe
+  }
+  await db.executeSql(`UPDATE accounts SET informed_balance = balance WHERE informed_balance IS NULL`);
 }
