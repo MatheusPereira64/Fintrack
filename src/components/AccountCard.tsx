@@ -5,12 +5,17 @@ import { useTheme }       from '../hooks/useTheme';
 import { Account }        from '../models/types';
 import { formatCurrency } from '../utils/currency';
 import { hasBalanceDivergence } from '../services/AccountBalanceService';
+import {
+  accountSupportsYield,
+  estimateMonthlyYield,
+} from '../services/AccountPlanService';
 import { Icon } from './Icon';
 
 interface AccountCardProps {
   account:      Account;
   onPress?:     (a: Account) => void;
   onLongPress?: (a: Account) => void;
+  onPlan?:      (a: Account) => void;
   index?:       number;
 }
 
@@ -23,7 +28,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export const AccountCard = memo(function AccountCard({
-  account, onPress, onLongPress, index = 0,
+  account, onPress, onLongPress, onPlan, index = 0,
 }: AccountCardProps) {
   const { colors, spacing, borderRadius, typography } = useTheme();
 
@@ -33,6 +38,9 @@ export const AccountCard = memo(function AccountCard({
   const diverges        = hasBalanceDivergence(account);
   const limitUsed       = isCredit && account.limit ? Math.abs(account.balance) / account.limit : 0;
   const limitColor      = limitUsed > 0.85 ? colors.error : limitUsed > 0.65 ? colors.warning : colors.success;
+  const yieldRate       = account.monthlyYieldRate ?? 0;
+  const showYield       = accountSupportsYield(account.type) && yieldRate > 0;
+  const monthlyYield    = showYield ? estimateMonthlyYield(informed, yieldRate) : 0;
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(350)}>
@@ -110,6 +118,37 @@ export const AccountCard = memo(function AccountCard({
           </Text>
         </View>
 
+        {showYield && (
+          <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
+            <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
+              Rendimento ~{String(yieldRate).replace('.', ',')}% a.m.
+            </Text>
+            <Text style={[typography.styles.labelLarge, {
+              color: '#BBF7D0',
+              fontWeight: '600',
+            }]}>
+              ≈ {formatCurrency(monthlyYield)}/mês
+            </Text>
+          </View>
+        )}
+
+        {onPlan && (
+          <TouchableOpacity
+            onPress={() => onPlan(account)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={[styles.planBtn, {
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              borderRadius: borderRadius.full,
+              marginTop: spacing.md,
+            }]}
+          >
+            <Icon name="chart-line" size={14} color="#FFF" />
+            <Text style={[typography.styles.labelSmall, { color: '#FFF', marginLeft: 6 }]}>
+              Planejar
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {isCredit && account.limit && (
           <View style={{ marginTop: spacing.sm }}>
             <View style={[styles.limitBar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
@@ -145,6 +184,7 @@ const styles = StyleSheet.create({
   bankBadge:  { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
   warnBadge:  { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   informedRow:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  planBtn:    { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6 },
   limitBar:   { height: 4, borderRadius: 2, overflow: 'hidden' },
   limitFill:  { height: '100%', borderRadius: 2 },
   limitRow:   { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },

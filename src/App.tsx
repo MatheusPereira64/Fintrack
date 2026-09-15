@@ -14,6 +14,7 @@ import { Logger }                 from './services/LoggerService';
 import { Logo }                   from './components/Logo';
 import { NotificationManager }    from './services/NotificationManager';
 import { RecurringService }       from './services/RecurringService';
+import { UpdateService }          from './services/UpdateService';
 
 type BootstrapStatus = 'loading' | 'ready' | 'error';
 
@@ -29,47 +30,58 @@ export default function App() {
   const loadGoals       = useGoalStore(s => s.loadGoals);
 
   useEffect(() => {
-    bootstrap();
-  }, []);
+    let cancelled = false;
+    let updateTimer: ReturnType<typeof setTimeout> | undefined;
 
-  async function bootstrap() {
-    try {
-      // 1. Inicializa o SQLite e executa migrations
-      await getDatabase();
-      Logger.info('App', 'Banco de dados inicializado');
+    async function bootstrap() {
+      try {
+        await getDatabase();
+        Logger.info('App', 'Banco de dados inicializado');
 
-      // 2. Carrega configurações primeiro (tema, idioma, etc.)
-      await loadSettings();
+        await loadSettings();
 
-      // 3. Carrega dados em paralelo
-      const now = new Date();
-      await Promise.all([
-        loadAccounts(),
-        loadCategories(),
-        loadByMonth(now.getFullYear(), now.getMonth() + 1),
-        loadBudgets(),
-        loadGoals(),
-      ]);
+        const now = new Date();
+        await Promise.all([
+          loadAccounts(),
+          loadCategories(),
+          loadByMonth(now.getFullYear(), now.getMonth() + 1),
+          loadBudgets(),
+          loadGoals(),
+        ]);
 
-      // 4. Carrega totais mensais em background (não bloqueia a UI)
-      loadMonthlyTotals();
+        loadMonthlyTotals();
 
-      // 5. Processa recorrências do mês atual em background
-      RecurringService.processCurrentMonth().then(n => {
-        if (n > 0) {
-          loadByMonth(now.getFullYear(), now.getMonth() + 1);
+        RecurringService.processCurrentMonth().then(n => {
+          if (n > 0 && !cancelled) {
+            loadByMonth(now.getFullYear(), now.getMonth() + 1);
+          }
+        });
+
+        Logger.info('App', 'Bootstrap concluído');
+        NotificationManager.start();
+        if (cancelled) return;
+        setStatus('ready');
+
+        updateTimer = setTimeout(() => {
+          UpdateService.checkOnLaunch().catch(err => {
+            Logger.warn('App', 'Checagem de update ignorada', err);
+          });
+        }, 1500);
+      } catch (err) {
+        Logger.error('App', 'Falha no bootstrap', err);
+        if (!cancelled) {
+          setErrorMsg(String(err));
+          setStatus('error');
         }
-      });
-
-      Logger.info('App', 'Bootstrap concluído');
-      NotificationManager.start();
-      setStatus('ready');
-    } catch (err) {
-      Logger.error('App', 'Falha no bootstrap', err);
-      setErrorMsg(String(err));
-      setStatus('error');
+      }
     }
-  }
+
+    bootstrap();
+    return () => {
+      cancelled = true;
+      if (updateTimer) clearTimeout(updateTimer);
+    };
+  }, []);
 
   if (status === 'loading') {
     return (

@@ -3,16 +3,17 @@ import { Account, InsertAccount } from '../../models/types';
 
 function rowToAccount(row: any): Account {
   return {
-    id:              row.id,
-    name:            row.name,
-    type:            row.type,
-    balance:         row.balance,
-    informedBalance: row.informed_balance ?? row.balance,
-    limit:           row.limit ?? undefined,
-    color:           row.color,
-    bankName:        row.bank_name ?? undefined,
-    createdAt:       row.created_at,
-    updatedAt:       row.updated_at,
+    id:               row.id,
+    name:             row.name,
+    type:             row.type,
+    balance:          row.balance,
+    informedBalance:  row.informed_balance ?? row.balance,
+    monthlyYieldRate: row.monthly_yield_rate ?? undefined,
+    limit:            row.limit ?? undefined,
+    color:            row.color,
+    bankName:         row.bank_name ?? undefined,
+    createdAt:        row.created_at,
+    updatedAt:        row.updated_at,
   };
 }
 
@@ -43,9 +44,18 @@ export const AccountRepository = {
     const db = await getDatabase();
     const informed = data.informedBalance ?? data.balance;
     const [result] = await db.executeSql(
-      `INSERT INTO accounts (name, type, balance, informed_balance, "limit", color, bank_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [data.name, data.type, data.balance, informed, data.limit ?? null, data.color, data.bankName ?? null],
+      `INSERT INTO accounts (name, type, balance, informed_balance, monthly_yield_rate, "limit", color, bank_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.name,
+        data.type,
+        data.balance,
+        informed,
+        data.monthlyYieldRate ?? null,
+        data.limit ?? null,
+        data.color,
+        data.bankName ?? null,
+      ],
     );
     const inserted = await this.findById(result.insertId);
     if (!inserted) throw new Error('Failed to insert account');
@@ -57,13 +67,14 @@ export const AccountRepository = {
     const fields: string[] = [];
     const values: unknown[] = [];
 
-    if (data.name            !== undefined) { fields.push('name = ?');             values.push(data.name); }
-    if (data.type            !== undefined) { fields.push('type = ?');             values.push(data.type); }
-    if (data.balance         !== undefined) { fields.push('balance = ?');          values.push(data.balance); }
-    if (data.informedBalance !== undefined) { fields.push('informed_balance = ?'); values.push(data.informedBalance); }
-    if (data.color           !== undefined) { fields.push('color = ?');            values.push(data.color); }
-    if (data.limit           !== undefined) { fields.push('"limit" = ?');          values.push(data.limit); }
-    if (data.bankName        !== undefined) { fields.push('bank_name = ?');       values.push(data.bankName); }
+    if (data.name             !== undefined) { fields.push('name = ?');              values.push(data.name); }
+    if (data.type             !== undefined) { fields.push('type = ?');              values.push(data.type); }
+    if (data.balance          !== undefined) { fields.push('balance = ?');           values.push(data.balance); }
+    if (data.informedBalance  !== undefined) { fields.push('informed_balance = ?');  values.push(data.informedBalance); }
+    if (data.monthlyYieldRate !== undefined) { fields.push('monthly_yield_rate = ?'); values.push(data.monthlyYieldRate); }
+    if (data.color            !== undefined) { fields.push('color = ?');             values.push(data.color); }
+    if (data.limit            !== undefined) { fields.push('"limit" = ?');           values.push(data.limit); }
+    if (data.bankName         !== undefined) { fields.push('bank_name = ?');         values.push(data.bankName); }
 
     if (fields.length === 0) return;
     fields.push("updated_at = datetime('now')");

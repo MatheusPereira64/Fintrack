@@ -7,6 +7,9 @@ import {
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useCategoryStore } from '../../../store/categoryStore';
+import { AppHeader } from '../../../components/AppHeader';
+import { CloseButton } from '../../../components/CloseButton';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { Category }        from '../../../models/types';
 
 const PRESET_ICONS  = ['🍔', '🛒', '🚗', '🏠', '💊', '📚', '🎮', '💳', '💰', '📺',
@@ -63,7 +66,7 @@ const CategoryRow = memo(function CategoryRow({
 
 export function CategoriesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
   const { categories, loadCategories, addCategory, deleteCategory } = useCategoryStore();
 
   const [showModal, setShowModal] = useState(false);
@@ -103,31 +106,16 @@ export function CategoriesScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
-
-      <View style={[styles.header, {
-        backgroundColor: colors.header,
-        paddingTop: Math.max(insets.top, 20),
-        paddingHorizontal: spacing.base,
-        paddingBottom: spacing.base,
-        borderBottomWidth: 1, borderBottomColor: colors.borderLight,
-      }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary, fontSize: 18 }}>‹</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>Categorias</Text>
-        <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          style={[{ backgroundColor: colors.primary, borderRadius: borderRadius.full, width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }]}
-        >
-          <Text style={{ color: '#FFF', fontSize: 18 }}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Categorias"
+        onClose={() => navigation.goBack()}
+        actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
+      />
 
       <FlatList
         data={categories}
         keyExtractor={c => String(c.id)}
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
         renderItem={({ item }) => (
           <CategoryRow category={item} onDelete={handleDelete} />
         )}
@@ -143,11 +131,12 @@ export function CategoriesScreen({ navigation }: any) {
 
       {/* Modal de criar categoria */}
       <Modal visible={showModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowModal(false)}
-        >
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowModal(false)}
+          />
           <Animated.View
             entering={SlideInDown.duration(300)}
             style={[styles.sheet, {
@@ -157,9 +146,12 @@ export function CategoriesScreen({ navigation }: any) {
               padding: spacing.xl,
             }]}
           >
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Nova categoria
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
+                Nova categoria
+              </Text>
+              <CloseButton onPress={() => setShowModal(false)} />
+            </View>
 
             {/* Preview */}
             <View style={[styles.preview, {
@@ -259,7 +251,7 @@ export function CategoriesScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

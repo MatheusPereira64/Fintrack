@@ -1,15 +1,13 @@
 import React, { memo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withSpring, withTiming, FadeInDown,
 } from 'react-native-reanimated';
 import { useTheme }     from '../../../hooks/useTheme';
+import { Icon }         from '../../../components/Icon';
 import { AnimatedNumber } from '../../../components/AnimatedNumber';
-import { formatCurrency } from '../../../utils/currency';
-import { formatMonthYear, subtractMonths, addMonths } from '../../../utils/date';
-
-const { width } = Dimensions.get('window');
+import { formatMonthYear } from '../../../utils/date';
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -52,24 +50,21 @@ export const BalanceCard = memo(function BalanceCard({
           padding:          spacing.xl,
         },
       ]}>
-        {/* Decoração de fundo */}
         <View style={[styles.circle1, { borderColor: 'rgba(255,255,255,0.1)' }]} />
         <View style={[styles.circle2, { borderColor: 'rgba(255,255,255,0.07)' }]} />
 
-        {/* Seletor de mês */}
         <View style={styles.monthRow}>
           <TouchableOpacity onPress={onPrevMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={styles.arrow}>‹</Text>
+            <Icon name="back" size={22} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
           <Text style={[typography.styles.labelLarge, styles.monthText]}>
             {formatMonthYear(currentDate)}
           </Text>
           <TouchableOpacity onPress={onNextMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={styles.arrow}>›</Text>
+            <Icon name="forward" size={22} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
         </View>
 
-        {/* Saldo total em contas */}
         <Text style={[typography.styles.labelMedium, styles.label]}>
           Patrimônio total
         </Text>
@@ -79,25 +74,27 @@ export const BalanceCard = memo(function BalanceCard({
           duration={600}
         />
 
-        {/* Divider */}
         <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
 
-        {/* Receita / Despesa / Saldo */}
         <View style={styles.metricsRow}>
           <View style={styles.metric}>
-            <Text style={styles.metricIcon}>📥</Text>
+            <Icon name="income" size={18} color="#86EFAC" />
             <AnimatedNumber value={income} style={[typography.styles.titleSmall, styles.incomeText]} duration={700} />
             <Text style={styles.metricLabel}>Receitas</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
           <View style={styles.metric}>
-            <Text style={styles.metricIcon}>📤</Text>
+            <Icon name="expense" size={18} color="#FCA5A5" />
             <AnimatedNumber value={expense} style={[typography.styles.titleSmall, styles.expenseText]} duration={700} />
             <Text style={styles.metricLabel}>Despesas</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
           <View style={styles.metric}>
-            <Text style={styles.metricIcon}>{isPositive ? '📈' : '📉'}</Text>
+            <Icon
+              name={isPositive ? 'trending-up' : 'trending-down'}
+              size={18}
+              color={isPositive ? '#86EFAC' : '#FCA5A5'}
+            />
             <AnimatedNumber
               value={Math.abs(balance)}
               style={[typography.styles.titleSmall, isPositive ? styles.incomeText : styles.expenseText]}
@@ -107,7 +104,6 @@ export const BalanceCard = memo(function BalanceCard({
           </View>
         </View>
 
-        {/* Contador de transações */}
         <View style={[styles.countBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
           <Text style={styles.countText}>
             {count} transaç{count === 1 ? 'ão' : 'ões'} no mês
@@ -141,14 +137,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 16, marginBottom: 8,
   },
-  arrow:       { color: 'rgba(255,255,255,0.8)', fontSize: 24, fontWeight: '300' },
   monthText:   { color: 'rgba(255,255,255,0.9)' },
   label:       { color: 'rgba(255,255,255,0.7)', marginBottom: 4 },
   totalBalance: { color: '#FFFFFF', marginBottom: 16 },
   divider:     { height: 1, marginBottom: 16 },
   metricsRow:  { flexDirection: 'row', alignItems: 'center' },
-  metric:      { flex: 1, alignItems: 'center', gap: 2 },
-  metricIcon:  { fontSize: 16 },
+  metric:      { flex: 1, alignItems: 'center', gap: 4 },
   metricDivider: { width: 1, height: 40 },
   metricLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 },
   incomeText:  { color: '#86EFAC' },

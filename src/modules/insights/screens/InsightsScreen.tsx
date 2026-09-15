@@ -1,13 +1,16 @@
-﻿import React, { useEffect, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
-import { InsightService }      from '../../../services/InsightService';
-import { Insight }             from '../../../models/types';
-import { formatDate }          from '../../../utils/date';
+import { Icon, AppIconName } from '../../../components/Icon';
+import { AppHeader } from '../../../components/AppHeader';
+import { InsightService } from '../../../services/InsightService';
+import { Insight } from '../../../models/types';
+import { formatDate } from '../../../utils/date';
+import { FinanceSnapshotCard } from '../../dashboard/components/FinanceSnapshotCard';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 const SEVERITY_COLORS: Record<string, string> = {
   info:     '#3B82F6',
@@ -15,59 +18,77 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: '#EF4444',
 };
 
-const SEVERITY_ICONS: Record<string, string> = {
-  info:     'ℹ️',
-  warning:  '⚠️',
-  critical: '🚨',
+const SEVERITY_ICONS: Record<string, AppIconName> = {
+  info:     'info',
+  warning:  'warning',
+  critical: 'error',
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  info:     'Dica',
+  warning:  'Atenção',
+  critical: 'Urgente',
 };
 
 export function InsightsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading]   = useState(true);
+  const [snapKey, setSnapKey]   = useState(0);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const generated = await InsightService.generateAndSave();
-        if (active) setInsights(generated);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const generated = await InsightService.generateAndSave();
+      setInsights(generated);
+      setSnapKey(k => k + 1);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
+      <AppHeader title="Insights" onClose={() => navigation.goBack()} />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary }}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.titleLarge, { color: colors.text }]}>Insights</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
+        <FinanceSnapshotCard refreshKey={snapKey} />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}>
-        {loading ? (
+        <Text style={[typography.styles.titleSmall, {
+          color: colors.text,
+          marginTop: spacing.xl,
+          marginBottom: spacing.md,
+        }]}>
+          Sugestões
+        </Text>
+
+        {loading && insights.length === 0 ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : insights.length === 0 ? (
-          <View style={[styles.empty, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl }]}>
-            <Text style={{ fontSize: 40, textAlign: 'center' }}>📊</Text>
+          <View style={[styles.empty, {
+            backgroundColor: colors.surfaceVariant,
+            borderRadius: borderRadius.xl,
+            padding: spacing.xl,
+          }]}>
+            <Icon name="chart-bar" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
               Sem insights ainda
             </Text>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-              Os insights aparecem conforme suas transações são registradas.
+              Registre transações e atualize o saldo das contas para receber médias, projeções e sugestões.
             </Text>
           </View>
         ) : insights.map((insight, idx) => {
           const badgeColor = SEVERITY_COLORS[insight.severity] ?? colors.primary;
-          const icon       = SEVERITY_ICONS[insight.severity] ?? 'ℹ️';
+          const icon       = SEVERITY_ICONS[insight.severity] ?? 'info';
 
           return (
             <View key={idx} style={[{
@@ -80,7 +101,9 @@ export function InsightsScreen({ navigation }: any) {
               ...shadows.sm,
             }]}>
               <View style={styles.insightHeader}>
-                <Text style={{ fontSize: 20 }}>{icon}</Text>
+                <View style={[styles.iconBox, { backgroundColor: `${badgeColor}18` }]}>
+                  <Icon name={icon} size={18} color={badgeColor} />
+                </View>
                 <View style={{ flex: 1, marginLeft: spacing.sm }}>
                   <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
                     {insight.title}
@@ -94,7 +117,7 @@ export function InsightsScreen({ navigation }: any) {
                     marginTop: 4,
                   }]}>
                     <Text style={[typography.styles.caption, { color: badgeColor }]}>
-                      {insight.severity}
+                      {SEVERITY_LABELS[insight.severity] ?? insight.severity}
                     </Text>
                   </View>
                 </View>
@@ -115,7 +138,7 @@ export function InsightsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   empty: { alignItems: 'center' },
   insightHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });

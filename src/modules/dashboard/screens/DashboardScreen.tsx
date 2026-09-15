@@ -17,7 +17,9 @@ import { InsightService }       from '../../../services/InsightService';
 import { BalanceCard }    from '../components/BalanceCard';
 import { SpendingChart }  from '../components/SpendingChart';
 import { CategoryChart }  from '../components/CategoryChart';
+import { FinanceSnapshotCard } from '../components/FinanceSnapshotCard';
 import { TransactionItem } from '../../../components/TransactionItem';
+import { Icon } from '../../../components/Icon';
 
 import { subtractMonths, addMonths } from '../../../utils/date';
 import { formatCurrency }           from '../../../utils/currency';
@@ -37,6 +39,7 @@ export function DashboardScreen({ navigation }: any) {
 
   const [insights, setInsights] = useState<any[]>([]);
   const [toast, setToast]       = useState<{ message: string; amount: number } | null>(null);
+  const [snapKey, setSnapKey]   = useState(0);
 
   const currentDate = useMemo(
     () => new Date(currentMonth.year, currentMonth.month - 1, 1),
@@ -66,6 +69,7 @@ export function DashboardScreen({ navigation }: any) {
       ]);
       const generated = await InsightService.generateAndSave();
       setInsights(generated.slice(0, 3));
+      setSnapKey(k => k + 1);
     };
     init();
   }, []);
@@ -79,6 +83,7 @@ export function DashboardScreen({ navigation }: any) {
     await syncSpent(currentMonth.year, currentMonth.month);
     const generated = await InsightService.generateAndSave();
     setInsights(generated.slice(0, 3));
+    setSnapKey(k => k + 1);
   }, [currentMonth]);
 
   // ── Navegação de mês ───────────────────────────────────────────────────────
@@ -124,7 +129,7 @@ export function DashboardScreen({ navigation }: any) {
             },
           ]}
         >
-          <Text style={{ fontSize: 16 }}>🤖</Text>
+          <Icon name="auto" size={20} color="#FFF" />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text style={[typography.styles.labelLarge, { color: '#FFF' }]}>
               Transação registrada
@@ -155,13 +160,12 @@ export function DashboardScreen({ navigation }: any) {
         <View style={[styles.greeting, { paddingHorizontal: spacing.base, marginBottom: spacing.md }]}>
           <View>
             <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary }]}>
-              {settings.userName ? `Olá, ${settings.userName} 👋` : 'Olá 👋'}
+              {settings.userName ? `Olá, ${settings.userName}` : 'Olá'}
             </Text>
             <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
               Resumo financeiro
             </Text>
           </View>
-          {/* Badge de monitoramento */}
           <TouchableOpacity
             style={[
               styles.monitorBadge,
@@ -174,9 +178,11 @@ export function DashboardScreen({ navigation }: any) {
               },
             ]}
           >
-            <Text style={{ fontSize: 10 }}>
-              {settings.notificationPermissionGranted ? '🟢' : '🟡'}
-            </Text>
+            <Icon
+              name="bell"
+              size={12}
+              color={settings.notificationPermissionGranted ? colors.success : colors.warning}
+            />
             <Text style={[
               typography.styles.caption,
               { color: settings.notificationPermissionGranted ? colors.success : colors.warning, marginLeft: 4 },
@@ -186,7 +192,6 @@ export function DashboardScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Card de saldo principal */}
         <BalanceCard
           totalBalance={totalBalance}
           income={summary.income}
@@ -197,7 +202,8 @@ export function DashboardScreen({ navigation }: any) {
           onNextMonth={goToNextMonth}
         />
 
-        {/* Gráfico de barras mensais */}
+        <FinanceSnapshotCard refreshKey={snapKey} />
+
         {monthlyTotals.length > 0 && (
           <View style={{ marginTop: spacing.xl }}>
             <SpendingChart data={monthlyTotals} />
@@ -214,9 +220,12 @@ export function DashboardScreen({ navigation }: any) {
         {/* Insights */}
         {insights.length > 0 && (
           <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl }}>
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.md }]}>
-              💡 Insights
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, gap: 8 }}>
+              <Icon name="insights" size={20} color={colors.primary} />
+              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+                Insights
+              </Text>
+            </View>
             {insights.map((insight, i) => (
               <Animated.View
                 key={i}
@@ -266,7 +275,7 @@ export function DashboardScreen({ navigation }: any) {
               styles.empty,
               { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl },
             ]}>
-              <Text style={{ fontSize: 40, textAlign: 'center' }}>🔔</Text>
+              <Icon name="bell" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
               <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
                 Nenhuma transação ainda
               </Text>
@@ -315,7 +324,7 @@ export function DashboardScreen({ navigation }: any) {
                     }]}
                   >
                     <View style={[{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: borderRadius.full, width: 36, height: 36, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm }]}>
-                      <Text style={{ fontSize: 18 }}>🏦</Text>
+                      <Icon name="bank" size={18} color="#FFF" />
                     </View>
                     <Text style={[typography.styles.labelSmall, { color: 'rgba(255,255,255,0.8)' }]}>
                       {acc.name}

@@ -7,13 +7,14 @@ import { useTheme }   from '../../../hooks/useTheme';
 import { AppHeader }  from '../../../components/AppHeader';
 import { AppButton }  from '../../../components/AppButton';
 import { Icon }       from '../../../components/Icon';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { getDatabase } from '../../../database/db';
 import { AppNotification } from '../../../models/types';
 import { formatDate }      from '../../../utils/date';
 
 export function NotificationsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const load = async () => {
@@ -53,14 +54,14 @@ export function NotificationsScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title="Notificações"
-        onBack={() => navigation.goBack()}
+        onClose={() => navigation.goBack()}
         actions={[{ icon: 'check-circle', onPress: markAllRead }]}
       />
 
       <FlatList
         data={notifications}
         keyExtractor={item => String(item.id)}
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
         ListEmptyComponent={
           <View style={[styles.empty, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl }]}>
             <Icon name="bell" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />

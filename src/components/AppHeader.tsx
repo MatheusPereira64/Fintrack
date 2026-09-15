@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';
 import { AppIconName } from './Icon';
 import { IconButton } from './AppButton';
+import { CloseButton } from './CloseButton';
 
 interface HeaderAction {
   icon:   AppIconName;
@@ -22,13 +23,15 @@ interface AppHeaderProps {
   title:       string;
   subtitle?:   string;
   onBack?:     () => void;
+  /** Fecha com X à direita (telas sobrepostas). */
+  onClose?:    () => void;
   actions?:    HeaderAction[];
   transparent?: boolean;
   right?:      React.ReactNode;
 }
 
 export const AppHeader = memo(function AppHeader({
-  title, subtitle, onBack, actions, transparent, right,
+  title, subtitle, onBack, onClose, actions, transparent, right,
 }: AppHeaderProps) {
   const { colors, spacing, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
@@ -57,8 +60,7 @@ export const AppHeader = memo(function AppHeader({
         ]}
       >
         <View style={styles.row}>
-          {/* Botão voltar */}
-          {onBack && (
+          {onBack && !onClose && (
             <IconButton
               name="back"
               onPress={onBack}
@@ -68,7 +70,6 @@ export const AppHeader = memo(function AppHeader({
             />
           )}
 
-          {/* Título */}
           <View style={styles.titleGroup}>
             <Text style={[typography.styles.titleLarge, { color: colors.text }]} numberOfLines={1}>
               {title}
@@ -80,7 +81,6 @@ export const AppHeader = memo(function AppHeader({
             ) : null}
           </View>
 
-          {/* Ações / Right slot */}
           <View style={styles.actions}>
             {right}
             {actions?.map((a, i) => (
@@ -93,6 +93,7 @@ export const AppHeader = memo(function AppHeader({
                 size={22}
               />
             ))}
+            {onClose && <CloseButton onPress={onClose} />}
           </View>
         </View>
       </View>
@@ -108,11 +109,13 @@ const styles = StyleSheet.create({
   },
   titleGroup: {
     flex:        1,
-    marginRight: 4,
+    marginRight: 8,
+    minWidth:    0,
   },
   actions: {
     flexDirection: 'row',
     alignItems:    'center',
     gap:           4,
+    flexShrink:    0,
   },
 });

@@ -1,10 +1,12 @@
 /**
- * InsightService — gera insights financeiros consultando o repositório diretamente
- * para acessar múltiplos meses (correção do bug original que só carregava 1 mês).
+ * InsightService — médias, projeções e sugestões de controle financeiro.
+ * Bancos não liberam saldo via API sem Open Finance; o app usa
+ * saldo informado + transações locais para orientar o usuário.
  */
 import { Insight, InsightType, NotificationSeverity } from '../models/types';
 import { TransactionRepository } from '../database/repositories/TransactionRepository';
 import { NotificationRepository } from '../database/repositories/NotificationRepository';
+import { formatCurrency } from '../utils/currency';
 
 function now(): { year: number; month: number } {
   const d = new Date();
@@ -14,6 +16,10 @@ function now(): { year: number; month: number } {
 function prevMonth(year: number, month: number): { year: number; month: number } {
   if (month === 1) return { year: year - 1, month: 12 };
   return { year, month: month - 1 };
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
 }
 
 function makeInsight(
@@ -31,27 +37,95 @@ function makeInsight(
     severity,
     metadata:    meta ? JSON.stringify(meta) : undefined,
     createdAt:   new Date().toISOString(),
-  } as any;
+  } as Insight;
+}
+
+export interface FinanceSnapshot {
+  avgIncome: number;
+  avgExpense: number;
+  avgBalance: number;
+  curIncome: number;
+  curExpense: number;
+  curBalance: number;
+  projectedExpense: number;
+  projectedBalance: number;
+  dayOfMonth: number;
+  daysTotal: number;
+  monthsSampled: number;
 }
 
 export const InsightService = {
 
-  /**
-   * Gera insights buscando dados diretamente no SQLite (não depende do store).
-   * Isso corrige o problema de ter apenas o mês atual carregado em memória.
-   */
+  /** Médias dos últimos N meses + projeção do mês atual (burn rate diário). */
+  async getFinanceSnapshot(months = 6): Promise<FinanceSnapshot> {
+    const cur = now();
+    const monthly = await TransactionRepository.monthlyTotals(months);
+    const past = monthly.filter(m => !(m.year === cur.year && m.month === cur.month));
+    const sample = past.length > 0 ? past : monthly;
+
+    const avgIncome  = sample.reduce((s, m) => s + m.income, 0) / Math.max(sample.length, 1);
+    const avgExpense = sample.reduce((s, m) => s + m.expense, 0) / Math.max(sample.length, 1);
+    const avgBalance = avgIncome - avgExpense;
+
+    const curSums = await TransactionRepository.sumByMonth(cur.year, cur.month);
+    const dayOfMonth = new Date().getDate();
+    const daysTotal  = daysInMonth(cur.year, cur.month);
+    const dailyBurn  = dayOfMonth > 0 ? curSums.expense / dayOfMonth : 0;
+    const projectedExpense = dailyBurn * daysTotal;
+    const projectedBalance = curSums.income - projectedExpense;
+
+    return {
+      avgIncome,
+      avgExpense,
+      avgBalance,
+      curIncome: curSums.income,
+      curExpense: curSums.expense,
+      curBalance: curSums.income - curSums.expense,
+      projectedExpense,
+      projectedBalance,
+      dayOfMonth,
+      daysTotal,
+      monthsSampled: sample.length,
+    };
+  },
+
   async generateAndSave(): Promise<Insight[]> {
     const insights: Insight[] = [];
     const cur  = now();
     const prev = prevMonth(cur.year, cur.month);
 
-    const [curSums, prevSums, catSpending, autoCount, monthlyTotals] = await Promise.all([
+    const [curSums, prevSums, catSpending, autoCount, snapshot] = await Promise.all([
       TransactionRepository.sumByMonth(cur.year, cur.month),
       TransactionRepository.sumByMonth(prev.year, prev.month),
       TransactionRepository.spendingByCategory(cur.year, cur.month),
       TransactionRepository.countByMonth(cur.year, cur.month),
-      TransactionRepository.monthlyTotals(6),
+      this.getFinanceSnapshot(6),
     ]);
+
+    // ── Médias ────────────────────────────────────────────────────────────────
+    if (snapshot.monthsSampled >= 2) {
+      insights.push(makeInsight(
+        'spending_pattern',
+        'Médias dos últimos meses',
+        `Receita média ${formatCurrency(snapshot.avgIncome)} · Despesa média ${formatCurrency(snapshot.avgExpense)} · Resultado médio ${formatCurrency(snapshot.avgBalance)}.`,
+        snapshot.avgBalance >= 0 ? 'info' : 'warning',
+        snapshot,
+      ));
+    }
+
+    // ── Projeção de lucro / prejuízo ──────────────────────────────────────────
+    if (snapshot.dayOfMonth >= 5 && snapshot.curExpense > 0) {
+      const profit = snapshot.projectedBalance >= 0;
+      insights.push(makeInsight(
+        profit ? 'savings_opportunity' : 'anomaly',
+        profit ? 'Projeção: mês no azul' : 'Projeção: risco de prejuízo',
+        profit
+          ? `No ritmo atual, o mês fecha com cerca de ${formatCurrency(snapshot.projectedBalance)} de sobra (despesa projetada ${formatCurrency(snapshot.projectedExpense)}).`
+          : `No ritmo atual, as despesas podem chegar a ${formatCurrency(snapshot.projectedExpense)} e o mês fechar com ${formatCurrency(Math.abs(snapshot.projectedBalance))} no vermelho.`,
+        profit ? 'info' : 'warning',
+        { projectedBalance: snapshot.projectedBalance, projectedExpense: snapshot.projectedExpense },
+      ));
+    }
 
     // ── Comparação mês a mês ───────────────────────────────────────────────────
     if (prevSums.expense > 0) {
@@ -59,10 +133,10 @@ export const InsightService = {
       if (Math.abs(change) > 15) {
         insights.push(makeInsight(
           change > 0 ? 'anomaly' : 'savings_opportunity',
-          change > 0 ? '📈 Gastos aumentaram' : '📉 Ótimo controle!',
+          change > 0 ? 'Gastos aumentaram' : 'Ótimo controle de gastos',
           change > 0
-            ? `Seus gastos aumentaram ${Math.abs(change).toFixed(0)}% em relação ao mês passado (R$ ${prevSums.expense.toFixed(2)} → R$ ${curSums.expense.toFixed(2)}).`
-            : `Seus gastos reduziram ${Math.abs(change).toFixed(0)}% em relação ao mês passado. Continue assim!`,
+            ? `Despesas subiram ${Math.abs(change).toFixed(0)}% vs. mês passado (${formatCurrency(prevSums.expense)} → ${formatCurrency(curSums.expense)}). Revise categorias e atualize saldos nas contas.`
+            : `Despesas caíram ${Math.abs(change).toFixed(0)}% vs. mês passado. Mantenha o hábito de registrar e atualizar saldos.`,
           change > 0 ? 'warning' : 'info',
           { change, curExpense: curSums.expense, prevExpense: prevSums.expense },
         ));
@@ -73,25 +147,37 @@ export const InsightService = {
     if (catSpending.length > 0) {
       const totalExpense = catSpending.reduce((s, c) => s + c.total, 0);
       const top = catSpending[0];
-      const pct = (top.total / totalExpense) * 100;
+      const pct = totalExpense > 0 ? (top.total / totalExpense) * 100 : 0;
 
       if (pct > 35) {
         insights.push(makeInsight(
           'spending_pattern',
-          `${top.icon} ${top.name} domina seus gastos`,
-          `${top.name} representa ${pct.toFixed(0)}% das suas despesas este mês.`,
+          `${top.name} concentra seus gastos`,
+          `${top.name} representa ${pct.toFixed(0)}% das despesas (${formatCurrency(top.total)}). Considere um teto mensal nessa categoria.`,
           pct > 60 ? 'warning' : 'info',
           { categoryId: top.categoryId, amount: top.total, percentage: pct },
         ));
       }
     }
 
+    // ── Acima da média de despesa ──────────────────────────────────────────────
+    if (snapshot.avgExpense > 0 && curSums.expense > snapshot.avgExpense * 1.2) {
+      const over = curSums.expense - snapshot.avgExpense;
+      insights.push(makeInsight(
+        'anomaly',
+        'Despesas acima da média',
+        `Você já gastou ${formatCurrency(over)} a mais que a média dos últimos meses. Atualize o saldo das contas e revise o orçamento.`,
+        'warning',
+        { over, avgExpense: snapshot.avgExpense, curExpense: curSums.expense },
+      ));
+    }
+
     // ── Sem receitas no mês ────────────────────────────────────────────────────
     if (curSums.income === 0 && curSums.expense > 0) {
       insights.push(makeInsight(
         'anomaly',
-        '💰 Nenhuma receita registrada',
-        'Você tem despesas este mês, mas nenhuma receita foi registrada.',
+        'Nenhuma receita registrada',
+        'Há despesas neste mês, mas nenhuma receita. Cadastre o salário ou Pix recebidos para o FinTrack projetar o resultado corretamente.',
         'warning',
       ));
     }
@@ -101,8 +187,8 @@ export const InsightService = {
     if (balance < 0) {
       insights.push(makeInsight(
         'anomaly',
-        '🚨 Saldo negativo no mês',
-        `Suas despesas (R$ ${curSums.expense.toFixed(2)}) superaram suas receitas (R$ ${curSums.income.toFixed(2)}) em R$ ${Math.abs(balance).toFixed(2)}.`,
+        'Mês no vermelho até agora',
+        `Despesas (${formatCurrency(curSums.expense)}) superam receitas (${formatCurrency(curSums.income)}) em ${formatCurrency(Math.abs(balance))}.`,
         'critical',
         { balance, income: curSums.income, expense: curSums.expense },
       ));
@@ -115,15 +201,14 @@ export const InsightService = {
       if (autoTxs.length > 0) {
         insights.push(makeInsight(
           'spending_pattern',
-          `🤖 ${autoTxs.length} transações monitoradas`,
-          `O FinTrack registrou automaticamente ${autoTxs.length} transação${autoTxs.length > 1 ? 'ões' : ''} via notificações bancárias este mês.`,
+          `${autoTxs.length} movimentações via notificação`,
+          `O FinTrack registrou ${autoTxs.length} transação${autoTxs.length > 1 ? 'ões' : ''} automaticamente. Confira se os valores batem com o app do banco.`,
           'info',
           { count: autoTxs.length },
         ));
       }
     }
 
-    // ── Persiste notificações para os insights críticos ────────────────────────
     for (const insight of insights) {
       if (insight.severity === 'critical' || insight.severity === 'warning') {
         await NotificationRepository.insert({
@@ -137,7 +222,6 @@ export const InsightService = {
     return insights;
   },
 
-  /** Versão síncrona (in-memory) para usar quando os dados já estão no store */
   generateSync(
     transactions: Array<{ date: string; amount: number; categoryId?: number; sourceNotification?: string }>,
     categories:   Array<{ id: number; name: string; icon?: string; color: string }>,
@@ -158,17 +242,17 @@ export const InsightService = {
       if (Math.abs(change) > 15) {
         insights.push(makeInsight(
           change > 0 ? 'anomaly' : 'savings_opportunity',
-          change > 0 ? '📈 Gastos aumentaram' : '📉 Ótimo controle!',
+          change > 0 ? 'Gastos aumentaram' : 'Ótimo controle de gastos',
           change > 0
             ? `Gastos aumentaram ${Math.abs(change).toFixed(0)}% vs. mês passado.`
-            : `Gastos reduziram ${Math.abs(change).toFixed(0)}% vs. mês passado!`,
+            : `Gastos reduziram ${Math.abs(change).toFixed(0)}% vs. mês passado.`,
           change > 0 ? 'warning' : 'info',
         ));
       }
     }
 
     if (curIncome === 0 && curExpenses > 0) {
-      insights.push(makeInsight('anomaly', '💰 Sem receitas no mês', 'Nenhuma receita registrada este mês.', 'warning'));
+      insights.push(makeInsight('anomaly', 'Sem receitas no mês', 'Nenhuma receita registrada este mês.', 'warning'));
     }
 
     const catMap = new Map(categories.map(c => [c.id, c]));
@@ -188,7 +272,7 @@ export const InsightService = {
         const cat = catMap.get(topId);
         insights.push(makeInsight(
           'spending_pattern',
-          `${cat?.icon ?? ''} ${cat?.name ?? 'Sem categoria'} domina gastos`,
+          `${cat?.name ?? 'Sem categoria'} concentra gastos`,
           `${cat?.name ?? 'Sem categoria'} representa ${pct.toFixed(0)}% das despesas.`,
           'info',
         ));

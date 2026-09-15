@@ -27,8 +27,7 @@ export type TransactionStackParamList = {
 // ─── Stack de Contas ──────────────────────────────────────────────────────────
 export type AccountStackParamList = {
   AccountsList:  undefined;
-  AccountDetail: { accountId: number };
-  AddAccount:    undefined;
+  AccountPlan:   { accountId: number };
 };
 
 // ─── Stack "Mais" ─────────────────────────────────────────────────────────────

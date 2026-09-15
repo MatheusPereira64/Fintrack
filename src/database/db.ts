@@ -40,6 +40,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
   if (current < 1) { await migration001(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (1)'); }
   if (current < 2) { await migration002(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (2)'); }
   if (current < 3) { await migration003(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (3)'); }
+  if (current < 4) { await migration004(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (4)'); }
 }
 
 // ─── Migration 001 — Schema inicial ───────────────────────────────────────────
@@ -231,4 +232,14 @@ async function migration003(db: SQLiteDatabase): Promise<void> {
     // coluna já existe
   }
   await db.executeSql(`UPDATE accounts SET informed_balance = balance WHERE informed_balance IS NULL`);
+}
+
+// ─── Migration 004 — Rendimento mensal (poupança / investimentos) ────────────
+
+async function migration004(db: SQLiteDatabase): Promise<void> {
+  try {
+    await db.executeSql(`ALTER TABLE accounts ADD COLUMN monthly_yield_rate REAL`);
+  } catch {
+    // coluna já existe
+  }
 }

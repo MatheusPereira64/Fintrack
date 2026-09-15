@@ -5,8 +5,13 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Base64;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
@@ -16,6 +21,8 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
+import java.io.ByteArrayOutputStream;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -23,14 +30,15 @@ import javax.annotation.Nonnull;
  * - Verificar se a permissão de notificações está ativa
  * - Abrir as configurações de acesso a notificações
  * - Registrar o ReactContext no serviço de listener
+ * - Listar apps bancários instalados (com ícone)
  */
 public class NotificationModule extends ReactContextBaseJavaModule {
 
     private static final String MODULE_NAME = "NotificationModule";
+    private static final int ICON_SIZE_PX = 96;
 
     public NotificationModule(ReactApplicationContext context) {
         super(context);
-        // Registra o contexto para o serviço poder emitir eventos
         FinTrackNotificationService.setReactContext(context);
     }
 
@@ -40,10 +48,6 @@ public class NotificationModule extends ReactContextBaseJavaModule {
         return MODULE_NAME;
     }
 
-    /**
-     * Verifica se o app tem permissão para acessar notificações.
-     * A permissão é concedida via Configurações → Acesso a Notificações.
-     */
     @ReactMethod
     public void hasNotificationPermission(Promise promise) {
         try {
@@ -59,10 +63,6 @@ public class NotificationModule extends ReactContextBaseJavaModule {
         }
     }
 
-    /**
-     * Abre a tela de configurações do Android para o usuário
-     * conceder permissão de acesso a notificações.
-     */
     @ReactMethod
     public void openNotificationSettings(Promise promise) {
         try {
@@ -81,10 +81,6 @@ public class NotificationModule extends ReactContextBaseJavaModule {
         }
     }
 
-    /**
-     * Tenta iniciar o serviço de listener manualmente (para casos onde
-     * o serviço não inicia automaticamente após concessão de permissão).
-     */
     @ReactMethod
     public void requestListenerBind(Promise promise) {
         try {
@@ -99,7 +95,8 @@ public class NotificationModule extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Retorna apps bancários instalados cujo packageName está na lista monitorada.
+     * Retorna apps bancários instalados, incluindo ícone do launcher em Base64 PNG.
+     * No Android 11+ usa verificação por package (com &lt;queries&gt; no Manifest).
      */
     @ReactMethod
     public void getInstalledBankApps(Promise promise) {
@@ -108,19 +105,71 @@ public class NotificationModule extends ReactContextBaseJavaModule {
             PackageManager pm = context.getPackageManager();
             WritableArray result = Arguments.createArray();
 
-            for (ApplicationInfo info : pm.getInstalledApplications(PackageManager.GET_META_DATA)) {
-                String pkg = info.packageName;
-                if (!FinTrackNotificationService.BANK_PACKAGES.contains(pkg)) {
-                    continue;
+            for (String pkg : BankPackages.ALL) {
+                try {
+                    ApplicationInfo info;
+                    if (android.os.Build.VERSION.SDK_INT >= 33) {
+                        info = pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0));
+                    } else {
+                        info = pm.getApplicationInfo(pkg, 0);
+                    }
+                    if (info == null) continue;
+
+                    WritableMap map = Arguments.createMap();
+                    map.putString("packageName", pkg);
+                    CharSequence label = pm.getApplicationLabel(info);
+                    map.putString("label", label != null ? label.toString() : pkg);
+
+                    try {
+                        Drawable icon = pm.getApplicationIcon(info);
+                        String base64 = drawableToPngBase64(icon, ICON_SIZE_PX);
+                        if (base64 != null) {
+                            map.putString("iconBase64", base64);
+                        }
+                    } catch (Exception ignored) {
+                        // Ícone indisponível — JS usa fallback
+                    }
+
+                    result.pushMap(map);
+                } catch (PackageManager.NameNotFoundException ignored) {
+                    // App não instalado
                 }
-                WritableMap map = Arguments.createMap();
-                map.putString("packageName", pkg);
-                map.putString("label", pm.getApplicationLabel(info).toString());
-                result.pushMap(map);
             }
             promise.resolve(result);
         } catch (Exception e) {
             promise.reject("ERROR", e.getMessage());
         }
+    }
+
+    private static String drawableToPngBase64(Drawable drawable, int sizePx) {
+        if (drawable == null) return null;
+
+        Bitmap bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        if (drawable instanceof BitmapDrawable) {
+            Bitmap src = ((BitmapDrawable) drawable).getBitmap();
+            if (src != null && !src.isRecycled()) {
+                Bitmap scaled = Bitmap.createScaledBitmap(src, sizePx, sizePx, true);
+                canvas.drawBitmap(scaled, 0, 0, null);
+                if (scaled != src) {
+                    scaled.recycle();
+                }
+            } else {
+                drawable.setBounds(0, 0, sizePx, sizePx);
+                drawable.draw(canvas);
+            }
+        } else {
+            drawable.setBounds(0, 0, sizePx, sizePx);
+            drawable.draw(canvas);
+        }
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        boolean ok = bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream);
+        bitmap.recycle();
+        if (!ok) return null;
+        byte[] bytes = stream.toByteArray();
+        if (bytes.length == 0) return null;
+        return Base64.encodeToString(bytes, Base64.NO_WRAP);
     }
 }

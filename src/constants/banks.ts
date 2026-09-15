@@ -10,7 +10,7 @@ export const BANKS: BankInfo[] = [
   {
     id: 'nubank',
     name: 'Nubank',
-    packageNames: ['com.nubank.nubank'],
+    packageNames: ['com.nu.production', 'com.nubank.nubank'],
     primaryColor: '#820AD1',
     logoEmoji: '💜',
   },
@@ -38,7 +38,7 @@ export const BANKS: BankInfo[] = [
   {
     id: 'bb',
     name: 'Banco do Brasil',
-    packageNames: ['com.bb.android'],
+    packageNames: ['com.bb.android', 'br.com.bb.android'],
     primaryColor: '#FFD700',
     logoEmoji: '💛',
   },
@@ -52,14 +52,14 @@ export const BANKS: BankInfo[] = [
   {
     id: 'c6bank',
     name: 'C6 Bank',
-    packageNames: ['br.com.c6bank.app'],
+    packageNames: ['br.com.c6bank.app', 'com.c6bank.app'],
     primaryColor: '#1C1C1C',
     logoEmoji: '⚫',
   },
   {
     id: 'caixa',
     name: 'Caixa Econômica',
-    packageNames: ['br.gov.caixa.internet.smartphones'],
+    packageNames: ['br.gov.caixa.internet.smartphones', 'br.gov.caixa.internet', 'br.com.gabba.Caixa'],
     primaryColor: '#006FB4',
     logoEmoji: '🔷',
   },

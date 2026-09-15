@@ -1,10 +1,55 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Permissão declarativa para o NotificationListenerService -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-        tools:ignore="ProtectedPermissions"
-        xmlns:tools="http://schemas.android.com/tools"/>
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+      Android 11+ (API 30): sem <queries>, o app NÃO enxerga outros pacotes.
+      Lista explícita dos bancos para detecção e monitoramento de notificações.
+    -->
+    <queries>
+        <package android:name="com.nu.production" />
+        <package android:name="com.nubank.nubank" />
+        <package android:name="br.com.intermedium" />
+        <package android:name="com.bancointer.banking" />
+        <package android:name="com.itau" />
+        <package android:name="com.itau.pf.android" />
+        <package android:name="com.itau.empresas" />
+        <package android:name="br.com.itau" />
+        <package android:name="br.com.itau.personnalite" />
+        <package android:name="com.bradesco" />
+        <package android:name="com.bradesco.prime" />
+        <package android:name="br.com.bradesco" />
+        <package android:name="br.com.bradesco.next" />
+        <package android:name="com.bb.android" />
+        <package android:name="br.com.bb.android" />
+        <package android:name="com.santander.app" />
+        <package android:name="com.santander.way" />
+        <package android:name="br.com.c6bank.app" />
+        <package android:name="com.c6bank.app" />
+        <package android:name="br.gov.caixa.internet.smartphones" />
+        <package android:name="br.gov.caixa.internet" />
+        <package android:name="br.com.gabba.Caixa" />
+        <package android:name="com.mercadopago.wallet" />
+        <package android:name="com.picpay" />
+        <package android:name="br.com.original.bank" />
+        <package android:name="br.com.uol.ps.myaccount" />
+        <package android:name="br.com.neon.app" />
+        <package android:name="com.neon.bank.android.prd" />
+        <package android:name="com.willbank" />
+        <package android:name="br.com.willbank" />
+        <package android:name="br.com.sicoob.sisbr" />
+        <package android:name="br.com.sicoob.mobile" />
+        <package android:name="br.com.sicredi.mobile" />
+        <package android:name="com.xpi.app" />
+        <package android:name="br.com.meliuz" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+    </queries>
 
     <application
       android:name=".MainApplication"
@@ -29,7 +74,16 @@
         </intent-filter>
       </activity>
 
-      <!-- Serviço de monitoramento de notificações bancárias -->
+      <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.fileprovider"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/file_paths" />
+      </provider>
+
       <service
         android:name=".notification.FinTrackNotificationService"
         android:label="FinTrack Monitor"

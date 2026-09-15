@@ -1,9 +1,7 @@
 /**
  * Serviço central de parsing de notificações bancárias.
- * Recebe dados brutos do NotificationListenerService nativo,
- * identifica o banco, extrai a transação e persiste no SQLite.
  */
-import { getBankConfig, isKnownBank } from './BankRegistry';
+import { getBankConfig, isKnownBank, normalizeBankName } from './BankRegistry';
 import { GenericBankParser } from '../parsers/GenericBankParser';
 import { ParsedTransaction } from '../../../models/types';
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
@@ -27,6 +25,36 @@ export interface ParseResult {
   ignored?: boolean;
 }
 
+function resolveAccount(
+  accounts: Awaited<ReturnType<typeof AccountRepository.findAll>>,
+  parsed: ParsedTransaction,
+  packageName: string,
+) {
+  const bankFromPkg = getBankConfig(packageName)?.name;
+  const targets = [parsed.bankName, bankFromPkg].filter(Boolean) as string[];
+
+  for (const target of targets) {
+    const norm = normalizeBankName(target);
+    const match = accounts.find(a => {
+      if (!a.bankName && !a.name) return false;
+      const byBank = a.bankName ? normalizeBankName(a.bankName) : '';
+      const byName = normalizeBankName(a.name);
+      return (
+        byBank === norm
+        || byName === norm
+        || (byBank && (byBank.includes(norm) || norm.includes(byBank)))
+        || byName.includes(norm)
+        || a.bankName?.toLowerCase().includes(target.toLowerCase())
+      );
+    });
+    if (match) return match;
+  }
+
+  const withBank = accounts.filter(a => a.bankName);
+  if (withBank.length === 1) return withBank[0];
+  return accounts[0];
+}
+
 export async function processNotification(raw: RawNotification): Promise<ParseResult> {
   if (!isKnownBank(raw.packageName)) {
     return { success: false, ignored: true };
@@ -47,21 +75,14 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
   }
 
   try {
-    // Encontra ou usa a primeira conta disponível
     const accounts = await AccountRepository.findAll();
     if (accounts.length === 0) {
       return { success: false, error: 'Nenhuma conta cadastrada' };
     }
 
-    // Tenta encontrar conta pelo nome do banco
-    const account = accounts.find(a =>
-      a.bankName?.toLowerCase().includes(parsed.bankName.toLowerCase()),
-    ) ?? accounts[0];
-
-    // Encontra categoria pelo nome
+    const account = resolveAccount(accounts, parsed, raw.packageName);
     const category = await CategoryRepository.findByName(parsed.category);
     const categoryId = category?.id;
-
     const date = new Date(raw.timestamp).toISOString().slice(0, 10);
 
     const inserted = await TransactionRepository.insert({

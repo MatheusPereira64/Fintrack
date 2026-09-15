@@ -12,12 +12,15 @@ export interface DetectedBank {
   primaryColor: string;
   packageName:  string;
   appLabel:     string;
+  /** data URI do ícone do app instalado (PNG Base64), quando disponível */
+  iconUri?:     string;
   alreadyRegistered: boolean;
 }
 
 interface NativeBankApp {
   packageName: string;
   label:       string;
+  iconBase64?: string;
 }
 
 function isAccountForBank(account: Account, bankName: string): boolean {
@@ -27,7 +30,16 @@ function isAccountForBank(account: Account, bankName: string): boolean {
     || bankName.toLowerCase().includes(account.bankName.toLowerCase());
 }
 
-/** Detecta bancos instalados no dispositivo que o FinTrack reconhece. */
+function toIconUri(base64?: string): string | undefined {
+  if (!base64) return undefined;
+  return `data:image/png;base64,${base64}`;
+}
+
+/**
+ * Detecta bancos instalados no dispositivo que o FinTrack reconhece.
+ * Inclui o ícone real do app via PackageManager (Android).
+ * Não há API pública de saldo nos apps — o usuário informa o valor manualmente.
+ */
 export async function detectInstalledBanks(
   existingAccounts: Account[] = [],
 ): Promise<DetectedBank[]> {
@@ -36,13 +48,11 @@ export async function detectInstalledBanks(
   }
 
   const installed: NativeBankApp[] = await NotificationModule.getInstalledBankApps();
-  const uniqueBanks = getUniqueBanks();
   const detected = new Map<string, DetectedBank>();
 
   for (const app of installed) {
     const config = BANK_REGISTRY[app.packageName];
     if (!config) continue;
-
     if (detected.has(config.name)) continue;
 
     detected.set(config.name, {
@@ -50,6 +60,7 @@ export async function detectInstalledBanks(
       primaryColor:      config.primaryColor,
       packageName:       app.packageName,
       appLabel:          app.label,
+      iconUri:           toIconUri(app.iconBase64),
       alreadyRegistered: existingAccounts.some(a => isAccountForBank(a, config.name)),
     });
   }

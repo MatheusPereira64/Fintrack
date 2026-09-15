@@ -27,7 +27,12 @@ export type AppIconName =
   | 'download' | 'upload' | 'file' | 'export' | 'import'
   | 'goal' | 'budget' | 'insights' | 'auto' | 'category'
   | 'check-circle' | 'dots-vertical' | 'repeat' | 'currency'
-  | 'bank' | 'credit-card' | 'qr-code' | 'notification-dot';
+  | 'bank' | 'credit-card' | 'qr-code' | 'notification-dot'
+  // Categorias / UI clean
+  | 'food' | 'transport' | 'bill' | 'health' | 'education'
+  | 'entertainment' | 'shopping' | 'user' | 'palette' | 'language'
+  | 'shield' | 'phone' | 'trash' | 'moon' | 'sun' | 'monitor'
+  | 'plane' | 'car' | 'ring' | 'laptop' | 'home-city';
 
 const MAP: Record<AppIconName, string> = {
   // Navegação
@@ -105,6 +110,27 @@ const MAP: Record<AppIconName, string> = {
   bank:                'bank-outline',
   'qr-code':           'qrcode',
   'notification-dot':  'record-circle',
+  food:                'food-outline',
+  transport:           'car-outline',
+  bill:                'lightning-bolt-outline',
+  health:              'medical-bag',
+  education:           'school-outline',
+  entertainment:       'gamepad-variant-outline',
+  shopping:            'shopping-outline',
+  user:                'account-outline',
+  palette:             'palette-outline',
+  language:            'translate',
+  shield:              'shield-check-outline',
+  phone:               'cellphone',
+  trash:               'trash-can-outline',
+  moon:                'moon-waning-crescent',
+  sun:                 'white-balance-sunny',
+  monitor:             'monitor',
+  plane:               'airplane',
+  car:                 'car-outline',
+  ring:                'ring',
+  laptop:              'laptop',
+  'home-city':         'home-city-outline',
 };
 
 interface IconProps {

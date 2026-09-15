@@ -9,6 +9,8 @@ export interface Account {
   type: AccountType;
   balance: number;
   informedBalance?: number;
+  /** Taxa de rendimento mensal em % a.m. (ex.: 0.5 = 0,5%). Usado em poupança/investimentos. */
+  monthlyYieldRate?: number | null;
   limit?: number;
   color: string;
   bankName?: string;
@@ -21,6 +23,7 @@ export interface InsertAccount {
   type: AccountType;
   balance: number;
   informedBalance?: number;
+  monthlyYieldRate?: number | null;
   limit?: number;
   color: string;
   bankName?: string;
@@ -189,7 +192,17 @@ export interface InsertUpcomingPayment {
 
 // ─── Metas ─────────────────────────────────────────────────────────────────────
 
-export type GoalCategory = 'emergency' | 'travel' | 'purchase' | 'custom' | 'education' | 'health';
+export type GoalCategory =
+  | 'emergency'
+  | 'travel'
+  | 'purchase'
+  | 'custom'
+  | 'education'
+  | 'health'
+  | 'house'
+  | 'wedding'
+  | 'car'
+  | 'electronics';
 
 export interface Goal {
   id: number;

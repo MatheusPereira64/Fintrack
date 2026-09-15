@@ -2,7 +2,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, ScrollView, Platform, ActivityIndicator,
+  Modal, Alert, ScrollView, Platform, ActivityIndicator, Image,
 } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useTheme }        from '../../../hooks/useTheme';
@@ -11,12 +11,19 @@ import { AccountCard }     from '../../../components/AccountCard';
 import { AppHeader }       from '../../../components/AppHeader';
 import { AppButton }       from '../../../components/AppButton';
 import { Icon }            from '../../../components/Icon';
+import { CloseButton }     from '../../../components/CloseButton';
+import { useTabListPadding } from '../../../hooks/useScreenPadding';
 import { Account, AccountType } from '../../../models/types';
 import { formatCurrency, parseAmount } from '../../../utils/currency';
 import {
   detectInstalledBanks, DetectedBank, getNewBanks,
 } from '../../../services/InstalledBanksService';
 import { hasBalanceDivergence } from '../../../services/AccountBalanceService';
+import {
+  accountSupportsYield,
+  estimateMonthlyYield,
+  projectCompoundYield,
+} from '../../../services/AccountPlanService';
 
 import type { AppIconName } from '../../../components/Icon';
 
@@ -29,18 +36,19 @@ const ACCOUNT_TYPES: Array<{ key: AccountType; label: string; icon: AppIconName 
 ];
 
 const COLORS = ['#7C3AED', '#DC2626', '#2563EB', '#16A34A', '#D97706', '#0891B2', '#EC4899', '#78716C'];
+const DEFAULT_SAVINGS_YIELD = '0,5';
 
 type FormState = {
   name: string; type: AccountType; balance: string; limit: string;
-  bankName: string; color: string; informedBalance: string;
+  bankName: string; color: string; informedBalance: string; yieldRate: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: '', type: 'checking', balance: '', limit: '',
-  bankName: '', color: COLORS[0], informedBalance: '',
+  bankName: '', color: COLORS[0], informedBalance: '', yieldRate: '',
 };
 
-export function AccountsScreen(_props: { navigation?: unknown }) {
+export function AccountsScreen({ navigation }: { navigation?: any }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -56,6 +64,7 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
   const [detected, setDetected]       = useState<DetectedBank[]>([]);
   const [detecting, setDetecting]     = useState(false);
   const [saving, setSaving]           = useState(false);
+  const listPad = useTabListPadding();
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
@@ -80,6 +89,9 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
       limit:           account.limit != null ? String(account.limit).replace('.', ',') : '',
       bankName:        account.bankName ?? '',
       color:           account.color,
+      yieldRate:       account.monthlyYieldRate != null
+        ? String(account.monthlyYieldRate).replace('.', ',')
+        : '',
     });
     setShowFormModal(true);
   };
@@ -103,30 +115,40 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
       Alert.alert('Atenção', 'Digite o nome da conta.');
       return;
     }
-    const balanceNum   = parseAmount(form.balance);
+    if (!form.informedBalance.trim() && !form.balance.trim()) {
+      Alert.alert('Atenção', 'Informe o saldo que aparece no app do banco.');
+      return;
+    }
+    const balanceNum   = parseAmount(form.balance || form.informedBalance);
     const informedNum  = parseAmount(form.informedBalance || form.balance);
     const limitNum     = form.limit ? parseAmount(form.limit) : undefined;
+    const supportsYield = accountSupportsYield(form.type);
+    const yieldNum = supportsYield && form.yieldRate.trim()
+      ? parseAmount(form.yieldRate)
+      : undefined;
 
     setSaving(true);
     try {
       if (editingId) {
         await updateAccount(editingId, {
-          name:            form.name.trim(),
-          type:            form.type,
-          bankName:        form.bankName.trim() || undefined,
-          color:           form.color,
-          limit:           limitNum,
-          informedBalance: informedNum,
+          name:             form.name.trim(),
+          type:             form.type,
+          bankName:         form.bankName.trim() || undefined,
+          color:            form.color,
+          limit:            limitNum,
+          informedBalance:  informedNum,
+          monthlyYieldRate: supportsYield ? (yieldNum ?? null) : null,
         });
       } else {
         await addAccount({
-          name:            form.name.trim(),
-          type:            form.type,
-          balance:         balanceNum,
-          informedBalance: informedNum,
-          limit:           limitNum,
-          color:           form.color,
-          bankName:        form.bankName.trim() || undefined,
+          name:             form.name.trim(),
+          type:             form.type,
+          balance:          balanceNum,
+          informedBalance:  informedNum,
+          limit:            limitNum,
+          color:            form.color,
+          bankName:         form.bankName.trim() || undefined,
+          monthlyYieldRate: supportsYield ? yieldNum : undefined,
         });
       }
       setShowFormModal(false);
@@ -183,10 +205,8 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
   const renderFormFields = () => (
     <>
       {[
-        { label: 'Nome *',        key: 'name' as const,            ph: 'Ex: Nubank, BB, Carteira', num: false },
-        { label: 'Banco',         key: 'bankName' as const,        ph: 'Ex: Nubank, Itaú, Inter',  num: false },
-        { label: editingId ? 'Saldo informado (app do banco)' : 'Saldo inicial',
-          key: 'informedBalance' as const, ph: '0,00', num: true },
+        { label: 'Nome *', key: 'name' as const,     ph: 'Ex: Nubank, BB, Carteira', num: false },
+        { label: 'Banco',  key: 'bankName' as const, ph: 'Ex: Nubank, Itaú, Inter',  num: false },
       ].map(f => (
         <View key={f.key} style={{ marginBottom: spacing.md }}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -197,7 +217,7 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
             onChangeText={v => setForm(prev => ({ ...prev, [f.key]: v }))}
             placeholder={f.ph}
             placeholderTextColor={colors.placeholder}
-            keyboardType={f.num ? 'decimal-pad' : 'default'}
+            keyboardType="default"
             style={[{
               backgroundColor: colors.inputBackground,
               borderRadius: borderRadius.lg,
@@ -207,6 +227,36 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
           />
         </View>
       ))}
+
+      <View style={{ marginBottom: spacing.sm }}>
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          Saldo no app do banco *
+        </Text>
+        <TextInput
+          value={form.informedBalance}
+          onChangeText={v => setForm(prev => ({
+            ...prev,
+            informedBalance: v,
+            ...(!editingId ? { balance: v } : {}),
+          }))}
+          placeholder="Valor que aparece no app do banco"
+          placeholderTextColor={colors.placeholder}
+          keyboardType="decimal-pad"
+          style={[{
+            backgroundColor: colors.inputBackground,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            color: colors.inputText,
+          }, typography.styles.bodyMedium]}
+        />
+        <Text style={[typography.styles.caption, {
+          color: colors.textTertiary,
+          marginTop: spacing.xs,
+          marginBottom: spacing.md,
+        }]}>
+          Bancos não liberam saldo via API sem Open Finance. Atualize este valor sempre que quiser manter o FinTrack alinhado.
+        </Text>
+      </View>
 
       {editingId && (
         <View style={[styles.calculatedBox, {
@@ -231,27 +281,6 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
               style={{ marginTop: spacing.sm }}
             />
           )}
-        </View>
-      )}
-
-      {!editingId && (
-        <View style={{ marginBottom: spacing.md }}>
-          <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            Saldo inicial (calculado)
-          </Text>
-          <TextInput
-            value={form.balance}
-            onChangeText={v => setForm(prev => ({ ...prev, balance: v }))}
-            placeholder="0,00"
-            placeholderTextColor={colors.placeholder}
-            keyboardType="decimal-pad"
-            style={[{
-              backgroundColor: colors.inputBackground,
-              borderRadius: borderRadius.lg,
-              padding: spacing.md,
-              color: colors.inputText,
-            }, typography.styles.bodyMedium]}
-          />
         </View>
       )}
 
@@ -285,7 +314,16 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
           return (
             <TouchableOpacity
               key={t.key}
-              onPress={() => setForm(prev => ({ ...prev, type: t.key }))}
+              onPress={() => setForm(prev => {
+                const next: FormState = { ...prev, type: t.key };
+                if (accountSupportsYield(t.key) && !prev.yieldRate.trim()) {
+                  next.yieldRate = t.key === 'savings' ? DEFAULT_SAVINGS_YIELD : prev.yieldRate;
+                }
+                if (!accountSupportsYield(t.key)) {
+                  next.yieldRate = '';
+                }
+                return next;
+              })}
               style={{
                 backgroundColor: sel ? colors.primary : colors.surfaceVariant,
                 borderRadius: borderRadius.full,
@@ -302,10 +340,62 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
         })}
       </View>
 
+      {accountSupportsYield(form.type) && (
+        <View style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+            Rendimento (% a.m.)
+          </Text>
+          <TextInput
+            value={form.yieldRate}
+            onChangeText={v => setForm(prev => ({ ...prev, yieldRate: v }))}
+            placeholder={form.type === 'savings' ? 'Ex: 0,5' : 'Ex: 0,8'}
+            placeholderTextColor={colors.placeholder}
+            keyboardType="decimal-pad"
+            style={[{
+              backgroundColor: colors.inputBackground,
+              borderRadius: borderRadius.lg,
+              padding: spacing.md,
+              color: colors.inputText,
+            }, typography.styles.bodyMedium]}
+          />
+          <Text style={[typography.styles.caption, {
+            color: colors.textTertiary,
+            marginTop: spacing.xs,
+          }]}>
+            Informe a taxa mensal da poupança ou do investimento. O app calcula o rendimento estimado automaticamente.
+          </Text>
+          {(() => {
+            const bal = parseAmount(form.informedBalance || form.balance);
+            const rate = parseAmount(form.yieldRate);
+            const monthly = estimateMonthlyYield(bal, rate);
+            if (monthly <= 0) return null;
+            const in12 = projectCompoundYield(bal, rate, 12) - bal;
+            return (
+              <View style={[styles.calculatedBox, {
+                backgroundColor: colors.surfaceVariant,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                marginTop: spacing.sm,
+              }]}>
+                <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
+                  Estimativa automática
+                </Text>
+                <Text style={[typography.styles.titleSmall, { color: colors.success, marginTop: 4 }]}>
+                  ≈ {formatCurrency(monthly)} / mês
+                </Text>
+                <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: 4 }]}>
+                  Em 12 meses (composto): ≈ {formatCurrency(in12)} de rendimento
+                </Text>
+              </View>
+            );
+          })()}
+        </View>
+      )}
+
       <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
         Cor
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.xl }}>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
         {COLORS.map(c => (
           <TouchableOpacity
             key={c}
@@ -336,7 +426,11 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
       />
 
       {Platform.OS === 'android' && (
-        <View style={{ paddingHorizontal: spacing.base, paddingBottom: spacing.sm }}>
+        <View style={{
+          paddingHorizontal: spacing.base,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.sm,
+        }}>
           <AppButton
             label="Detectar bancos no celular"
             variant="secondary"
@@ -350,7 +444,7 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
       <FlatList
         data={accounts}
         keyExtractor={a => String(a.id)}
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         refreshing={isLoading}
         onRefresh={loadAccounts}
         ListEmptyComponent={
@@ -382,153 +476,192 @@ export function AccountsScreen(_props: { navigation?: unknown }) {
             index={index}
             onPress={openEdit}
             onLongPress={a => handleDelete(a.id)}
+            onPlan={a => navigation?.navigate('AccountPlan', { accountId: a.id })}
           />
         )}
       />
 
       {/* Modal criar / editar */}
       <Modal visible={showFormModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => { setShowFormModal(false); resetForm(); }}
-        >
-          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-            <Animated.View
-              entering={SlideInDown.duration(300)}
-              style={[styles.sheet, {
-                backgroundColor: colors.card,
-                borderTopLeftRadius: borderRadius['2xl'],
-                borderTopRightRadius: borderRadius['2xl'],
-                padding: spacing.xl,
-                paddingBottom: Math.max(insets.bottom, 20),
-                maxHeight: '90%',
-              }]}
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => { setShowFormModal(false); resetForm(); }}
+          />
+          <Animated.View
+            entering={SlideInDown.duration(300)}
+            style={[styles.sheet, {
+              backgroundColor: colors.card,
+              borderTopLeftRadius: borderRadius['2xl'],
+              borderTopRightRadius: borderRadius['2xl'],
+              paddingTop: spacing.xl,
+              paddingHorizontal: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 16),
+              maxHeight: '92%',
+            }]}
+          >
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: spacing.md,
+            }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+                {editingId ? 'Editar conta' : 'Nova conta'}
+              </Text>
+              <CloseButton onPress={() => { setShowFormModal(false); resetForm(); }} />
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: spacing.md }}
+              style={{ flexGrow: 0 }}
             >
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-                  {editingId ? 'Editar conta' : 'Nova conta'}
-                </Text>
-                {renderFormFields()}
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <AppButton
-                    label="Cancelar"
-                    variant="secondary"
-                    onPress={() => { setShowFormModal(false); resetForm(); }}
-                    style={{ flex: 1 }}
-                  />
-                  <AppButton
-                    label={editingId ? 'Salvar' : 'Criar conta'}
-                    variant="primary"
-                    onPress={handleSave}
-                    loading={saving}
-                    icon="check"
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              </ScrollView>
-            </Animated.View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+              {renderFormFields()}
+            </ScrollView>
+
+            <View style={{
+              flexDirection: 'row',
+              gap: spacing.sm,
+              paddingTop: spacing.md,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: colors.borderLight,
+            }}>
+              <AppButton
+                label="Cancelar"
+                variant="secondary"
+                onPress={() => { setShowFormModal(false); resetForm(); }}
+                style={{ flex: 1 }}
+              />
+              <AppButton
+                label={editingId ? 'Salvar' : 'Criar conta'}
+                variant="primary"
+                onPress={handleSave}
+                loading={saving}
+                icon="check"
+                style={{ flex: 1 }}
+              />
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
 
       {/* Modal detectar bancos */}
       <Modal visible={showDetectModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowDetectModal(false)}
-        >
-          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-            <Animated.View
-              entering={SlideInDown.duration(300)}
-              style={[styles.sheet, {
-                backgroundColor: colors.card,
-                borderTopLeftRadius: borderRadius['2xl'],
-                borderTopRightRadius: borderRadius['2xl'],
-                padding: spacing.xl,
-                paddingBottom: Math.max(insets.bottom, 20),
-                maxHeight: '80%',
-              }]}
-            >
-              <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.xs }]}>
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowDetectModal(false)}
+          />
+          <Animated.View
+            entering={SlideInDown.duration(300)}
+            style={[styles.sheet, {
+              backgroundColor: colors.card,
+              borderTopLeftRadius: borderRadius['2xl'],
+              borderTopRightRadius: borderRadius['2xl'],
+              padding: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 20),
+              maxHeight: '80%',
+            }]}
+          >
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: spacing.xs,
+            }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
                 Bancos detectados
               </Text>
-              <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
-                Apps bancários instalados no seu celular.
-              </Text>
+              <CloseButton onPress={() => setShowDetectModal(false)} />
+            </View>
+            <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
+              Apps instalados no celular. Toque para cadastrar e informar o saldo manualmente — os bancos não compartilham saldo sem Open Finance.
+            </Text>
 
-              {detecting ? (
-                <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />
-              ) : detected.length === 0 ? (
-                <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                  <Icon name="bank" size={40} color={colors.textTertiary} />
-                  <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }]}>
-                    Nenhum app bancário compatível encontrado.
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {detected.map(bank => (
-                    <TouchableOpacity
-                      key={bank.packageName}
-                      disabled={bank.alreadyRegistered}
-                      onPress={() => {
-                        setShowDetectModal(false);
-                        openCreate({
-                          name:     bank.name,
-                          bankName: bank.name,
-                          color:    bank.primaryColor,
-                          balance:  '0',
-                          informedBalance: '0',
-                        });
-                      }}
-                      style={[styles.detectRow, {
-                        backgroundColor: bank.alreadyRegistered
-                          ? colors.surfaceVariant
-                          : `${bank.primaryColor}15`,
-                        borderRadius: borderRadius.lg,
-                        padding: spacing.md,
-                        marginBottom: spacing.sm,
-                        opacity: bank.alreadyRegistered ? 0.6 : 1,
-                      }]}
-                    >
-                      <View style={[styles.detectDot, { backgroundColor: bank.primaryColor }]} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
-                          {bank.name}
-                        </Text>
-                        <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-                          {bank.appLabel}
-                        </Text>
+            {detecting ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />
+            ) : detected.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                <Icon name="bank" size={40} color={colors.textTertiary} />
+                <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }]}>
+                  Nenhum app bancário compatível encontrado.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {detected.map(bank => (
+                  <TouchableOpacity
+                    key={bank.packageName}
+                    disabled={bank.alreadyRegistered}
+                    onPress={() => {
+                      setShowDetectModal(false);
+                      openCreate({
+                        name:     bank.name,
+                        bankName: bank.name,
+                        color:    bank.primaryColor,
+                        balance:  '',
+                        informedBalance: '',
+                      });
+                    }}
+                    style={[styles.detectRow, {
+                      backgroundColor: bank.alreadyRegistered
+                        ? colors.surfaceVariant
+                        : `${bank.primaryColor}15`,
+                      borderRadius: borderRadius.lg,
+                      padding: spacing.md,
+                      marginBottom: spacing.sm,
+                      opacity: bank.alreadyRegistered ? 0.6 : 1,
+                    }]}
+                  >
+                    {bank.iconUri ? (
+                      <Image
+                        source={{ uri: bank.iconUri }}
+                        style={styles.detectIcon}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.detectIconFallback, { backgroundColor: bank.primaryColor }]}>
+                        <Icon name="bank" size={18} color="#FFF" />
                       </View>
-                      {bank.alreadyRegistered ? (
-                        <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
-                          Cadastrado
-                        </Text>
-                      ) : (
-                        <Icon name="add" size={20} color={bank.primaryColor} />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                  {newBanks.length > 0 && (
-                    <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginTop: spacing.sm }]}>
-                      Toque em um banco para cadastrar e informar o saldo.
-                    </Text>
-                  )}
-                </ScrollView>
-              )}
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
+                        {bank.name}
+                      </Text>
+                      <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+                        {bank.appLabel}
+                      </Text>
+                    </View>
+                    {bank.alreadyRegistered ? (
+                      <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
+                        Cadastrado
+                      </Text>
+                    ) : (
+                      <Icon name="add" size={20} color={bank.primaryColor} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+                {newBanks.length > 0 && (
+                  <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginTop: spacing.sm }]}>
+                    Toque em um banco para cadastrar e informar o saldo.
+                  </Text>
+                )}
+              </ScrollView>
+            )}
 
-              <AppButton
-                label="Fechar"
-                variant="secondary"
-                onPress={() => setShowDetectModal(false)}
-                style={{ marginTop: spacing.md }}
-                fullWidth
-              />
-            </Animated.View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+            <AppButton
+              label="Fechar"
+              variant="secondary"
+              onPress={() => setShowDetectModal(false)}
+              style={{ marginTop: spacing.md }}
+              fullWidth
+            />
+          </Animated.View>
+        </View>
       </Modal>
     </View>
   );
@@ -538,8 +671,12 @@ const styles = StyleSheet.create({
   container:      { flex: 1 },
   empty:          { alignItems: 'center' },
   overlay:        { flex: 1, justifyContent: 'flex-end' },
-  sheet:          {},
+  sheet:          { width: '100%' },
   calculatedBox:  {},
   detectRow:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  detectDot:      { width: 12, height: 12, borderRadius: 6 },
+  detectIcon:     { width: 40, height: 40, borderRadius: 10 },
+  detectIconFallback: {
+    width: 40, height: 40, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
 });

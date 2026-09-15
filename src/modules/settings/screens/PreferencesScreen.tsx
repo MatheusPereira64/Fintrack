@@ -6,10 +6,12 @@ import {
 } from 'react-native';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useSettingsStore } from '../../../store/settingsStore';
+import { AppHeader } from '../../../components/AppHeader';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 export function PreferencesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
   const { settings, updateSettings } = useSettingsStore();
 
   const [userName, setUserName]         = useState(settings.userName ?? '');
@@ -32,19 +34,17 @@ export function PreferencesScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
+      <AppHeader
+        title="Preferências"
+        onClose={() => navigation.goBack()}
+        right={
+          <TouchableOpacity onPress={handleSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Salvar</Text>
+          </TouchableOpacity>
+        }
+      />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary }}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.titleLarge, { color: colors.text }]}>Preferências</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>Salvar</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: spacing.base }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
         <View style={[{ backgroundColor: colors.card, borderRadius: borderRadius.xl, padding: spacing.base, ...shadows.sm }]}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>Seu nome</Text>
           <TextInput

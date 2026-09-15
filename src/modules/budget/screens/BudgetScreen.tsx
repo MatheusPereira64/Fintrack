@@ -9,6 +9,9 @@ import { useTheme }       from '../../../hooks/useTheme';
 import { useBudgetStore } from '../../../store/budgetStore';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { useTransactionStore } from '../../../store/transactionStore';
+import { AppHeader } from '../../../components/AppHeader';
+import { CloseButton } from '../../../components/CloseButton';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { formatCurrency, formatPercent } from '../../../utils/currency';
 
 const BudgetCard = memo(function BudgetCard({
@@ -98,6 +101,7 @@ export function BudgetScreen({ navigation }: any) {
   const [amount,    setAmount]    = useState('');
   const [catId,     setCatId]     = useState<number | undefined>();
   const [saving,    setSaving]    = useState(false);
+  const bottomPad = useSafeBottomPadding(24);
 
   useEffect(() => {
     loadCategories();
@@ -140,29 +144,16 @@ export function BudgetScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
-
-      <View style={[styles.header, {
-        backgroundColor: colors.header,
-        paddingTop: Math.max(insets.top, 20),
-        paddingHorizontal: spacing.base,
-        paddingBottom: spacing.base,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-      }]}>
-        <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>Orçamentos</Text>
-        <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: borderRadius.full }]}
-        >
-          <Text style={{ color: '#FFF', fontSize: 20 }}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Orçamentos"
+        onClose={() => navigation.goBack()}
+        actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
+      />
 
       <FlatList
         data={budgets}
         keyExtractor={b => String(b.id)}
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
         refreshing={isLoading}
         onRefresh={loadBudgets}
         ListEmptyComponent={
@@ -188,11 +179,12 @@ export function BudgetScreen({ navigation }: any) {
 
       {/* Modal de criar orçamento */}
       <Modal visible={showModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowModal(false)}
-        >
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowModal(false)}
+          />
           <Animated.View
             entering={SlideInDown.duration(300)}
             style={[styles.sheet, {
@@ -200,11 +192,15 @@ export function BudgetScreen({ navigation }: any) {
               borderTopLeftRadius: borderRadius['2xl'],
               borderTopRightRadius: borderRadius['2xl'],
               padding: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 20),
             }]}
           >
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Novo orçamento mensal
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
+                Novo orçamento mensal
+              </Text>
+              <CloseButton onPress={() => setShowModal(false)} />
+            </View>
 
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
               Valor limite (R$) *
@@ -276,7 +272,7 @@ export function BudgetScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

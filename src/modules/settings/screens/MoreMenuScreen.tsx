@@ -10,6 +10,7 @@ import { useBudgetStore }    from '../../../store/budgetStore';
 import { AppHeader }         from '../../../components/AppHeader';
 import { Icon }              from '../../../components/Icon';
 import type { AppIconName }  from '../../../components/Icon';
+import { useTabListPadding } from '../../../hooks/useScreenPadding';
 
 interface MenuItem {
   icon:     AppIconName;
@@ -89,7 +90,7 @@ const MenuRow = memo(function MenuRow({
 
 export function MoreMenuScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const listPad = useTabListPadding();
   const { goals }   = useGoalStore();
   const { budgets } = useBudgetStore();
 
@@ -106,7 +107,7 @@ export function MoreMenuScreen({ navigation }: any) {
       <AppHeader title="Mais" />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         showsVerticalScrollIndicator={false}
       >
         {MENU_ITEMS.map((item, i) => (

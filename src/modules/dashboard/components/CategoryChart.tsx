@@ -106,7 +106,7 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
                     style={[typography.styles.labelSmall, { color: colors.text }]}
                     numberOfLines={1}
                   >
-                    {cat.icon} {cat.name}
+                    {cat.name}
                   </Text>
                   <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
                     {formatPercent(pct)} · {formatCurrency(cat.total)}

@@ -9,10 +9,12 @@ import { useTransactionStore } from '../../../store/transactionStore';
 import { useAccountStore }     from '../../../store/accountStore';
 import { ExportService }       from '../../../services/ExportService';
 import { formatMonthYear }     from '../../../utils/date';
+import { AppHeader } from '../../../components/AppHeader';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 export function ExportScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
   const { transactions, currentMonth } = useTransactionStore();
   const { accounts }                    = useAccountStore();
   const [exporting, setExporting]       = useState(false);
@@ -37,17 +39,9 @@ export function ExportScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} backgroundColor={colors.header} />
+      <AppHeader title="Exportar dados" onClose={() => navigation.goBack()} />
 
-      <View style={[styles.header, { backgroundColor: colors.header, paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.base, paddingBottom: spacing.base, ...shadows.sm }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary }}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.titleLarge, { color: colors.text }]}>Exportar dados</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: spacing.base }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
         <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginBottom: spacing.xl }]}>
           Exporte suas transações para análise em planilhas ou outros apps.
         </Text>

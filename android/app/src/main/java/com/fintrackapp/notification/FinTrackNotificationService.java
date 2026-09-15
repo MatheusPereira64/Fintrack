@@ -11,8 +11,6 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import org.json.JSONObject;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -27,28 +25,8 @@ public class FinTrackNotificationService extends NotificationListenerService {
     private static final String TAG = "FinTrackNotif";
     private static final String EVENT_BANK_NOTIFICATION = "onBankNotification";
 
-    // Package names dos bancos monitorados (mantido sincronizado com BankRegistry.ts)
-    static final Set<String> BANK_PACKAGES = new HashSet<>(Arrays.asList(
-        "com.nubank.nubank",
-        "br.com.intermedium",
-        "com.bancointer.banking",
-        "com.itau",
-        "com.itau.empresas",
-        "com.bradesco",
-        "com.bradesco.prime",
-        "com.bb.android",
-        "com.santander.app",
-        "com.santander.way",
-        "br.com.c6bank.app",
-        "br.gov.caixa.internet.smartphones",
-        "com.mercadopago.wallet",
-        "com.picpay",
-        "br.com.bradesco.next",
-        "br.com.original.bank",
-        "br.com.uol.ps.myaccount",
-        "br.com.neon.app",
-        "com.willbank"
-    ));
+    // Package names dos bancos monitorados (fonte: BankPackages.java)
+    static final Set<String> BANK_PACKAGES = BankPackages.ALL;
 
     // Instância estática para comunicar com o módulo React Native
     private static ReactContext reactContext;

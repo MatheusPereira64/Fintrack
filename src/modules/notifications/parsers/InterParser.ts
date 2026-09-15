@@ -1,11 +1,8 @@
 import { BankParser, ParsedTransaction } from '../../../models/types';
-import { parseBRL } from '../../../utils/currency';
-
-const BRL_RE = /r\$\s?([\d.]*\d*,\d{2})/i;
+import { parseNotificationAmount } from '../../../utils/notificationAmount';
 
 function findAmount(title: string, body: string): number | null {
-  const m = BRL_RE.exec(`${title} ${body}`);
-  return m ? parseBRL(m[1]) : null;
+  return parseNotificationAmount(`${title} ${body}`);
 }
 
 function includesAny(text: string, ...terms: string[]): boolean {
@@ -18,8 +15,10 @@ export const InterParser: BankParser = {
     const raw  = `${title} ${body}`;
     const amt  = findAmount(title, body);
 
-    // Pix recebido
-    if (includesAny(full, 'pix recebid', 'recebeu', 'pix in', 'entrada de pix', 'creditado')) {
+    if (includesAny(full,
+      'pix recebid', 'recebeu um pix', 'você recebeu', 'voce recebeu',
+      'pix in', 'entrada de pix', 'creditado', 'recebeu r$',
+    ) || (full.includes('pix') && includesAny(full, 'receb', 'entrada', 'credit'))) {
       if (amt) {
         return {
           type: 'income', category: 'Pix',
@@ -30,7 +29,6 @@ export const InterParser: BankParser = {
       }
     }
 
-    // Pix enviado — inclui formas femininas (enviada, realizada, efetuada, concluída)
     if (includesAny(full,
       'pix enviad', 'pix realizad', 'pix efetuad', 'pix conclu',
       'você enviou', 'voce enviou', 'transferiu', 'pagamento pix',
@@ -46,72 +44,53 @@ export const InterParser: BankParser = {
       }
     }
 
-    // Fallback: qualquer menção a pix com valor
     if (full.includes('pix') && amt) {
-      const isIn = includesAny(full, 'receb', 'entrada', 'credit');
+      const isIn = includesAny(full, 'receb', 'entrada', 'credit', 'você recebeu', 'voce recebeu');
+      const isOut = includesAny(full, 'envi', 'pagou', 'debit', 'saída', 'saida', 'realizad', 'efetuad');
+      if (isOut && !isIn) {
+        return {
+          type: 'expense', category: 'Pix', amount: -amt,
+          description: 'Pix enviado', bankName: 'Inter', rawTitle: title, rawBody: body,
+        };
+      }
       return {
-        type: isIn ? 'income' : 'expense',
-        category: 'Pix',
-        amount: isIn ? amt : -amt,
-        description: isIn ? 'Pix recebido' : 'Pix enviado',
+        type: 'income', category: 'Pix', amount: amt,
+        description: 'Pix recebido', bankName: 'Inter', rawTitle: title, rawBody: body,
+      };
+    }
+
+    if (includesAny(full, 'compra aprovada', 'compra realizada', 'compra no cartão') && amt) {
+      return {
+        type: 'expense', category: 'Compra Crédito',
+        amount: -amt,
+        description: extractMerchantInter(raw) ?? 'Compra aprovada',
         bankName: 'Inter', rawTitle: title, rawBody: body,
       };
     }
 
-    // Compra aprovada
-    if (includesAny(full, 'compra aprovada', 'compra realizada', 'compra no cartão')) {
-      if (amt) {
-        return {
-          type: 'expense', category: 'Compra Crédito',
-          amount: -amt,
-          description: extractMerchantInter(raw) ?? 'Compra aprovada',
-          bankName: 'Inter', rawTitle: title, rawBody: body,
-        };
-      }
-    }
-
-    // Débito em conta
-    if (includesAny(full, 'débito', 'debito')) {
-      if (amt) {
-        return {
-          type: 'expense', category: 'Compra Débito',
-          amount: -amt,
-          description: 'Débito em conta',
-          bankName: 'Inter', rawTitle: title, rawBody: body,
-        };
-      }
-    }
-
-    // Transferência recebida
-    if (includesAny(full, 'transferência recebid', 'ted recebid', 'doc recebid')) {
-      if (amt) {
-        return {
-          type: 'income', category: 'Transferência',
-          amount: amt,
-          description: 'Transferência recebida',
-          bankName: 'Inter', rawTitle: title, rawBody: body,
-        };
-      }
-    }
-
-    // Transferência enviada
-    if (includesAny(full, 'transferência enviad', 'transferência realizad', 'ted enviad', 'doc enviad')) {
-      if (amt) {
-        return {
-          type: 'expense', category: 'Transferência',
-          amount: -amt,
-          description: `Transferência enviada${extractAfter(raw, 'para')}`,
-          bankName: 'Inter', rawTitle: title, rawBody: body,
-        };
-      }
-    }
-
-    // Boleto
-    if (full.includes('boleto') && amt) {
+    if (includesAny(full, 'débito', 'debito') && amt) {
       return {
-        type: 'expense', category: 'Boleto',
+        type: 'expense', category: 'Compra Débito',
         amount: -amt,
-        description: 'Pagamento de boleto',
+        description: 'Débito em conta',
+        bankName: 'Inter', rawTitle: title, rawBody: body,
+      };
+    }
+
+    if (includesAny(full, 'transferência recebid', 'ted recebid', 'doc recebid') && amt) {
+      return {
+        type: 'income', category: 'Transferência',
+        amount: amt,
+        description: 'Transferência recebida',
+        bankName: 'Inter', rawTitle: title, rawBody: body,
+      };
+    }
+
+    if (includesAny(full, 'transferência enviad', 'transferência realizad', 'ted enviad', 'doc enviad') && amt) {
+      return {
+        type: 'expense', category: 'Transferência',
+        amount: -amt,
+        description: 'Transferência enviada',
         bankName: 'Inter', rawTitle: title, rawBody: body,
       };
     }
@@ -120,13 +99,13 @@ export const InterParser: BankParser = {
   },
 };
 
-function extractAfter(text: string, prep: string): string {
-  const re = new RegExp(`\\b${prep}\\s+([\\w\\sÀ-ú]{2,30})(?:\\s+-|\\s+r\\$|$)`, 'i');
-  const m  = re.exec(text);
+function extractAfter(text: string, word: string): string {
+  const re = new RegExp(`\\b${word}\\s+([A-Za-zÀ-ú][A-Za-zÀ-ú ]{1,30})`, 'i');
+  const m = re.exec(text);
   return m ? ` - ${m[1].trim()}` : '';
 }
 
-function extractMerchantInter(body: string): string | null {
-  const m = /(?:em|na loja|no estabelecimento)\s+([A-Za-zÀ-ú\s&0-9]+?)(?:\s+r\$|\s+no valor|\.|$)/i.exec(body);
+function extractMerchantInter(text: string): string | null {
+  const m = /(?:em|no|na)\s+([A-Za-zÀ-ú0-9 &.']{2,40}?)(?:\s*r\$|\.|$)/i.exec(text);
   return m ? m[1].trim() : null;
 }

@@ -17,6 +17,7 @@ import { TransactionsScreen }    from '../modules/transactions/screens/Transacti
 import { TransactionDetailScreen } from '../modules/transactions/screens/TransactionDetailScreen';
 import { AddTransactionScreen }  from '../modules/transactions/screens/AddTransactionScreen';
 import { AccountsScreen }        from '../modules/accounts/screens/AccountsScreen';
+import { AccountPlanScreen }     from '../modules/accounts/screens/AccountPlanScreen';
 import { GoalsScreen }           from '../modules/goals/screens/GoalsScreen';
 import { BudgetScreen }          from '../modules/budget/screens/BudgetScreen';
 import { InsightsScreen }        from '../modules/insights/screens/InsightsScreen';
@@ -31,6 +32,7 @@ import { ImportScreen }         from '../modules/settings/screens/ImportScreen';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab       = createBottomTabNavigator<AppTabParamList>();
 const TxStack   = createNativeStackNavigator<TransactionStackParamList>();
+const AccStack  = createNativeStackNavigator<AccountStackParamList>();
 const MoreStack = createNativeStackNavigator<MoreStackParamList>();
 
 function TransactionNavigator() {
@@ -40,6 +42,15 @@ function TransactionNavigator() {
       <TxStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <TxStack.Screen name="AddTransaction"    component={AddTransactionScreen} />
     </TxStack.Navigator>
+  );
+}
+
+function AccountsNavigator() {
+  return (
+    <AccStack.Navigator screenOptions={{ headerShown: false }}>
+      <AccStack.Screen name="AccountsList" component={AccountsScreen} />
+      <AccStack.Screen name="AccountPlan"  component={AccountPlanScreen} />
+    </AccStack.Navigator>
   );
 }
 
@@ -122,7 +133,7 @@ function AppTabs() {
       />
       <Tab.Screen
         name="Accounts"
-        component={AccountsScreen}
+        component={AccountsNavigator}
         options={{
           tabBarLabel: ({ color }) => <TabLabel label="Contas" color={color} />,
           tabBarIcon: ({ focused, color }) => (

@@ -10,11 +10,13 @@ import { useAccountStore }     from '../../../store/accountStore';
 import { Transaction }         from '../../../models/types';
 import { formatCurrency }      from '../../../utils/currency';
 import { formatDate, formatTime } from '../../../utils/date';
+import { AppHeader } from '../../../components/AppHeader';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 export function TransactionDetailScreen({ route, navigation }: any) {
   const { transactionId } = route.params;
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
 
   const { transactions, deleteTransaction } = useTransactionStore();
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
@@ -66,26 +68,17 @@ export function TransactionDetailScreen({ route, navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, {
-        backgroundColor: colors.header,
-        paddingTop: Math.max(insets.top, 20),
-        paddingHorizontal: spacing.base,
-        paddingBottom: spacing.base,
-        ...shadows.sm,
-      }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={{ color: colors.primary, fontSize: 18 }}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={[typography.styles.titleMedium, { color: colors.text }]}>
-          Detalhe
-        </Text>
-        <TouchableOpacity onPress={handleDelete}>
-          <Text style={{ color: colors.error, fontSize: 14 }}>Excluir</Text>
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        title="Detalhe"
+        onClose={() => navigation.goBack()}
+        right={
+          <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ color: colors.error, fontSize: 14 }}>Excluir</Text>
+          </TouchableOpacity>
+        }
+      />
 
-      <ScrollView contentContainerStyle={{ padding: spacing.base }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
         {/* Card principal */}
         <View style={[styles.mainCard, {
           backgroundColor: isIncome ? colors.incomeBackground : colors.expenseBackground,

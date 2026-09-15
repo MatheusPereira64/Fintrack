@@ -5,6 +5,8 @@ import {
   ScrollView, Platform, Switch, Alert, KeyboardAvoidingView,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { CloseButton } from '../../../components/CloseButton';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
 import { useAccountStore }      from '../../../store/accountStore';
@@ -24,6 +26,7 @@ interface Props {
 export function AddTransactionScreen({ navigation, route }: Props) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(40);
   const existing = route.params?.editTransaction;
 
   const { addTransaction, updateTransaction } = useTransactionStore();
@@ -103,9 +106,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           borderBottomColor: colors.borderLight,
           flexDirection: 'row', alignItems: 'center',
         }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: spacing.xs, marginRight: spacing.sm }}>
-            <Text style={[typography.styles.titleMedium, { color: colors.primary }]}>✕</Text>
-          </TouchableOpacity>
+          <CloseButton onPress={() => navigation.goBack()} style={{ marginRight: spacing.sm }} />
           <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1 }]}>
             {existing ? 'Editar transação' : 'Nova transação'}
           </Text>
@@ -125,7 +126,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: 40 }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad }}>
           {/* Tipo */}
           <Animated.View entering={FadeInDown.delay(50)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>

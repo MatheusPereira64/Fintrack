@@ -16,6 +16,8 @@ import { SwipeableTransaction } from '../components/SwipeableTransaction';
 import { AppHeader }            from '../../../components/AppHeader';
 import { IconButton }           from '../../../components/AppButton';
 import { Icon }                 from '../../../components/Icon';
+import { CloseButton }          from '../../../components/CloseButton';
+import { useTabListPadding }    from '../../../hooks/useScreenPadding';
 import type { AppIconName }     from '../../../components/Icon';
 import { Transaction }           from '../../../models/types';
 import {
@@ -44,6 +46,7 @@ const SORT_OPTIONS: Array<{ key: SortOrder; label: string }> = [
 export function TransactionsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
+  const listPad = useTabListPadding();
 
   const {
     transactions, isLoading, summary, currentMonth,
@@ -289,7 +292,7 @@ export function TransactionsScreen({ navigation }: any) {
             colors={[colors.primary]}
           />
         }
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         removeClippedSubviews
         maxToRenderPerBatch={10}
         windowSize={10}
@@ -339,11 +342,12 @@ export function TransactionsScreen({ navigation }: any) {
 
       {/* ── Modal de Ordenação ────────────────────────────────────────────────── */}
       <Modal visible={showSort} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowSort(false)}
-        >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowSort(false)}
+          />
           <Animated.View
             entering={SlideInDown.duration(300)}
             style={[styles.bottomSheet, {
@@ -354,9 +358,12 @@ export function TransactionsScreen({ navigation }: any) {
               paddingBottom: Math.max(insets.bottom, 20),
             }]}
           >
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Ordenar por
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
+                Ordenar por
+              </Text>
+              <CloseButton onPress={() => setShowSort(false)} />
+            </View>
             {SORT_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.key}
@@ -374,16 +381,17 @@ export function TransactionsScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
           </Animated.View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* ── Modal de Filtros Avançados ───────────────────────────────────────── */}
       <Modal visible={showFilters} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowFilters(false)}
-        >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowFilters(false)}
+          />
           <Animated.View
             entering={SlideInDown.duration(300)}
             style={[styles.bottomSheet, {
@@ -394,9 +402,15 @@ export function TransactionsScreen({ navigation }: any) {
               paddingBottom: Math.max(insets.bottom, 20),
             }]}
           >
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Filtros avançados
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text
+                style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}
+                numberOfLines={1}
+              >
+                Filtros avançados
+              </Text>
+              <CloseButton onPress={() => setShowFilters(false)} />
+            </View>
 
             {/* Categoria */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -533,7 +547,7 @@ export function TransactionsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

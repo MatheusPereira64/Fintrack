@@ -4,9 +4,11 @@ import {
 } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useTheme }        from '../hooks/useTheme';
+import { Icon }            from './Icon';
 import { Transaction }     from '../models/types';
 import { formatCurrency }  from '../utils/currency';
 import { formatDate }      from '../utils/date';
+import { resolveCategoryIcon } from '../utils/categoryIcon';
 import { useCategoryStore } from '../store/categoryStore';
 
 interface TransactionItemProps {
@@ -24,7 +26,7 @@ export const TransactionItem = memo(function TransactionItem({
   const category  = transaction.categoryId ? getCategoryById(transaction.categoryId) : undefined;
   const isIncome  = transaction.amount > 0;
   const amtColor  = isIncome ? colors.income : colors.expense;
-  const catIcon   = category?.icon ?? (isIncome ? '📥' : '💸');
+  const catIcon   = resolveCategoryIcon(category?.name ?? category?.icon, isIncome ? 'income' : 'expense');
   const catColor  = category?.color ?? colors.primary;
 
   const handlePress = useCallback(() => onPress?.(transaction), [onPress, transaction]);
@@ -44,15 +46,13 @@ export const TransactionItem = memo(function TransactionItem({
           },
         ]}
       >
-        {/* Ícone */}
         <View style={[
           styles.iconWrap,
           { backgroundColor: `${catColor}20`, borderRadius: borderRadius.md },
         ]}>
-          <Text style={styles.icon}>{catIcon}</Text>
+          <Icon name={catIcon} size={20} color={catColor} />
         </View>
 
-        {/* Info */}
         <View style={styles.info}>
           <Text
             style={[typography.styles.titleSmall, { color: colors.text }]}
@@ -79,7 +79,6 @@ export const TransactionItem = memo(function TransactionItem({
           </View>
         </View>
 
-        {/* Valor */}
         <View style={styles.right}>
           <Text style={[typography.styles.titleSmall, { color: amtColor }]}>
             {isIncome ? '+' : ''}{formatCurrency(transaction.amount)}
@@ -98,7 +97,6 @@ export const TransactionItem = memo(function TransactionItem({
 const styles = StyleSheet.create({
   container:  { flexDirection: 'row', alignItems: 'center' },
   iconWrap:   { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  icon:       { fontSize: 20 },
   info:       { flex: 1, marginRight: 8 },
   meta:       { flexDirection: 'row', flexWrap: 'wrap', marginTop: 2 },
   right:      { alignItems: 'flex-end', gap: 4 },

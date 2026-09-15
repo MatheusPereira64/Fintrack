@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState, useMemo } from 'react';
+﻿import React, { useCallback, useState, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -13,8 +13,13 @@ import { useAccountStore }   from '../../../store/accountStore';
 import { ExportService }     from '../../../services/ExportService';
 import { Logger }            from '../../../services/LoggerService';
 import { getDatabase }       from '../../../database/db';
+import { Icon, AppIconName } from '../../../components/Icon';
+import { AppHeader } from '../../../components/AppHeader';
+import { CloseButton } from '../../../components/CloseButton';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
+import { UpdateService, RELEASES_PAGE } from '../../../services/UpdateService';
 
-import { Share, NativeModules } from 'react-native';
+import { Share, NativeModules, Linking, ActivityIndicator } from 'react-native';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'pt-BR' | 'en-US';
@@ -41,7 +46,7 @@ function SettingsGroup({ title, children }: SettingsGroupProps) {
 }
 
 interface SettingsRowProps {
-  icon:       string;
+  icon:       AppIconName;
   title:      string;
   subtitle?:  string;
   onPress?:   () => void;
@@ -55,8 +60,7 @@ interface SettingsRowProps {
 function SettingsRow({
   icon, title, subtitle, onPress, right, isDestructive, disabled, first, last,
 }: SettingsRowProps) {
-  const { colors, spacing, borderRadius, typography, shadows } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors, spacing, borderRadius, typography } = useTheme();
 
   return (
     <TouchableOpacity
@@ -83,7 +87,11 @@ function SettingsRow({
         backgroundColor: isDestructive ? `${colors.error}20` : `${colors.primary}15`,
         justifyContent: 'center', alignItems: 'center', marginRight: spacing.md,
       }]}>
-        <Text style={{ fontSize: 16 }}>{icon}</Text>
+        <Icon
+          name={icon}
+          size={16}
+          color={isDestructive ? colors.error : colors.primary}
+        />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[typography.styles.bodyLarge, {
@@ -98,7 +106,7 @@ function SettingsRow({
         )}
       </View>
       {right ?? (onPress && !disabled && (
-        <Text style={{ color: colors.textTertiary, fontSize: 16 }}>›</Text>
+        <Icon name="forward" size={18} color={colors.textTertiary} />
       ))}
     </TouchableOpacity>
   );
@@ -114,9 +122,28 @@ export function SettingsScreen({ navigation }: any) {
   const [isExporting, setIsExporting] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showLangModal, setShowLangModal]   = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [appVersion, setAppVersion] = useState('2.0.0');
+  const bottomPad = useSafeBottomPadding(24);
+
+  useEffect(() => {
+    UpdateService.getLocalVersion()
+      .then(v => setAppVersion(`${v.versionName} (${v.versionCode})`))
+      .catch(() => {});
+  }, []);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
+  const handleCheckUpdates = useCallback(async () => {
+    setCheckingUpdate(true);
+    try {
+      await UpdateService.checkFromSettings(pct => setUpdateProgress(pct));
+    } finally {
+      setCheckingUpdate(false);
+      setUpdateProgress(null);
+    }
+  }, []);
   const handleCheckPermission = useCallback(async () => {
     try {
       const mod = NativeModules.NotificationModule;
@@ -214,15 +241,15 @@ export function SettingsScreen({ navigation }: any) {
     ]);
   }, []);
 
-  const THEME_OPTIONS: Array<{ key: ThemeOption; label: string; icon: string }> = [
-    { key: 'light',  label: 'Claro',    icon: '☀️'  },
-    { key: 'dark',   label: 'Escuro',   icon: '🌙'  },
-    { key: 'system', label: 'Sistema',  icon: '⚙️'  },
+  const THEME_OPTIONS: Array<{ key: ThemeOption; label: string; icon: AppIconName }> = [
+    { key: 'light',  label: 'Claro',    icon: 'sun' },
+    { key: 'dark',   label: 'Escuro',   icon: 'moon' },
+    { key: 'system', label: 'Sistema',  icon: 'monitor' },
   ];
 
-  const LANG_OPTIONS: Array<{ key: LanguageOption; label: string; icon: string }> = [
-    { key: 'pt-BR', label: 'Português (BR)', icon: '🇧🇷' },
-    { key: 'en-US', label: 'English (US)',   icon: '🇺🇸' },
+  const LANG_OPTIONS: Array<{ key: LanguageOption; label: string }> = [
+    { key: 'pt-BR', label: 'Português (BR)' },
+    { key: 'en-US', label: 'English (US)' },
   ];
 
   const currentThemeLabel = THEME_OPTIONS.find(t => t.key === settings.theme)?.label ?? 'Sistema';
@@ -230,34 +257,20 @@ export function SettingsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar
-        barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'}
-        backgroundColor={colors.background}
+      <AppHeader
+        title="Configurações"
+        onClose={() => navigation.goBack()}
       />
-
-      {/* Header */}
-      <View style={[styles.header, {
-        paddingTop: Math.max(insets.top, 20),
-        paddingHorizontal: spacing.base,
-        paddingBottom:    spacing.base,
-        backgroundColor:  colors.header,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-      }]}>
-        <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
-          Configurações
-        </Text>
-      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.base, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
       >
         {/* ── Conta ─────────────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(50).duration(400)}>
           <SettingsGroup title="Conta">
             <SettingsRow
-              icon="👤" title="Preferências pessoais"
+              icon="user" title="Preferências pessoais"
               subtitle={settings.userName ?? 'Nome, renda, limite mensal'}
               onPress={() => navigation.navigate('Preferences')}
               first last
@@ -265,12 +278,36 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Notificações ──────────────────────────────────────────────────── */}
+        <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+          <SettingsGroup title="Atualizações">
+            <SettingsRow
+              icon="download"
+              title="Procurar atualizações"
+              subtitle={
+                checkingUpdate
+                  ? (updateProgress != null ? `Baixando… ${updateProgress}%` : 'Verificando no GitHub…')
+                  : `Versão instalada: ${appVersion}`
+              }
+              onPress={handleCheckUpdates}
+              disabled={checkingUpdate}
+              right={checkingUpdate ? <ActivityIndicator color={colors.primary} /> : undefined}
+              first
+            />
+            <SettingsRow
+              icon="share"
+              title="Releases no GitHub"
+              subtitle="Baixar APK manualmente"
+              onPress={() => Linking.openURL(RELEASES_PAGE)}
+              last
+            />
+          </SettingsGroup>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <SettingsGroup title="Notificações">
             <SettingsRow
-              icon="🔔" title="Acesso a notificações"
-              subtitle={settings.notificationPermissionGranted ? '✅ Permissão concedida' : '⚠️ Permissão necessária'}
+              icon="bell" title="Acesso a notificações"
+              subtitle={settings.notificationPermissionGranted ? 'Permissão concedida' : 'Permissão necessária'}
               onPress={handleCheckPermission}
               right={
                 <View style={[{
@@ -288,7 +325,7 @@ export function SettingsScreen({ navigation }: any) {
               first
             />
             <SettingsRow
-              icon="🏦" title="Bancos monitorados"
+              icon="bank" title="Bancos monitorados"
               subtitle="Nubank, Inter, Itaú, Bradesco, BB e mais"
               onPress={() => {}}
               last
@@ -296,17 +333,16 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Aparência ─────────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(150).duration(400)}>
           <SettingsGroup title="Aparência">
             <SettingsRow
-              icon="🎨" title="Tema"
+              icon="palette" title="Tema"
               subtitle={currentThemeLabel}
               onPress={() => setShowThemeModal(true)}
               first
             />
             <SettingsRow
-              icon="🌐" title="Idioma"
+              icon="language" title="Idioma"
               subtitle={currentLangLabel}
               onPress={() => setShowLangModal(true)}
               last
@@ -314,24 +350,23 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Exportação ────────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
           <SettingsGroup title="Exportação">
             <SettingsRow
-              icon="📊" title="Exportar CSV"
+              icon="export" title="Exportar CSV"
               subtitle={`${transactions.length} transações disponíveis`}
               onPress={handleExportCSV}
               disabled={isExporting || transactions.length === 0}
               first
             />
             <SettingsRow
-              icon="📋" title="Exportar JSON"
+              icon="file" title="Exportar JSON"
               subtitle="Formato completo com todos os campos"
               onPress={handleExportJSON}
               disabled={isExporting || transactions.length === 0}
             />
             <SettingsRow
-              icon="🔢" title="Exportar Excel (CSV)"
+              icon="download" title="Exportar Excel (CSV)"
               subtitle="Compatível com Excel e Google Sheets"
               onPress={() => navigation.navigate('Export')}
               last
@@ -339,25 +374,24 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Backup e Segurança ────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(250).duration(400)}>
           <SettingsGroup title="Backup e Segurança">
             <SettingsRow
-              icon="💾" title="Fazer backup"
+              icon="upload" title="Fazer backup"
               subtitle="Exporta todos os dados em formato JSON"
               onPress={handleBackup}
               first
             />
             <SettingsRow
-              icon="🔒" title="Privacidade"
+              icon="lock" title="Privacidade"
               subtitle="Todos os dados são armazenados localmente"
               onPress={() => Alert.alert(
-                '🔒 Privacidade',
+                'Privacidade',
                 'O FinTrack armazena todos os seus dados exclusivamente no seu dispositivo. Nenhuma informação financeira é enviada para servidores externos.\n\nPermissões utilizadas:\n• Acesso a notificações: para detectar transações bancárias automaticamente.',
               )}
             />
             <SettingsRow
-              icon="🛡️" title="Dados locais"
+              icon="shield" title="Dados locais"
               subtitle="Sem envio de notificações para servidores"
               first={false} last
               onPress={() => {}}
@@ -370,16 +404,15 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Sobre ─────────────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <SettingsGroup title="Sobre">
             <SettingsRow
-              icon="📱" title="FinTrack"
-              subtitle="Versão 2.0.0 — Monitor financeiro inteligente"
+              icon="phone" title="FinTrack"
+              subtitle={`Versão ${appVersion} — Controle financeiro inteligente`}
               first
             />
             <SettingsRow
-              icon="📝" title="Logs de depuração"
+              icon="file" title="Logs de depuração"
               subtitle="Ver e limpar logs do sistema"
               onPress={handleClearLogs}
               last
@@ -387,11 +420,10 @@ export function SettingsScreen({ navigation }: any) {
           </SettingsGroup>
         </Animated.View>
 
-        {/* ── Zona de Perigo ────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(350).duration(400)}>
           <SettingsGroup title="Zona de perigo">
             <SettingsRow
-              icon="🗑️" title="Resetar todos os dados"
+              icon="trash" title="Resetar todos os dados"
               subtitle="Remove permanentemente transações, contas e configurações"
               onPress={handleResetData}
               isDestructive
@@ -403,21 +435,25 @@ export function SettingsScreen({ navigation }: any) {
 
       {/* ── Modal de Tema ────────────────────────────────────────────────────── */}
       <Modal visible={showThemeModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowThemeModal(false)}
-        >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowThemeModal(false)}
+          />
           <View style={[styles.bottomSheet, {
             backgroundColor: colors.card,
             borderTopLeftRadius:  borderRadius['2xl'],
             borderTopRightRadius: borderRadius['2xl'],
             padding: spacing.xl,
           }]}>
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Tema
-            </Text>
-            {THEME_OPTIONS.map((opt, i) => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
+                Tema
+              </Text>
+              <CloseButton onPress={() => setShowThemeModal(false)} />
+            </View>
+            {THEME_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.key}
                 onPress={() => { setTheme(opt.key); setShowThemeModal(false); }}
@@ -427,37 +463,41 @@ export function SettingsScreen({ navigation }: any) {
                   borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
                 }]}
               >
-                <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
+                <Icon name={opt.icon} size={22} color={settings.theme === opt.key ? colors.primary : colors.textSecondary} />
                 <Text style={[typography.styles.bodyLarge, {
                   color: settings.theme === opt.key ? colors.primary : colors.text, flex: 1,
                 }]}>
                   {opt.label}
                 </Text>
                 {settings.theme === opt.key && (
-                  <Text style={{ color: colors.primary, fontSize: 18 }}>✓</Text>
+                  <Icon name="check" size={18} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* ── Modal de Idioma ──────────────────────────────────────────────────── */}
       <Modal visible={showLangModal} transparent animationType="slide">
-        <TouchableOpacity
-          style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
-          activeOpacity={1}
-          onPress={() => setShowLangModal(false)}
-        >
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowLangModal(false)}
+          />
           <View style={[styles.bottomSheet, {
             backgroundColor: colors.card,
             borderTopLeftRadius:  borderRadius['2xl'],
             borderTopRightRadius: borderRadius['2xl'],
             padding: spacing.xl,
           }]}>
-            <Text style={[typography.styles.titleLarge, { color: colors.text, marginBottom: spacing.lg }]}>
-              Idioma
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
+                Idioma
+              </Text>
+              <CloseButton onPress={() => setShowLangModal(false)} />
+            </View>
             {LANG_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.key}
@@ -468,14 +508,14 @@ export function SettingsScreen({ navigation }: any) {
                   borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
                 }]}
               >
-                <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
+                <Icon name="language" size={22} color={(settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.textSecondary} />
                 <Text style={[typography.styles.bodyLarge, {
                   color: (settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.text, flex: 1,
                 }]}>
                   {opt.label}
                 </Text>
                 {(settings.language ?? 'pt-BR') === opt.key && (
-                  <Text style={{ color: colors.primary, fontSize: 18 }}>✓</Text>
+                  <Icon name="check" size={18} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -483,7 +523,7 @@ export function SettingsScreen({ navigation }: any) {
               * A tradução completa para inglês estará disponível em breve.
             </Text>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

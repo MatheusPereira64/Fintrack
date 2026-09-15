@@ -1,11 +1,8 @@
 import { BankParser, ParsedTransaction } from '../../../models/types';
-import { parseBRL } from '../../../utils/currency';
-
-const BRL_RE = /r\$\s?([\d.]*\d*,\d{2})/i;
+import { parseNotificationAmount } from '../../../utils/notificationAmount';
 
 function findAmount(title: string, body: string): number | null {
-  const m = BRL_RE.exec(`${title} ${body}`);
-  return m ? parseBRL(m[1]) : null;
+  return parseNotificationAmount(`${title} ${body}`);
 }
 
 function includesAny(text: string, ...terms: string[]): boolean {
@@ -18,7 +15,6 @@ export const NubankParser: BankParser = {
     const raw  = `${title} ${body}`;
     const amt  = findAmount(title, body);
 
-    // Transferência recebida: "Transferência recebida" / "Recebemos sua transferência de R$ 1,00."
     if (includesAny(full,
       'transferência recebid', 'transferencia recebid',
       'recebemos sua transferência', 'recebemos sua transferencia',
@@ -34,7 +30,6 @@ export const NubankParser: BankParser = {
       }
     }
 
-    // Transferência enviada: "Transferência enviada" / "Enviamos sua transferência de R$ X"
     if (includesAny(full,
       'transferência enviad', 'transferencia enviad',
       'enviamos sua transferência', 'enviamos sua transferencia',
@@ -44,15 +39,16 @@ export const NubankParser: BankParser = {
         return {
           type: 'expense', category: 'Transferência',
           amount: -amt,
-          description: `Transferência enviada${extractName(raw, 'para')}`,
+          description: 'Transferência enviada',
           bankName: 'Nubank', rawTitle: title, rawBody: body,
         };
       }
     }
 
-    // Pix enviado: "Você enviou R$ 53,90 para João"
-    if (includesAny(full, 'pix enviad', 'você enviou', 'voce enviou', 'enviou r$') ||
-        (full.includes('pix') && includesAny(full, 'enviou', 'transferi'))) {
+    if (includesAny(full,
+      'pix enviad', 'você enviou', 'voce enviou', 'pix out',
+      'pagou um pix', 'pagamento pix',
+    )) {
       if (amt) {
         return {
           type: 'expense', category: 'Pix',
@@ -63,9 +59,15 @@ export const NubankParser: BankParser = {
       }
     }
 
-    // Pix recebido: "Você recebeu R$ 200,00 de Maria" / "Pix recebido"
-    if (includesAny(full, 'pix recebid', 'você recebeu', 'voce recebeu', 'recebeu r$') ||
-        (full.includes('pix') && full.includes('receb'))) {
+    if (
+      includesAny(full,
+        'pix recebid', 'você recebeu', 'voce recebeu', 'recebeu um pix',
+        'recebeu r$', 'transferência pix receb',
+      )
+      || (full.includes('pix') && includesAny(full, 'receb', 'creditado', 'entrada'))
+      || /^pix\s+de\s+r\$/i.test(full.trim())
+      || (full.includes('pix de') && !includesAny(full, 'envi', 'pagou', 'saída', 'saida'))
+    ) {
       if (amt) {
         return {
           type: 'income', category: 'Pix',
@@ -76,7 +78,6 @@ export const NubankParser: BankParser = {
       }
     }
 
-    // Compra aprovada
     if (includesAny(full, 'compra aprovada', 'compra no', 'compra na', 'compra de r$')) {
       if (amt) {
         const merchant = extractMerchant(raw);
@@ -89,7 +90,6 @@ export const NubankParser: BankParser = {
       }
     }
 
-    // Débito: "R$ 45,00 debitado"
     if (full.includes('debitado') && amt) {
       return {
         type: 'expense', category: 'Compra Débito',
@@ -99,7 +99,6 @@ export const NubankParser: BankParser = {
       };
     }
 
-    // Pagamento de fatura
     if (full.includes('fatura') && full.includes('pagamento') && amt) {
       return {
         type: 'expense', category: 'Boleto',
@@ -109,7 +108,6 @@ export const NubankParser: BankParser = {
       };
     }
 
-    // Estorno
     if (full.includes('estorno') && amt) {
       return {
         type: 'income', category: 'Estorno',
@@ -119,9 +117,16 @@ export const NubankParser: BankParser = {
       };
     }
 
-    // Fallback: qualquer notificação Nubank com valor monetário
     if (amt && includesAny(full, 'receb', 'enviad', 'compra', 'pagamento', 'transfer', 'pix', 'debit')) {
       const isIn = includesAny(full, 'receb', 'recebemos', 'credit', 'estorno');
+      const isOut = includesAny(full, 'enviad', 'enviamos', 'pagou', 'debit');
+      if (!isIn && !isOut && full.includes('pix')) {
+        return {
+          type: 'income', category: 'Pix', amount: amt,
+          description: title || 'Pix Nubank',
+          bankName: 'Nubank', rawTitle: title, rawBody: body,
+        };
+      }
       return {
         type: isIn ? 'income' : 'expense',
         category: full.includes('pix') ? 'Pix' : 'Transferência',

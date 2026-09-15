@@ -11,6 +11,7 @@ import { useTransactionStore } from '../../../store/transactionStore';
 import { AppHeader }           from '../../../components/AppHeader';
 import { AppButton }           from '../../../components/AppButton';
 import { Icon }                from '../../../components/Icon';
+import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { formatCurrency }      from '../../../utils/currency';
 import {
   pickImportFile, parseImportFile, ImportCandidate,
@@ -20,6 +21,7 @@ import { TransactionRepository } from '../../../database/repositories/Transactio
 export function ImportScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
+  const bottomPad = useSafeBottomPadding(24);
 
   const { accounts } = useAccountStore();
   const { loadByMonth, currentMonth } = useTransactionStore();
@@ -108,7 +110,7 @@ export function ImportScreen({ navigation }: any) {
       <AppHeader
         title="Importar Extrato"
         subtitle="OFX · CSV"
-        onBack={() => navigation.goBack()}
+        onClose={() => navigation.goBack()}
       />
 
       {candidates.length === 0 ? (
@@ -189,7 +191,7 @@ export function ImportScreen({ navigation }: any) {
           <FlatList
             data={candidates}
             keyExtractor={(_, i) => String(i)}
-            contentContainerStyle={{ padding: spacing.sm, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: spacing.sm, paddingBottom: bottomPad + 40 }}
             renderItem={({ item, index }) => {
               const sel = selected.has(index);
               return (
