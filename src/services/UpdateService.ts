@@ -16,10 +16,15 @@ const { UpdateModule } = NativeModules;
 /** Repo público das releases do FinTrack */
 export const GITHUB_OWNER = 'MatheusPereira64';
 export const GITHUB_REPO  = 'Fintrack';
-export const RELEASES_API =
-  `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+const GH_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+export const RELEASES_API = `${GH_API}/releases/latest`;
 export const RELEASES_PAGE =
   `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
+
+const GH_HEADERS = {
+  Accept: 'application/vnd.github+json',
+  'User-Agent': 'FinTrackApp',
+} as const;
 
 export interface AppVersionInfo {
   versionName: string;
@@ -71,9 +76,29 @@ function pickApkAsset(assets: GhAsset[]): GhAsset | null {
     || (a.content_type ?? '').includes('android.package'),
   );
   if (apks.length === 0) return null;
-  // Prefer release/universal APK names
   const preferred = apks.find(a => /release|fintrack|universal/i.test(a.name));
   return preferred ?? apks[0];
+}
+
+function mapRelease(data: GhRelease): RemoteRelease {
+  const apk = pickApkAsset(data.assets ?? []);
+  return {
+    tagName: data.tag_name,
+    versionName: parseVersionTag(data.tag_name),
+    versionCode: parseVersionCodeFromBody(data.body),
+    name: data.name || data.tag_name,
+    body: data.body || '',
+    htmlUrl: data.html_url,
+    apkUrl: apk?.browser_download_url ?? null,
+    apkName: apk?.name ?? null,
+    publishedAt: data.published_at,
+  };
+}
+
+async function ghJson<T>(path: string): Promise<{ ok: true; data: T } | { ok: false; status: number }> {
+  const res = await fetch(`${GH_API}${path}`, { headers: GH_HEADERS });
+  if (!res.ok) return { ok: false, status: res.status };
+  return { ok: true, data: (await res.json()) as T };
 }
 
 export const UpdateService = {
@@ -86,35 +111,22 @@ export const UpdateService = {
   },
 
   async fetchLatestRelease(): Promise<RemoteRelease | null> {
-    const res = await fetch(RELEASES_API, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'FinTrackApp',
-      },
-    });
+    const latest = await ghJson<GhRelease>('/releases/latest');
+    if (latest.ok) return mapRelease(latest.data);
 
-    if (res.status === 404) {
-      return null;
-    }
-    if (!res.ok) {
-      throw new Error(`GitHub API ${res.status}`);
+    if (latest.status !== 404) {
+      throw new Error(`GitHub API ${latest.status}`);
     }
 
-    const data = (await res.json()) as GhRelease;
-    const apk = pickApkAsset(data.assets ?? []);
-    const versionName = parseVersionTag(data.tag_name);
+    // /latest devolve 404 quando só existe tag, ou só draft/pre-release.
+    const listed = await ghJson<GhRelease[]>('/releases?per_page=10');
+    if (!listed.ok) {
+      if (listed.status === 404) return null;
+      throw new Error(`GitHub API ${listed.status}`);
+    }
 
-    return {
-      tagName: data.tag_name,
-      versionName,
-      versionCode: parseVersionCodeFromBody(data.body),
-      name: data.name || data.tag_name,
-      body: data.body || '',
-      htmlUrl: data.html_url,
-      apkUrl: apk?.browser_download_url ?? null,
-      apkName: apk?.name ?? null,
-      publishedAt: data.published_at,
-    };
+    const published = listed.data.find(r => pickApkAsset(r.assets ?? []));
+    return published ? mapRelease(published) : (listed.data[0] ? mapRelease(listed.data[0]) : null);
   },
 
   async checkForUpdate(): Promise<UpdateCheckResult> {
@@ -296,6 +308,28 @@ export const UpdateService = {
         return result;
       }
       if (result.status === 'up_to_date') {
+        if (!result.remote) {
+          Alert.alert(
+            'Nenhuma release no GitHub',
+            `Você está na versão ${result.local.versionName}, mas ainda não há uma release publicada em ${RELEASES_PAGE}.`,
+            [
+              { text: 'OK', style: 'cancel' },
+              { text: 'Abrir GitHub', onPress: () => Linking.openURL(RELEASES_PAGE) },
+            ],
+          );
+          return result;
+        }
+        if (!result.remote.apkUrl) {
+          Alert.alert(
+            'Release sem APK',
+            `A release ${result.remote.name} existe, mas não tem um APK anexado. Abra a página para baixar manualmente.`,
+            [
+              { text: 'OK', style: 'cancel' },
+              { text: 'Abrir GitHub', onPress: () => Linking.openURL(result.remote!.htmlUrl || RELEASES_PAGE) },
+            ],
+          );
+          return result;
+        }
         Alert.alert(
           'App atualizado',
           `Você já está na versão ${result.local.versionName}.`,
@@ -304,6 +338,17 @@ export const UpdateService = {
       }
 
       const { remote, local } = result;
+      if (!remote.apkUrl) {
+        Alert.alert(
+          'Atualização encontrada',
+          `Versão ${remote.versionName} está no GitHub, mas a release não tem APK anexado.`,
+          [
+            { text: 'OK', style: 'cancel' },
+            { text: 'Abrir GitHub', onPress: () => Linking.openURL(remote.htmlUrl || RELEASES_PAGE) },
+          ],
+        );
+        return result;
+      }
       return await new Promise(resolve => {
         Alert.alert(
           'Atualização encontrada',
