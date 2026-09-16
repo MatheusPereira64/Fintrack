@@ -12,6 +12,7 @@ import { useAccountStore }   from '../../../store/accountStore';
 import { ExportService }     from '../../../services/ExportService';
 import { Logger }            from '../../../services/LoggerService';
 import { getDatabase }       from '../../../database/db';
+import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
 import { Icon, AppIconName } from '../../../components/Icon';
 import { AppHeader } from '../../../components/AppHeader';
 import { CloseButton } from '../../../components/CloseButton';
@@ -112,16 +113,18 @@ function SettingsRow({
 
 export function SettingsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const { settings, setTheme, setLanguage } = useSettingsStore();
-  const { transactions }  = useTransactionStore();
-  const { accounts }      = useAccountStore();
+  const settings = useSettingsStore(s => s.settings);
+  const setTheme = useSettingsStore(s => s.setTheme);
+  const setLanguage = useSettingsStore(s => s.setLanguage);
+  const txCount = useTransactionStore(s => s.summary.count);
+  const accounts = useAccountStore(s => s.accounts);
 
   const [isExporting, setIsExporting] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showLangModal, setShowLangModal]   = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
-  const [appVersion, setAppVersion] = useState('2.0.0');
+  const [appVersion, setAppVersion] = useState('1.0.0');
   const bottomPad = useSafeBottomPadding(24);
 
   useEffect(() => {
@@ -157,23 +160,25 @@ export function SettingsScreen({ navigation }: any) {
   const handleExportCSV = useCallback(async () => {
     setIsExporting(true);
     try {
-      const csv = ExportService.toCSV(transactions, accounts);
+      const txs = await TransactionRepository.findAll(2000, 0);
+      const csv = ExportService.toCSV(txs, accounts);
       await Share.share({
         title:   `FinTrack_${new Date().toISOString().split('T')[0]}.csv`,
         message: csv,
       });
-      Logger.info('Settings', 'Exportação CSV concluída', { count: transactions.length });
+      Logger.info('Settings', 'Exportação CSV concluída', { count: txs.length });
     } catch {
       Alert.alert('Erro', 'Não foi possível exportar o CSV.');
     } finally {
       setIsExporting(false);
     }
-  }, [transactions, accounts]);
+  }, [accounts]);
 
   const handleExportJSON = useCallback(async () => {
     setIsExporting(true);
     try {
-      const json = ExportService.toJSON(transactions, accounts);
+      const txs = await TransactionRepository.findAll(2000, 0);
+      const json = ExportService.toJSON(txs, accounts);
       await Share.share({
         title:   `FinTrack_${new Date().toISOString().split('T')[0]}.json`,
         message: json,
@@ -183,7 +188,7 @@ export function SettingsScreen({ navigation }: any) {
     } finally {
       setIsExporting(false);
     }
-  }, [transactions, accounts]);
+  }, [accounts]);
 
   const handleResetData = useCallback(() => {
     Alert.alert(
@@ -220,16 +225,17 @@ export function SettingsScreen({ navigation }: any) {
 
   const handleBackup = useCallback(async () => {
     try {
-      const backupData = ExportService.toJSON(transactions, accounts);
+      const txs = await TransactionRepository.findAll(2000, 0);
+      const backupData = ExportService.toJSON(txs, accounts);
       await Share.share({
         title:   `FinTrack_Backup_${new Date().toISOString().split('T')[0]}.json`,
         message: backupData,
       });
-      Logger.info('Settings', 'Backup gerado', { transactions: transactions.length, accounts: accounts.length });
+      Logger.info('Settings', 'Backup gerado', { transactions: txs.length, accounts: accounts.length });
     } catch {
       Alert.alert('Erro', 'Não foi possível gerar o backup.');
     }
-  }, [transactions, accounts]);
+  }, [accounts]);
 
   const handleClearLogs = useCallback(() => {
     Alert.alert('Limpar logs', 'Deseja remover todos os logs de depuração?', [
@@ -351,16 +357,16 @@ export function SettingsScreen({ navigation }: any) {
           <SettingsGroup title="Exportação">
             <SettingsRow
               icon="export" title="Exportar CSV"
-              subtitle={`${transactions.length} transações disponíveis`}
+              subtitle={`${txCount} transações neste mês`}
               onPress={handleExportCSV}
-              disabled={isExporting || transactions.length === 0}
+              disabled={isExporting}
               first
             />
             <SettingsRow
               icon="file" title="Exportar JSON"
               subtitle="Formato completo com todos os campos"
               onPress={handleExportJSON}
-              disabled={isExporting || transactions.length === 0}
+              disabled={isExporting}
             />
             <SettingsRow
               icon="download" title="Exportar Excel (CSV)"

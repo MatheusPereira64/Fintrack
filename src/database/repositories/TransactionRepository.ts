@@ -1,6 +1,12 @@
 import { getDatabase } from '../db';
 import { Transaction, InsertTransaction } from '../../models/types';
 
+const TX_COLS = `id, account_id, category_id, cost_center_id, date, amount, description,
+  type, is_recurring, tags, bank_name, source_notification, created_at`;
+
+export const MONTH_PAGE_SIZE = 500;
+export const MONTH_HARD_CAP = 2000;
+
 function rowToTransaction(r: any): Transaction {
   return {
     id:                 r.id,
@@ -19,10 +25,6 @@ function rowToTransaction(r: any): Transaction {
   };
 }
 
-/**
- * Gera condição SQL para o intervalo correto de um mês,
- * independente de quantos dias o mês possui.
- */
 function monthRange(year: number, month: number): { start: string; end: string } {
   const start = `${year}-${String(month).padStart(2, '0')}-01`;
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -31,29 +33,39 @@ function monthRange(year: number, month: number): { start: string; end: string }
   return { start, end };
 }
 
+function collectRows(r: { rows: { length: number; item: (i: number) => any } }): Transaction[] {
+  const rows: Transaction[] = [];
+  for (let i = 0; i < r.rows.length; i++) rows.push(rowToTransaction(r.rows.item(i)));
+  return rows;
+}
+
 export const TransactionRepository = {
 
   async findAll(limit = 200, offset = 0): Promise<Transaction[]> {
     const db = await getDatabase();
     const [r] = await db.executeSql(
-      `SELECT * FROM transactions ORDER BY date DESC, id DESC LIMIT ? OFFSET ?`,
+      `SELECT ${TX_COLS} FROM transactions ORDER BY date DESC, id DESC LIMIT ? OFFSET ?`,
       [limit, offset],
     );
-    const rows: Transaction[] = [];
-    for (let i = 0; i < r.rows.length; i++) rows.push(rowToTransaction(r.rows.item(i)));
-    return rows;
+    return collectRows(r);
   },
 
-  async findByMonth(year: number, month: number): Promise<Transaction[]> {
+  async findByMonth(
+    year: number,
+    month: number,
+    limit = MONTH_HARD_CAP,
+    offset = 0,
+  ): Promise<Transaction[]> {
     const db = await getDatabase();
     const { start, end } = monthRange(year, month);
     const [r] = await db.executeSql(
-      `SELECT * FROM transactions WHERE date >= ? AND date < ? ORDER BY date DESC, id DESC`,
-      [start, end],
+      `SELECT ${TX_COLS} FROM transactions
+       WHERE date >= ? AND date < ?
+       ORDER BY date DESC, id DESC
+       LIMIT ? OFFSET ?`,
+      [start, end, limit, offset],
     );
-    const rows: Transaction[] = [];
-    for (let i = 0; i < r.rows.length; i++) rows.push(rowToTransaction(r.rows.item(i)));
-    return rows;
+    return collectRows(r);
   },
 
   async findByMonthRange(
@@ -64,18 +76,19 @@ export const TransactionRepository = {
     const start = `${startYear}-${String(startMonth).padStart(2, '0')}-01`;
     const { end } = monthRange(endYear, endMonth);
     const [r] = await db.executeSql(
-      `SELECT * FROM transactions WHERE date >= ? AND date < ? ORDER BY date DESC, id DESC`,
-      [start, end],
+      `SELECT ${TX_COLS} FROM transactions
+       WHERE date >= ? AND date < ?
+       ORDER BY date DESC, id DESC
+       LIMIT ?`,
+      [start, end, MONTH_HARD_CAP],
     );
-    const rows: Transaction[] = [];
-    for (let i = 0; i < r.rows.length; i++) rows.push(rowToTransaction(r.rows.item(i)));
-    return rows;
+    return collectRows(r);
   },
 
   async findById(id: number): Promise<Transaction | null> {
     const db = await getDatabase();
     const [r] = await db.executeSql(
-      `SELECT * FROM transactions WHERE id = ? LIMIT 1`, [id],
+      `SELECT ${TX_COLS} FROM transactions WHERE id = ? LIMIT 1`, [id],
     );
     if (r.rows.length === 0) return null;
     return rowToTransaction(r.rows.item(0));
@@ -84,12 +97,22 @@ export const TransactionRepository = {
   async findByAccount(accountId: number, limit = 100): Promise<Transaction[]> {
     const db = await getDatabase();
     const [r] = await db.executeSql(
-      `SELECT * FROM transactions WHERE account_id = ? ORDER BY date DESC LIMIT ?`,
+      `SELECT ${TX_COLS} FROM transactions WHERE account_id = ? ORDER BY date DESC LIMIT ?`,
       [accountId, limit],
     );
-    const rows: Transaction[] = [];
-    for (let i = 0; i < r.rows.length; i++) rows.push(rowToTransaction(r.rows.item(i)));
-    return rows;
+    return collectRows(r);
+  },
+
+  /** Última ocorrência de cada transação recorrente (description + account). */
+  async findRecurringTemplates(): Promise<Transaction[]> {
+    const db = await getDatabase();
+    const [r] = await db.executeSql(
+      `SELECT ${TX_COLS} FROM transactions
+       WHERE is_recurring = 1 AND id IN (
+         SELECT MAX(id) FROM transactions WHERE is_recurring = 1 GROUP BY description, account_id
+       )`,
+    );
+    return collectRows(r);
   },
 
   async insert(data: InsertTransaction): Promise<Transaction> {
@@ -116,7 +139,6 @@ export const TransactionRepository = {
       ],
     );
 
-    // Atualiza saldo da conta
     await db.executeSql(
       `UPDATE accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?`,
       [data.amount, data.accountId],
@@ -127,15 +149,11 @@ export const TransactionRepository = {
     return inserted;
   },
 
-  /**
-   * Atualiza a transação e recalcula o saldo da conta corretamente.
-   */
   async update(id: number, data: Partial<InsertTransaction>): Promise<void> {
     const db = await getDatabase();
     const current = await this.findById(id);
     if (!current) throw new Error(`Transaction ${id} not found`);
 
-    // Se o valor mudou, ajusta o saldo da conta
     if (data.amount !== undefined && data.amount !== current.amount) {
       const diff = data.amount - current.amount;
       await db.executeSql(
@@ -171,8 +189,6 @@ export const TransactionRepository = {
     }
     await db.executeSql('DELETE FROM transactions WHERE id = ?', [id]);
   },
-
-  // ─── Agregações ──────────────────────────────────────────────────────────────
 
   async sumByMonth(year: number, month: number): Promise<{ income: number; expense: number }> {
     const db = await getDatabase();
@@ -216,13 +232,35 @@ export const TransactionRepository = {
     lastNMonths = 6,
   ): Promise<Array<{ year: number; month: number; income: number; expense: number }>> {
     const now = new Date();
-    const results = [];
+    const startDate = new Date(now.getFullYear(), now.getMonth() - (lastNMonths - 1), 1);
+    const start = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const endMonth = now.getMonth() === 11 ? 1 : now.getMonth() + 2;
+    const endYear  = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+    const end = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
 
+    const [r] = await db.executeSql(
+      `SELECT CAST(strftime('%Y', date) AS INTEGER) as y,
+              CAST(strftime('%m', date) AS INTEGER) as m,
+              COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as income,
+              COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0) as expense
+       FROM transactions
+       WHERE date >= ? AND date < ?
+       GROUP BY y, m`,
+      [start, end],
+    );
+
+    const byKey = new Map<string, { income: number; expense: number }>();
+    for (let i = 0; i < r.rows.length; i++) {
+      const row = r.rows.item(i);
+      byKey.set(`${row.y}-${row.m}`, { income: row.income, expense: row.expense });
+    }
+
+    const results = [];
     for (let i = lastNMonths - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year  = d.getFullYear();
       const month = d.getMonth() + 1;
-      const sums  = await this.sumByMonth(year, month);
+      const sums  = byKey.get(`${year}-${month}`) ?? { income: 0, expense: 0 };
       results.push({ year, month, ...sums });
     }
     return results;
@@ -233,6 +271,19 @@ export const TransactionRepository = {
     const { start, end } = monthRange(year, month);
     const [r] = await db.executeSql(
       `SELECT COUNT(*) as total FROM transactions WHERE date >= ? AND date < ?`,
+      [start, end],
+    );
+    return r.rows.item(0).total;
+  },
+
+  async countAutoByMonth(year: number, month: number): Promise<number> {
+    const db = await getDatabase();
+    const { start, end } = monthRange(year, month);
+    const [r] = await db.executeSql(
+      `SELECT COUNT(*) as total FROM transactions
+       WHERE date >= ? AND date < ?
+         AND source_notification IS NOT NULL
+         AND source_notification != ''`,
       [start, end],
     );
     return r.rows.item(0).total;

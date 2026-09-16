@@ -29,9 +29,10 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   const bottomPad = useSafeBottomPadding(40);
   const existing = route.params?.editTransaction;
 
-  const { addTransaction, updateTransaction } = useTransactionStore();
-  const { accounts } = useAccountStore();
-  const { categories } = useCategoryStore();
+  const addTransaction    = useTransactionStore(s => s.addTransaction);
+  const updateTransaction = useTransactionStore(s => s.updateTransaction);
+  const accounts          = useAccountStore(s => s.accounts);
+  const categories        = useCategoryStore(s => s.categories);
 
   const [type,        setType]        = useState<TransactionType>(existing?.type ?? 'expense');
   const [amount,      setAmount]      = useState(existing ? Math.abs(existing.amount).toFixed(2).replace('.', ',') : '');

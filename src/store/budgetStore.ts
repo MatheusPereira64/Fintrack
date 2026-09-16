@@ -59,13 +59,16 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   syncSpent: async (year, month) => {
     const catSpending = await TransactionRepository.spendingByCategory(year, month);
     const spendMap = new Map(catSpending.map(c => [c.categoryId, c.total]));
+    const pending: Array<{ id: number; spent: number }> = [];
 
     for (const budget of get().budgets) {
       const spent = budget.categoryId ? (spendMap.get(budget.categoryId) ?? 0) : 0;
       if (Math.abs(spent - budget.spent) > 0.01) {
-        await BudgetRepository.updateSpent(budget.id, spent);
+        pending.push({ id: budget.id, spent });
       }
     }
+    if (pending.length === 0) return;
+    await Promise.all(pending.map(p => BudgetRepository.updateSpent(p.id, p.spent)));
     await get().loadBudgets();
   },
 }));

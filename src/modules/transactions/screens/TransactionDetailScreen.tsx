@@ -16,9 +16,10 @@ export function TransactionDetailScreen({ route, navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
 
-  const { transactions, deleteTransaction } = useTransactionStore();
+  const transactions      = useTransactionStore(s => s.transactions);
+  const deleteTransaction = useTransactionStore(s => s.deleteTransaction);
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
-  const { accounts }    = useAccountStore();
+  const accounts        = useAccountStore(s => s.accounts);
 
   const transaction = transactions.find(t => t.id === transactionId);
   const category    = transaction?.categoryId ? getCategoryById(transaction.categoryId) : undefined;

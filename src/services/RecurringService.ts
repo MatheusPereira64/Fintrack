@@ -1,12 +1,5 @@
 /**
- * RecurringService — Processa transações recorrentes.
- *
- * Chamado no bootstrap do App.tsx.
- * Para cada transação marcada como is_recurring, verifica se já existe
- * uma cópia no mês atual. Se não existir, cria automaticamente.
- *
- * Isso permite que o usuário marque uma transação como "Salário mensal",
- * "Aluguel", "Academia" etc. e ela apareça automaticamente todo mês.
+ * RecurringService — Processa transações recorrentes no bootstrap.
  */
 import { TransactionRepository } from '../database/repositories/TransactionRepository';
 import { AccountRepository }     from '../database/repositories/AccountRepository';
@@ -24,29 +17,20 @@ export const RecurringService = {
     let created = 0;
 
     try {
-      // Pega todas as recorrentes (de qualquer mês passado)
-      const allTx  = await TransactionRepository.findAll(500, 0);
-      const recurring = allTx.filter(t => t.isRecurring);
-
+      const recurring = await TransactionRepository.findRecurringTemplates();
       if (recurring.length === 0) return 0;
 
-      // Pega as já existentes no mês atual
       const thisMonth = await TransactionRepository.findByMonth(year, month);
       const thisMonthKeys = new Set(thisMonth.map(t => `${t.description}|${t.accountId}`));
+      const accounts = await AccountRepository.findAll();
+      const accountIds = new Set(accounts.map(a => a.id));
 
       for (const tx of recurring) {
         const key = `${tx.description}|${tx.accountId}`;
-        if (thisMonthKeys.has(key)) continue; // já existe no mês
-
-        // Verifica se a transação é de um mês anterior (não copia o próprio mês)
+        if (thisMonthKeys.has(key)) continue;
         if (tx.date.startsWith(monthStr)) continue;
+        if (!accountIds.has(tx.accountId)) continue;
 
-        // Verifica conta ainda existe
-        const accounts = await AccountRepository.findAll();
-        const account  = accounts.find(a => a.id === tx.accountId);
-        if (!account) continue;
-
-        // Cria a cópia para o mês atual
         const newDate = `${monthStr}-${String(tx.date.slice(8, 10)).padStart(2, '0')}`;
 
         await TransactionRepository.insert({
@@ -61,8 +45,7 @@ export const RecurringService = {
         });
 
         created++;
-        thisMonthKeys.add(key); // evita duplicatas dentro do próprio loop
-
+        thisMonthKeys.add(key);
         Logger.info('RecurringService', `Criada recorrência: ${tx.description}`);
       }
 

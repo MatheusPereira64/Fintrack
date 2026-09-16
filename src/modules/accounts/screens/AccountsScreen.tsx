@@ -16,7 +16,7 @@ import { useTabListPadding } from '../../../hooks/useScreenPadding';
 import { Account, AccountType } from '../../../models/types';
 import { formatCurrency, parseAmount } from '../../../utils/currency';
 import {
-  detectInstalledBanks, DetectedBank, getNewBanks,
+  detectInstalledBanks, DetectedBank, getNewBanks, hydrateBankIcons,
 } from '../../../services/InstalledBanksService';
 import { hasBalanceDivergence } from '../../../services/AccountBalanceService';
 import {
@@ -51,11 +51,14 @@ const EMPTY_FORM: FormState = {
 export function AccountsScreen({ navigation }: { navigation?: any }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const {
-    accounts, totalBalance, isLoading, loadAccounts,
-    addAccount, updateAccount, deleteAccount,
-    reconcileBalance,
-  } = useAccountStore();
+  const accounts         = useAccountStore(s => s.accounts);
+  const totalBalance     = useAccountStore(s => s.totalBalance);
+  const isLoading        = useAccountStore(s => s.isLoading);
+  const loadAccounts     = useAccountStore(s => s.loadAccounts);
+  const addAccount       = useAccountStore(s => s.addAccount);
+  const updateAccount    = useAccountStore(s => s.updateAccount);
+  const deleteAccount    = useAccountStore(s => s.deleteAccount);
+  const reconcileBalance = useAccountStore(s => s.reconcileBalance);
 
   const [form, setForm]               = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId]     = useState<number | null>(null);
@@ -102,10 +105,12 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
     try {
       const list = await detectInstalledBanks(accounts);
       setDetected(list);
+      setDetecting(false);
+      const withIcons = await hydrateBankIcons(list);
+      setDetected(withIcons);
     } catch {
       Alert.alert('Erro', 'Não foi possível detectar bancos instalados.');
       setDetected([]);
-    } finally {
       setDetecting(false);
     }
   }, [accounts]);

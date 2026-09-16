@@ -16,10 +16,11 @@ interface TransactionItemProps {
   onPress?:    (t: Transaction) => void;
   showDate?:   boolean;
   index?:      number;
+  animate?:    boolean;
 }
 
 export const TransactionItem = memo(function TransactionItem({
-  transaction, onPress, showDate = false, index = 0,
+  transaction, onPress, showDate = false, index = 0, animate = false,
 }: TransactionItemProps) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
@@ -31,9 +32,8 @@ export const TransactionItem = memo(function TransactionItem({
 
   const handlePress = useCallback(() => onPress?.(transaction), [onPress, transaction]);
 
-  return (
-    <Animated.View entering={FadeInRight.delay(index * 30).duration(250)}>
-      <TouchableOpacity
+  const inner = (
+    <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.7}
         style={[
@@ -90,6 +90,13 @@ export const TransactionItem = memo(function TransactionItem({
           )}
         </View>
       </TouchableOpacity>
+  );
+
+  if (!animate) return inner;
+
+  return (
+    <Animated.View entering={FadeInRight.delay(Math.min(index, 6) * 30).duration(250)}>
+      {inner}
     </Animated.View>
   );
 });

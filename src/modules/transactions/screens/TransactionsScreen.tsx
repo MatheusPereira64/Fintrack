@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, RefreshControl, Modal,
-  ScrollView,
+  ScrollView, ActivityIndicator,
 } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 
@@ -48,11 +48,17 @@ export function TransactionsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const listPad = useTabListPadding();
 
-  const {
-    transactions, isLoading, summary, currentMonth,
-    loadByMonth,
-  } = useTransactionStore();
-  const { categories, loadCategories } = useCategoryStore();
+  const transactions  = useTransactionStore(s => s.transactions);
+  const isLoading     = useTransactionStore(s => s.isLoading);
+  const isLoadingMore = useTransactionStore(s => s.isLoadingMore);
+  const summary       = useTransactionStore(s => s.summary);
+  const currentMonth  = useTransactionStore(s => s.currentMonth);
+  const loadByMonth   = useTransactionStore(s => s.loadByMonth);
+  const loadMore      = useTransactionStore(s => s.loadMore);
+  const hasMore       = useTransactionStore(s => s.hasMore);
+  const truncated     = useTransactionStore(s => s.truncated);
+  const categories    = useCategoryStore(s => s.categories);
+  const loadCategories = useCategoryStore(s => s.loadCategories);
 
   // ── Estado dos filtros ─────────────────────────────────────────────────────
   const [search,    setSearch]    = useState('');
@@ -126,13 +132,24 @@ export function TransactionsScreen({ navigation }: any) {
     return list;
   }, [transactions, typeFilter, search, advanced, sort]);
 
-  // ── Agrupamento por data (apenas para ordenação por data) ─────────────────
-  const sections = useMemo(() => {
+  // ── Lista virtualizada (header de dia + transação, sem .map interno) ──────
+  type ListRow =
+    | { kind: 'header'; key: string; date: string }
+    | { kind: 'tx'; key: string; tx: Transaction };
+
+  const listRows = useMemo((): ListRow[] => {
     if (sort.startsWith('amount')) {
-      return [{ date: '', txs: filtered }];
+      return filtered.map(tx => ({ kind: 'tx' as const, key: `tx-${tx.id}`, tx }));
     }
     const grouped = groupByDate(filtered as Array<Transaction & { date: string }>);
-    return Array.from(grouped.entries()).map(([date, txs]) => ({ date, txs: txs as Transaction[] }));
+    const rows: ListRow[] = [];
+    for (const [date, txs] of grouped.entries()) {
+      rows.push({ kind: 'header', key: `h-${date}`, date });
+      for (const tx of txs as Transaction[]) {
+        rows.push({ kind: 'tx', key: `tx-${tx.id}`, tx });
+      }
+    }
+    return rows;
   }, [filtered, sort]);
 
   const hasActiveFilters = useMemo(() =>
@@ -142,6 +159,12 @@ export function TransactionsScreen({ navigation }: any) {
     advanced.maxAmount !== undefined,
     [advanced],
   );
+
+  useEffect(() => {
+    if ((search.trim() || hasActiveFilters) && hasMore) {
+      loadMore();
+    }
+  }, [search, hasActiveFilters, hasMore, loadMore]);
 
   const applyAdvancedFilters = () => {
     setAdvanced({
@@ -284,8 +307,8 @@ export function TransactionsScreen({ navigation }: any) {
       {/* ── Lista de transações ──────────────────────────────────────────────── */}
       <FlatList
         style={styles.list}
-        data={sections}
-        keyExtractor={(item, idx) => item.date || String(idx)}
+        data={listRows}
+        keyExtractor={item => item.key}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -296,9 +319,20 @@ export function TransactionsScreen({ navigation }: any) {
         }
         contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         removeClippedSubviews
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        initialNumToRender={8}
+        maxToRenderPerBatch={12}
+        windowSize={8}
+        initialNumToRender={12}
+        onEndReached={() => { if (hasMore) loadMore(); }}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
+          ) : truncated ? (
+            <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginVertical: spacing.sm }]}>
+              Exibindo as {transactions.length} mais recentes deste mês
+            </Text>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={[styles.empty, {
             backgroundColor: colors.surfaceVariant,
@@ -319,27 +353,25 @@ export function TransactionsScreen({ navigation }: any) {
             )}
           </View>
         }
-        renderItem={({ item: section }) => (
-          <View>
-            {section.date ? (
+        renderItem={({ item }) => {
+          if (item.kind === 'header') {
+            return (
               <Text style={[
                 typography.styles.labelLarge,
                 { color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md },
               ]}>
-                {formatDate(section.date, 'medium')}
+                {formatDate(item.date, 'medium')}
               </Text>
-            ) : null}
-            {(section.txs as Transaction[]).map((tx, idx) => (
-              <SwipeableTransaction
-                key={tx.id}
-                transaction={tx}
-                onPress={handlePress}
-                onEdit={handleEdit}
-                index={idx}
-              />
-            ))}
-          </View>
-        )}
+            );
+          }
+          return (
+            <SwipeableTransaction
+              transaction={item.tx}
+              onPress={handlePress}
+              onEdit={handleEdit}
+            />
+          );
+        }}
       />
 
       {/* ── Modal de Ordenação ────────────────────────────────────────────────── */}

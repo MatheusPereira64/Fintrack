@@ -12,7 +12,6 @@ export interface DetectedBank {
   primaryColor: string;
   packageName:  string;
   appLabel:     string;
-  /** data URI do ícone do app instalado (PNG Base64), quando disponível */
   iconUri?:     string;
   alreadyRegistered: boolean;
 }
@@ -20,7 +19,6 @@ export interface DetectedBank {
 interface NativeBankApp {
   packageName: string;
   label:       string;
-  iconBase64?: string;
 }
 
 function isAccountForBank(account: Account, bankName: string): boolean {
@@ -36,9 +34,7 @@ function toIconUri(base64?: string): string | undefined {
 }
 
 /**
- * Detecta bancos instalados no dispositivo que o FinTrack reconhece.
- * Inclui o ícone real do app via PackageManager (Android).
- * Não há API pública de saldo nos apps — o usuário informa o valor manualmente.
+ * Lista bancos instalados sem baixar ícones (rápido).
  */
 export async function detectInstalledBanks(
   existingAccounts: Account[] = [],
@@ -60,7 +56,6 @@ export async function detectInstalledBanks(
       primaryColor:      config.primaryColor,
       packageName:       app.packageName,
       appLabel:          app.label,
-      iconUri:           toIconUri(app.iconBase64),
       alreadyRegistered: existingAccounts.some(a => isAccountForBank(a, config.name)),
     });
   }
@@ -73,7 +68,23 @@ export async function detectInstalledBanks(
   });
 }
 
-/** Bancos instalados ainda não cadastrados como conta */
+/** Carrega ícones um a um, sem bloquear a listagem. */
+export async function hydrateBankIcons(banks: DetectedBank[]): Promise<DetectedBank[]> {
+  if (Platform.OS !== 'android' || !NotificationModule?.getBankAppIcon) {
+    return banks;
+  }
+  const next = [...banks];
+  await Promise.all(next.map(async (bank, i) => {
+    try {
+      const b64: string | null = await NotificationModule.getBankAppIcon(bank.packageName);
+      if (b64) next[i] = { ...bank, iconUri: toIconUri(b64) };
+    } catch {
+      // fallback de cor
+    }
+  }));
+  return next;
+}
+
 export function getNewBanks(detected: DetectedBank[]): DetectedBank[] {
   return detected.filter(b => !b.alreadyRegistered);
 }

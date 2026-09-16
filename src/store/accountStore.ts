@@ -5,6 +5,7 @@ import {
   reconcileAccountBalance,
   setInformedBalance,
 } from '../services/AccountBalanceService';
+import { invalidateAccountCache } from '../services/accountCache';
 
 interface AccountState {
   accounts:     Account[];
@@ -32,6 +33,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     try {
       const accounts     = await AccountRepository.findAll();
       const totalBalance = await AccountRepository.totalBalance();
+      invalidateAccountCache();
       set({ accounts, totalBalance, isLoading: false });
     } catch (e) {
       set({ error: String(e), isLoading: false });
@@ -40,6 +42,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
 
   addAccount: async (data) => {
     const account = await AccountRepository.insert(data);
+    invalidateAccountCache();
     set(state => ({ accounts: [...state.accounts, account] }));
     await get().refreshTotalBalance();
     return account;
@@ -52,6 +55,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
 
   deleteAccount: async (id) => {
     await AccountRepository.delete(id);
+    invalidateAccountCache();
     set(state => ({ accounts: state.accounts.filter(a => a.id !== id) }));
     await get().refreshTotalBalance();
   },

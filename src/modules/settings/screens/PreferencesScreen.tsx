@@ -11,7 +11,8 @@ import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 export function PreferencesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
-  const { settings, updateSettings } = useSettingsStore();
+  const settings       = useSettingsStore(s => s.settings);
+  const updateSettings = useSettingsStore(s => s.updateSettings);
 
   const [userName, setUserName]         = useState(settings.userName ?? '');
   const [monthlyIncome, setMonthlyIncome] = useState(

@@ -25,20 +25,14 @@ import java.io.ByteArrayOutputStream;
 
 import javax.annotation.Nonnull;
 
-/**
- * Módulo React Native que expõe funções nativas para o lado JS:
- * - Verificar se a permissão de notificações está ativa
- * - Abrir as configurações de acesso a notificações
- * - Registrar o ReactContext no serviço de listener
- * - Listar apps bancários instalados (com ícone)
- */
 public class NotificationModule extends ReactContextBaseJavaModule {
 
     private static final String MODULE_NAME = "NotificationModule";
-    private static final int ICON_SIZE_PX = 96;
+    private static final int ICON_SIZE_PX = 72;
 
     public NotificationModule(ReactApplicationContext context) {
         super(context);
+        FinTrackNotificationService.setJsReady(false);
         FinTrackNotificationService.setReactContext(context);
     }
 
@@ -46,6 +40,25 @@ public class NotificationModule extends ReactContextBaseJavaModule {
     @Override
     public String getName() {
         return MODULE_NAME;
+    }
+
+    @ReactMethod
+    public void addListener(String eventName) {
+        // NativeEventEmitter
+    }
+
+    @ReactMethod
+    public void removeListeners(Integer count) {
+        // NativeEventEmitter
+    }
+
+    @ReactMethod
+    public void flushPendingNotifications(Promise promise) {
+        try {
+            promise.resolve(FinTrackNotificationService.drainPendingAndMarkReady());
+        } catch (Exception e) {
+            promise.reject("ERROR", e.getMessage());
+        }
     }
 
     @ReactMethod
@@ -94,10 +107,7 @@ public class NotificationModule extends ReactContextBaseJavaModule {
         }
     }
 
-    /**
-     * Retorna apps bancários instalados, incluindo ícone do launcher em Base64 PNG.
-     * No Android 11+ usa verificação por package (com &lt;queries&gt; no Manifest).
-     */
+    /** Lista bancos instalados sem ícones (rápido). */
     @ReactMethod
     public void getInstalledBankApps(Promise promise) {
         try {
@@ -119,17 +129,6 @@ public class NotificationModule extends ReactContextBaseJavaModule {
                     map.putString("packageName", pkg);
                     CharSequence label = pm.getApplicationLabel(info);
                     map.putString("label", label != null ? label.toString() : pkg);
-
-                    try {
-                        Drawable icon = pm.getApplicationIcon(info);
-                        String base64 = drawableToPngBase64(icon, ICON_SIZE_PX);
-                        if (base64 != null) {
-                            map.putString("iconBase64", base64);
-                        }
-                    } catch (Exception ignored) {
-                        // Ícone indisponível — JS usa fallback
-                    }
-
                     result.pushMap(map);
                 } catch (PackageManager.NameNotFoundException ignored) {
                     // App não instalado
@@ -138,6 +137,25 @@ public class NotificationModule extends ReactContextBaseJavaModule {
             promise.resolve(result);
         } catch (Exception e) {
             promise.reject("ERROR", e.getMessage());
+        }
+    }
+
+    /** Ícone de um único app, sob demanda. */
+    @ReactMethod
+    public void getBankAppIcon(String packageName, Promise promise) {
+        try {
+            PackageManager pm = getReactApplicationContext().getPackageManager();
+            ApplicationInfo info;
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                info = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0));
+            } else {
+                info = pm.getApplicationInfo(packageName, 0);
+            }
+            Drawable icon = pm.getApplicationIcon(info);
+            String base64 = drawableToPngBase64(icon, ICON_SIZE_PX);
+            promise.resolve(base64);
+        } catch (Exception e) {
+            promise.resolve(null);
         }
     }
 
@@ -165,7 +183,7 @@ public class NotificationModule extends ReactContextBaseJavaModule {
         }
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        boolean ok = bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream);
+        boolean ok = bitmap.compress(Bitmap.CompressFormat.PNG, 85, stream);
         bitmap.recycle();
         if (!ok) return null;
         byte[] bytes = stream.toByteArray();

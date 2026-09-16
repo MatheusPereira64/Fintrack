@@ -1,19 +1,14 @@
 /**
  * NotificationManager — Singleton global de captura de notificações bancárias.
- *
- * Montado uma única vez no App.tsx, elimina o risco de múltiplas instâncias
- * do hook useNotificationListener registrando o mesmo evento ao mesmo tempo.
- *
- * Expõe:
- *  - start()  : registra o listener nativo
- *  - stop()   : remove o listener
- *  - addObserver() / removeObserver() : callbacks externos (ex: toast no dashboard)
  */
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { processNotification, RawNotification } from '../modules/notifications/services/NotificationParser';
 import { NotificationRepository }               from '../database/repositories/NotificationRepository';
 import { BudgetRepository }                     from '../database/repositories/BudgetRepository';
 import { Logger }                               from './LoggerService';
+import { useTransactionStore }                  from '../store/transactionStore';
+import { useAccountStore }                      from '../store/accountStore';
+import { invalidateAccountCache }               from './accountCache';
 
 const { NotificationModule } = NativeModules;
 const EVENT_NAME              = 'onBankNotification';
@@ -35,11 +30,21 @@ class _NotificationManager {
 
   start() {
     if (Platform.OS !== 'android' || !NotificationModule) return;
-    if (this.subscription) return; // já iniciado
+    if (this.subscription) return;
 
     this.emitter      = new NativeEventEmitter(NotificationModule);
     this.subscription = this.emitter.addListener(EVENT_NAME, this.handleRaw);
     Logger.info('NotificationManager', 'Listener iniciado');
+
+    if (NotificationModule.flushPendingNotifications) {
+      NotificationModule.flushPendingNotifications()
+        .then((pending: string[] | undefined) => {
+          if (!pending?.length) return;
+          Logger.info('NotificationManager', `Flush de ${pending.length} notificação(ões) pendentes`);
+          pending.forEach(json => this.handleRaw(json));
+        })
+        .catch(() => {});
+    }
   }
 
   stop() {
@@ -63,7 +68,6 @@ class _NotificationManager {
     catch {}
   }
 
-  // ── Handler interno ────────────────────────────────────────────────────────
   private handleRaw = (rawJson: string) => {
     this.queue.push(rawJson);
     void this.drainQueue();
@@ -91,14 +95,19 @@ class _NotificationManager {
           const tx = result.transaction;
           Logger.info('NotificationManager', 'Transação automática', { desc: tx.description, amount: tx.amount });
 
+          if (result.inserted) {
+            invalidateAccountCache();
+            await useTransactionStore.getState().ingestAutoTransaction(result.inserted);
+            await useAccountStore.getState().refreshTotalBalance();
+          }
+
           await this.checkBudgetAlert(result.categoryId, tx.amount);
 
-          const event: TransactionEvent = {
+          this.observers.forEach(fn => fn({
             description: tx.description,
             amount:      Math.abs(tx.amount),
             bankName:    tx.bankName,
-          };
-          this.observers.forEach(fn => fn(event));
+          }));
         } else if (result.error) {
           Logger.warn('NotificationManager', 'Falha ao processar notificação', { error: result.error });
         }
@@ -110,9 +119,8 @@ class _NotificationManager {
     this.processing = false;
   };
 
-  // ── Alerta de orçamento excedido ────────────────────────────────────────────
   private async checkBudgetAlert(categoryId: number | undefined, amount: number) {
-    if (amount >= 0 || !categoryId) return; // só despesas com categoria
+    if (amount >= 0 || !categoryId) return;
     try {
       const budgets = await BudgetRepository.findAll();
 

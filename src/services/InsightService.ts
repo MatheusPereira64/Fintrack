@@ -98,7 +98,7 @@ export const InsightService = {
       TransactionRepository.sumByMonth(cur.year, cur.month),
       TransactionRepository.sumByMonth(prev.year, prev.month),
       TransactionRepository.spendingByCategory(cur.year, cur.month),
-      TransactionRepository.countByMonth(cur.year, cur.month),
+      TransactionRepository.countAutoByMonth(cur.year, cur.month),
       this.getFinanceSnapshot(6),
     ]);
 
@@ -196,17 +196,13 @@ export const InsightService = {
 
     // ── Transações automáticas ─────────────────────────────────────────────────
     if (autoCount > 0) {
-      const curTxs = await TransactionRepository.findByMonth(cur.year, cur.month);
-      const autoTxs = curTxs.filter(t => t.sourceNotification);
-      if (autoTxs.length > 0) {
-        insights.push(makeInsight(
-          'spending_pattern',
-          `${autoTxs.length} movimentações via notificação`,
-          `O FinTrack registrou ${autoTxs.length} transação${autoTxs.length > 1 ? 'ões' : ''} automaticamente. Confira se os valores batem com o app do banco.`,
-          'info',
-          { count: autoTxs.length },
-        ));
-      }
+      insights.push(makeInsight(
+        'spending_pattern',
+        `${autoCount} movimentações via notificação`,
+        `O FinTrack registrou ${autoCount} transação${autoCount > 1 ? 'ões' : ''} automaticamente. Confira se os valores batem com o app do banco.`,
+        'info',
+        { count: autoCount },
+      ));
     }
 
     for (const insight of insights) {

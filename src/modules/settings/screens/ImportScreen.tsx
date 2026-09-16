@@ -23,8 +23,9 @@ export function ImportScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(24);
 
-  const { accounts } = useAccountStore();
-  const { loadByMonth, currentMonth } = useTransactionStore();
+  const accounts     = useAccountStore(s => s.accounts);
+  const loadByMonth  = useTransactionStore(s => s.loadByMonth);
+  const currentMonth = useTransactionStore(s => s.currentMonth);
 
   const [candidates,  setCandidates]  = useState<ImportCandidate[]>([]);
   const [selected,    setSelected]    = useState<Set<number>>(new Set());

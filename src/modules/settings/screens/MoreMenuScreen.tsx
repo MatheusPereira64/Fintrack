@@ -89,8 +89,8 @@ const MenuRow = memo(function MenuRow({
 export function MoreMenuScreen({ navigation }: any) {
   const { colors, spacing, typography } = useTheme();
   const listPad = useTabListPadding();
-  const { goals }   = useGoalStore();
-  const { budgets } = useBudgetStore();
+  const goals   = useGoalStore(s => s.goals);
+  const budgets = useBudgetStore(s => s.budgets);
 
   const completedGoals = goals.filter(g => g.currentAmount >= g.targetAmount).length;
   const overBudgets    = budgets.filter(b => b.spent > b.amount).length;

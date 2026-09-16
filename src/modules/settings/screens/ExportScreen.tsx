@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, Share,
@@ -7,6 +7,8 @@ import { useTheme }            from '../../../hooks/useTheme';
 import { useTransactionStore } from '../../../store/transactionStore';
 import { useAccountStore }     from '../../../store/accountStore';
 import { ExportService }       from '../../../services/ExportService';
+import { TransactionRepository, MONTH_HARD_CAP } from '../../../database/repositories/TransactionRepository';
+import { Transaction } from '../../../models/types';
 import { formatMonthYear }     from '../../../utils/date';
 import { AppHeader } from '../../../components/AppHeader';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
@@ -14,9 +16,18 @@ import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 export function ExportScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
-  const { transactions, currentMonth } = useTransactionStore();
-  const { accounts }                    = useAccountStore();
+  const currentMonth = useTransactionStore(s => s.currentMonth);
+  const accounts     = useAccountStore(s => s.accounts);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [exporting, setExporting]       = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    TransactionRepository.findByMonth(currentMonth.year, currentMonth.month, MONTH_HARD_CAP, 0)
+      .then(rows => { if (!cancelled) setTransactions(rows); })
+      .catch(() => { if (!cancelled) setTransactions([]); });
+    return () => { cancelled = true; };
+  }, [currentMonth]);
 
   const handleExport = async (format: 'csv' | 'json') => {
     setExporting(true);

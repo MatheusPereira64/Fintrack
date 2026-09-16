@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, Platform, StatusBar,
@@ -28,35 +28,44 @@ export function DashboardScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const { bottom: tabBarBottom, top: safeTop } = useTabBarInsets();
 
-  const {
-    transactions, summary, currentMonth, categorySpending,
-    monthlyTotals, isLoading, loadByMonth, loadMonthlyTotals,
-  } = useTransactionStore();
+  const transactions     = useTransactionStore(s => s.transactions);
+  const summary          = useTransactionStore(s => s.summary);
+  const currentMonth     = useTransactionStore(s => s.currentMonth);
+  const categorySpending = useTransactionStore(s => s.categorySpending);
+  const monthlyTotals    = useTransactionStore(s => s.monthlyTotals);
+  const isLoading        = useTransactionStore(s => s.isLoading);
+  const loadByMonth      = useTransactionStore(s => s.loadByMonth);
+  const loadMonthlyTotals = useTransactionStore(s => s.loadMonthlyTotals);
 
-  const { accounts, totalBalance, loadAccounts } = useAccountStore();
-  const { settings }   = useSettingsStore();
-  const { syncSpent }  = useBudgetStore();
+  const accounts     = useAccountStore(s => s.accounts);
+  const totalBalance = useAccountStore(s => s.totalBalance);
+  const loadAccounts = useAccountStore(s => s.loadAccounts);
+  const userName     = useSettingsStore(s => s.settings.userName);
+  const notifOn      = useSettingsStore(s => s.settings.notificationPermissionGranted);
+  const syncSpent    = useBudgetStore(s => s.syncSpent);
 
   const [insights, setInsights] = useState<any[]>([]);
   const [toast, setToast]       = useState<{ message: string; amount: number } | null>(null);
   const [snapKey, setSnapKey]   = useState(0);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentDate = useMemo(
     () => new Date(currentMonth.year, currentMonth.month - 1, 1),
     [currentMonth],
   );
 
-  // ── Observador do singleton de notificações ───────────────────────────────
   const onTransaction = useCallback((ev: TransactionEvent) => {
     setToast({ message: ev.description, amount: ev.amount });
-    loadByMonth(currentMonth.year, currentMonth.month);
-    loadAccounts();
-    setTimeout(() => setToast(null), 4000);
-  }, [currentMonth, loadByMonth, loadAccounts]);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
 
   useEffect(() => {
     NotificationManager.addObserver(onTransaction);
-    return () => NotificationManager.removeObserver(onTransaction);
+    return () => {
+      NotificationManager.removeObserver(onTransaction);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
   }, [onTransaction]);
 
   // ── Carregamento inicial ───────────────────────────────────────────────────
@@ -162,7 +171,7 @@ export function DashboardScreen({ navigation }: any) {
         <View style={[styles.greeting, { paddingHorizontal: spacing.base, marginBottom: spacing.md }]}>
           <View>
             <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary }]}>
-              {settings.userName ? `Olá, ${settings.userName}` : 'Olá'}
+              {userName ? `Olá, ${userName}` : 'Olá'}
             </Text>
             <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
               Resumo financeiro
@@ -172,24 +181,24 @@ export function DashboardScreen({ navigation }: any) {
             style={[
               styles.monitorBadge,
               {
-                backgroundColor: settings.notificationPermissionGranted
+                backgroundColor: notifOn
                   ? `${colors.success}20` : `${colors.warning}20`,
                 borderRadius: borderRadius.full,
                 borderWidth: 1,
-                borderColor: settings.notificationPermissionGranted ? colors.success : colors.warning,
+                borderColor: notifOn ? colors.success : colors.warning,
               },
             ]}
           >
             <Icon
               name="bell"
               size={12}
-              color={settings.notificationPermissionGranted ? colors.success : colors.warning}
+              color={notifOn ? colors.success : colors.warning}
             />
             <Text style={[
               typography.styles.caption,
-              { color: settings.notificationPermissionGranted ? colors.success : colors.warning, marginLeft: 4 },
+              { color: notifOn ? colors.success : colors.warning, marginLeft: 4 },
             ]}>
-              {settings.notificationPermissionGranted ? 'Ativo' : 'Inativo'}
+              {notifOn ? 'Ativo' : 'Inativo'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -292,6 +301,7 @@ export function DashboardScreen({ navigation }: any) {
                 transaction={tx}
                 showDate
                 index={idx}
+                animate={idx < 6}
                 onPress={() => navigation.navigate('Transactions', {
                   screen: 'TransactionDetail', params: { transactionId: tx.id },
                 })}

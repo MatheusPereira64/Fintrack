@@ -3,9 +3,9 @@
  */
 import { getBankConfig, isKnownBank, normalizeBankName } from './BankRegistry';
 import { GenericBankParser } from '../parsers/GenericBankParser';
-import { ParsedTransaction } from '../../../models/types';
+import { ParsedTransaction, Transaction, Account } from '../../../models/types';
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
-import { AccountRepository }     from '../../../database/repositories/AccountRepository';
+import { getAccountsCached }     from '../../../services/accountCache';
 import { CategoryRepository }    from '../../../database/repositories/CategoryRepository';
 
 export interface RawNotification {
@@ -19,6 +19,7 @@ export interface RawNotification {
 export interface ParseResult {
   success: boolean;
   transaction?: ParsedTransaction;
+  inserted?: Transaction;
   transactionId?: number;
   categoryId?: number;
   error?: string;
@@ -26,7 +27,7 @@ export interface ParseResult {
 }
 
 function resolveAccount(
-  accounts: Awaited<ReturnType<typeof AccountRepository.findAll>>,
+  accounts: Account[],
   parsed: ParsedTransaction,
   packageName: string,
 ) {
@@ -75,7 +76,7 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
   }
 
   try {
-    const accounts = await AccountRepository.findAll();
+    const accounts = await getAccountsCached();
     if (accounts.length === 0) {
       return { success: false, error: 'Nenhuma conta cadastrada' };
     }
@@ -97,7 +98,7 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
       sourceNotification: `${raw.title} | ${raw.text}`,
     });
 
-    return { success: true, transaction: parsed, transactionId: inserted.id, categoryId };
+    return { success: true, transaction: parsed, inserted, transactionId: inserted.id, categoryId };
   } catch (error) {
     return {
       success: false,

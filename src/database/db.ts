@@ -41,6 +41,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
   if (current < 2) { await migration002(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (2)'); }
   if (current < 3) { await migration003(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (3)'); }
   if (current < 4) { await migration004(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (4)'); }
+  if (current < 5) { await migration005(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (5)'); }
 }
 
 // ─── Migration 001 — Schema inicial ───────────────────────────────────────────
@@ -242,4 +243,12 @@ async function migration004(db: SQLiteDatabase): Promise<void> {
   } catch {
     // coluna já existe
   }
+}
+
+// ─── Migration 005 — Índices compostos para consultas mensais / recorrentes ──
+
+async function migration005(db: SQLiteDatabase): Promise<void> {
+  await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_date_id ON transactions(date DESC, id DESC)`);
+  await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_recurring ON transactions(is_recurring, account_id)`);
+  await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_source ON transactions(source_notification)`);
 }

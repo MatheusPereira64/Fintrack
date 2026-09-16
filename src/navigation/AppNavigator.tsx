@@ -156,12 +156,12 @@ function AppTabs() {
 }
 
 export function AppNavigator() {
-  const { settings } = useSettingsStore();
+  const onboardingCompleted = useSettingsStore(s => s.settings.onboardingCompleted);
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {!settings.onboardingCompleted ? (
+        {!onboardingCompleted ? (
           <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
         ) : (
           <RootStack.Screen name="App" component={AppTabs} />

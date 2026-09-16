@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { Transaction, InsertTransaction } from '../models/types';
-import { TransactionRepository } from '../database/repositories/TransactionRepository';
+import {
+  TransactionRepository,
+  MONTH_PAGE_SIZE,
+  MONTH_HARD_CAP,
+} from '../database/repositories/TransactionRepository';
 
 interface MonthSummary {
   income:   number;
@@ -27,19 +31,24 @@ interface MonthlyTotal {
 interface TransactionState {
   transactions:     Transaction[];
   isLoading:        boolean;
+  isLoadingMore:    boolean;
   error:            string | null;
   currentMonth:     { year: number; month: number };
   summary:          MonthSummary;
   categorySpending: CategorySpending[];
   monthlyTotals:    MonthlyTotal[];
+  hasMore:          boolean;
+  truncated:        boolean;
 
-  loadByMonth:        (year: number, month: number) => Promise<void>;
-  addTransaction:     (data: InsertTransaction) => Promise<Transaction>;
-  updateTransaction:  (id: number, data: Partial<InsertTransaction>) => Promise<void>;
-  deleteTransaction:  (id: number) => Promise<void>;
-  setCurrentMonth:    (year: number, month: number) => void;
-  refreshSummary:     () => Promise<void>;
-  loadMonthlyTotals:  () => Promise<void>;
+  loadByMonth:          (year: number, month: number) => Promise<void>;
+  loadMore:             () => Promise<void>;
+  addTransaction:       (data: InsertTransaction) => Promise<Transaction>;
+  ingestAutoTransaction:(tx: Transaction) => Promise<void>;
+  updateTransaction:    (id: number, data: Partial<InsertTransaction>) => Promise<void>;
+  deleteTransaction:    (id: number) => Promise<void>;
+  setCurrentMonth:      (year: number, month: number) => void;
+  refreshSummary:       () => Promise<void>;
+  loadMonthlyTotals:    () => Promise<void>;
 }
 
 const defaultSummary: MonthSummary = { income: 0, expense: 0, balance: 0, count: 0 };
@@ -47,17 +56,20 @@ const defaultSummary: MonthSummary = { income: 0, expense: 0, balance: 0, count:
 export const useTransactionStore = create<TransactionState>((set, get) => ({
   transactions:     [],
   isLoading:        false,
+  isLoadingMore:    false,
   error:            null,
   currentMonth:     { year: new Date().getFullYear(), month: new Date().getMonth() + 1 },
   summary:          defaultSummary,
   categorySpending: [],
   monthlyTotals:    [],
+  hasMore:          false,
+  truncated:        false,
 
   loadByMonth: async (year, month) => {
     set({ isLoading: true, error: null, currentMonth: { year, month } });
     try {
       const [transactions, sums, catSpending, count] = await Promise.all([
-        TransactionRepository.findByMonth(year, month),
+        TransactionRepository.findByMonth(year, month, MONTH_PAGE_SIZE, 0),
         TransactionRepository.sumByMonth(year, month),
         TransactionRepository.spendingByCategory(year, month),
         TransactionRepository.countByMonth(year, month),
@@ -66,6 +78,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
         transactions,
         summary:          { ...sums, balance: sums.income - sums.expense, count },
         categorySpending: catSpending,
+        hasMore:          count > transactions.length && transactions.length < MONTH_HARD_CAP,
+        truncated:        count > MONTH_HARD_CAP,
         isLoading:        false,
       });
     } catch (e) {
@@ -73,21 +87,64 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     }
   },
 
+  loadMore: async () => {
+    const { hasMore, isLoadingMore, currentMonth, transactions } = get();
+    if (!hasMore || isLoadingMore) return;
+    if (transactions.length >= MONTH_HARD_CAP) {
+      set({ hasMore: false, truncated: true });
+      return;
+    }
+    set({ isLoadingMore: true });
+    try {
+      const next = await TransactionRepository.findByMonth(
+        currentMonth.year,
+        currentMonth.month,
+        MONTH_PAGE_SIZE,
+        transactions.length,
+      );
+      const merged = [...transactions, ...next];
+      set({
+        transactions: merged,
+        hasMore: next.length === MONTH_PAGE_SIZE && merged.length < MONTH_HARD_CAP,
+        truncated: merged.length >= MONTH_HARD_CAP,
+        isLoadingMore: false,
+      });
+    } catch {
+      set({ isLoadingMore: false });
+    }
+  },
+
   addTransaction: async (data) => {
     const tx = await TransactionRepository.insert(data);
     const { currentMonth } = get();
-    // Só adiciona ao array se for do mês atual
     if (tx.date.startsWith(`${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`)) {
       set(state => ({ transactions: [tx, ...state.transactions] }));
     }
-    await get().refreshSummary();
+    await Promise.all([get().refreshSummary(), get().loadMonthlyTotals()]);
     return tx;
+  },
+
+  ingestAutoTransaction: async (tx) => {
+    const { currentMonth } = get();
+    const prefix = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}`;
+    if (tx.date.startsWith(prefix)) {
+      set(state => {
+        if (state.transactions.some(t => t.id === tx.id)) return state;
+        return { transactions: [tx, ...state.transactions] };
+      });
+    }
+    await Promise.all([get().refreshSummary(), get().loadMonthlyTotals()]);
   },
 
   updateTransaction: async (id, data) => {
     await TransactionRepository.update(id, data);
-    const { currentMonth } = get();
-    const txs = await TransactionRepository.findByMonth(currentMonth.year, currentMonth.month);
+    const { currentMonth, transactions } = get();
+    const txs = await TransactionRepository.findByMonth(
+      currentMonth.year,
+      currentMonth.month,
+      Math.max(transactions.length, MONTH_PAGE_SIZE),
+      0,
+    );
     set({ transactions: txs });
     await get().refreshSummary();
   },

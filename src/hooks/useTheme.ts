@@ -4,10 +4,10 @@ import { useSettingsStore } from '../store/settingsStore';
 
 export function useTheme(): AppTheme {
   const systemScheme = useColorScheme();
-  const { settings } = useSettingsStore();
+  const themePref = useSettingsStore(s => s.settings.theme);
 
-  if (settings.theme === 'dark') return darkTheme;
-  if (settings.theme === 'light') return lightTheme;
+  if (themePref === 'dark') return darkTheme;
+  if (themePref === 'light') return lightTheme;
 
   // 'system'
   return systemScheme === 'dark' ? darkTheme : lightTheme;

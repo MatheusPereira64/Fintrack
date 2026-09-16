@@ -133,7 +133,12 @@ const GoalCard = memo(function GoalCard({
 export function GoalsScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const { goals, isLoading, loadGoals, addGoal, deleteGoal, getTotalProgress } = useGoalStore();
+  const goals             = useGoalStore(s => s.goals);
+  const isLoading         = useGoalStore(s => s.isLoading);
+  const loadGoals         = useGoalStore(s => s.loadGoals);
+  const addGoal           = useGoalStore(s => s.addGoal);
+  const deleteGoal        = useGoalStore(s => s.deleteGoal);
+  const getTotalProgress  = useGoalStore(s => s.getTotalProgress);
   const [showModal, setShowModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 

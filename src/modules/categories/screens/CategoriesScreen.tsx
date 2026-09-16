@@ -65,7 +65,10 @@ const CategoryRow = memo(function CategoryRow({
 export function CategoriesScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
-  const { categories, loadCategories, addCategory, deleteCategory } = useCategoryStore();
+  const categories     = useCategoryStore(s => s.categories);
+  const loadCategories = useCategoryStore(s => s.loadCategories);
+  const addCategory    = useCategoryStore(s => s.addCategory);
+  const deleteCategory = useCategoryStore(s => s.deleteCategory);
 
   const [showModal, setShowModal] = useState(false);
   const [name,     setName]     = useState('');

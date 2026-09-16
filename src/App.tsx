@@ -25,7 +25,8 @@ export default function App() {
   const loadSettings    = useSettingsStore(s => s.loadSettings);
   const loadAccounts    = useAccountStore(s => s.loadAccounts);
   const loadCategories  = useCategoryStore(s => s.loadCategories);
-  const { loadByMonth, loadMonthlyTotals } = useTransactionStore();
+  const loadByMonth     = useTransactionStore(s => s.loadByMonth);
+  const loadMonthlyTotals = useTransactionStore(s => s.loadMonthlyTotals);
   const loadBudgets     = useBudgetStore(s => s.loadBudgets);
   const loadGoals       = useGoalStore(s => s.loadGoals);
 

@@ -92,9 +92,15 @@ const BudgetCard = memo(function BudgetCard({
 export function BudgetScreen({ navigation }: any) {
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const { budgets, isLoading, loadBudgets, addBudget, deleteBudget, syncSpent } = useBudgetStore();
-  const { categories, loadCategories } = useCategoryStore();
-  const { currentMonth } = useTransactionStore();
+  const budgets      = useBudgetStore(s => s.budgets);
+  const isLoading    = useBudgetStore(s => s.isLoading);
+  const loadBudgets  = useBudgetStore(s => s.loadBudgets);
+  const addBudget    = useBudgetStore(s => s.addBudget);
+  const deleteBudget = useBudgetStore(s => s.deleteBudget);
+  const syncSpent    = useBudgetStore(s => s.syncSpent);
+  const categories     = useCategoryStore(s => s.categories);
+  const loadCategories = useCategoryStore(s => s.loadCategories);
+  const currentMonth   = useTransactionStore(s => s.currentMonth);
 
   const [showModal, setShowModal] = useState(false);
   const [amount,    setAmount]    = useState('');
