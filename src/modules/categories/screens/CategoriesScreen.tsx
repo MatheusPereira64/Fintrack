@@ -1,8 +1,7 @@
 ﻿import React, { useEffect, useCallback, useState, memo } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, Platform, StatusBar,
+  Modal, Alert,
 } from 'react-native';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { useTheme }        from '../../../hooks/useTheme';
@@ -21,7 +20,6 @@ const CategoryRow = memo(function CategoryRow({
   category, onDelete,
 }: { category: Category; onDelete: (id: number) => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
     <Animated.View entering={FadeInDown.duration(300)}>
@@ -75,7 +73,7 @@ export function CategoriesScreen({ navigation }: any) {
   const [color,    setColor]    = useState(PRESET_COLORS[0]);
   const [saving,   setSaving]   = useState(false);
 
-  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
 
   const handleAdd = useCallback(async () => {
     if (!name.trim()) {
@@ -95,14 +93,6 @@ export function CategoriesScreen({ navigation }: any) {
   }, [name, color, icon, addCategory]);
 
   const handleDelete = useCallback((id: number) => { deleteCategory(id); }, [deleteCategory]);
-
-  const systemCats = categories.filter(c => c.isSystem);
-  const customCats = categories.filter(c => !c.isSystem);
-
-  const sections = [
-    { title: 'Padrão do sistema', data: systemCats, count: systemCats.length },
-    { title: 'Personalizadas', data: customCats, count: customCats.length },
-  ].filter(s => s.data.length > 0 || s.title === 'Personalizadas');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

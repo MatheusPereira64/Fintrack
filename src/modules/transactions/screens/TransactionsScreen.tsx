@@ -1,5 +1,5 @@
 ﻿import React, {
-  useEffect, useState, useCallback, useMemo, useRef,
+  useEffect, useState, useCallback, useMemo,
 } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -7,7 +7,7 @@ import {
   TextInput, RefreshControl, Modal,
   ScrollView,
 } from 'react-native';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 
 import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
@@ -44,7 +44,7 @@ const SORT_OPTIONS: Array<{ key: SortOrder; label: string }> = [
 ];
 
 export function TransactionsScreen({ navigation }: any) {
-  const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const listPad = useTabListPadding();
 
@@ -76,6 +76,8 @@ export function TransactionsScreen({ navigation }: any) {
   useEffect(() => {
     loadByMonth(currentMonth.year, currentMonth.month);
     loadCategories();
+    // Primeira carga do mês visível.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onRefresh = useCallback(() => {

@@ -1,12 +1,6 @@
 import React, { useEffect, memo } from 'react';
 import { Text, TextStyle } from 'react-native';
-import Animated, {
-  useSharedValue, useAnimatedProps, withTiming, Easing,
-} from 'react-native-reanimated';
 import { formatCurrency } from '../utils/currency';
-
-// Necessário para animar propriedades de texto com Reanimated
-const AnimatedText = Animated.createAnimatedComponent(Text);
 
 interface AnimatedNumberProps {
   value:   number;

@@ -108,7 +108,7 @@ export const FinanceSnapshotCard = memo(function FinanceSnapshotCard({ refreshKe
 function Metric({
   label, value, color, icon,
 }: { label: string; value: string; color: string; icon: 'income' | 'expense' | 'trending-up' | 'trending-down' }) {
-  const { colors, typography, spacing } = useTheme();
+  const { colors, typography } = useTheme();
   return (
     <View style={styles.metric}>
       <Icon name={icon} size={14} color={color} />

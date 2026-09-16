@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTheme }      from '../hooks/useTheme';
 import { AnimatedNumber } from './AnimatedNumber';
-import { formatCurrency } from '../utils/currency';
 
 type MetricVariant = 'default' | 'income' | 'expense' | 'primary';
 

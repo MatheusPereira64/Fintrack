@@ -81,6 +81,8 @@ export default function App() {
       cancelled = true;
       if (updateTimer) clearTimeout(updateTimer);
     };
+    // Bootstrap único na montagem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (status === 'loading') {

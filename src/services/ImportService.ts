@@ -85,7 +85,6 @@ function parseOFX(content: string): ImportResult {
   for (const block of txBlocks) {
     try {
       const b = block[1];
-      const type      = tag(b, 'TRNTYPE');
       const dtPosted  = tag(b, 'DTPOSTED');
       const amount    = tag(b, 'TRNAMT') ?? tag(b, 'AMT');
       const name      = tag(b, 'NAME') ?? tag(b, 'MEMO') ?? tag(b, 'FITID') ?? '';

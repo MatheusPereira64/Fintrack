@@ -29,6 +29,8 @@ export const BalanceCard = memo(function BalanceCard({
   useEffect(() => {
     scale.value   = withSpring(1, { damping: 12, stiffness: 150 });
     opacity.value = withTiming(1, { duration: 400 });
+    // Shared values do Reanimated são estáveis.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({

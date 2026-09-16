@@ -1,8 +1,7 @@
 ﻿import React, { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Platform, StatusBar, Alert,
+  TextInput, Alert,
 } from 'react-native';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useSettingsStore } from '../../../store/settingsStore';

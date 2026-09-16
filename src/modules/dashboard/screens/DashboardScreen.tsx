@@ -72,6 +72,8 @@ export function DashboardScreen({ navigation }: any) {
       setSnapKey(k => k + 1);
     };
     init();
+    // Carrega o mês atual uma vez na montagem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -84,7 +86,7 @@ export function DashboardScreen({ navigation }: any) {
     const generated = await InsightService.generateAndSave();
     setInsights(generated.slice(0, 3));
     setSnapKey(k => k + 1);
-  }, [currentMonth]);
+  }, [currentMonth, loadAccounts, loadByMonth, loadMonthlyTotals, syncSpent]);
 
   // ── Navegação de mês ───────────────────────────────────────────────────────
   const goToPrevMonth = useCallback(() => {

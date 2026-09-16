@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useMemo, useEffect } from 'react';
+﻿import React, { useState, useCallback, useMemo } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function AddTransactionScreen({ navigation, route }: Props) {
-  const { colors, spacing, borderRadius, typography, shadows } = useTheme();
+  const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(40);
   const existing = route.params?.editTransaction;
@@ -38,7 +38,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   const [description, setDescription] = useState(existing?.description ?? '');
   const [accountId,   setAccountId]   = useState<number | undefined>(existing?.accountId ?? accounts[0]?.id);
   const [categoryId,  setCategoryId]  = useState<number | undefined>(existing?.categoryId);
-  const [date,        setDate]        = useState(existing?.date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [date] = useState(existing?.date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [isRecurring, setIsRecurring] = useState(existing?.isRecurring ?? false);
   const [isSaving,    setIsSaving]    = useState(false);
 
@@ -80,7 +80,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [existing, isValid, parsedAmount, type, description, categoryId, date, accountId, isRecurring]);
+  }, [existing, isValid, parsedAmount, type, description, categoryId, date, accountId, isRecurring, addTransaction, updateTransaction, navigation]);
 
   const filteredCategories = useMemo(() =>
     categories.filter(c => c.id > 0),

@@ -52,6 +52,8 @@ export function AccountPlanScreen({ route, navigation }: any) {
       setHydrated(true);
     })();
     return () => { cancelled = true; };
+    // Recarrega só quando a conta muda, não a cada campo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.id]);
 
   const parse = (v: string) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
@@ -72,6 +74,8 @@ export function AccountPlanScreen({ route, navigation }: any) {
       yieldRate: parse(yieldRate),
       months,
     }));
+    // `account` é lido via account.id já coberto acima.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.id, income, expense, yieldRate, months, hydrated]);
 
   if (!account) {

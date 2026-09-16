@@ -4,7 +4,7 @@
  */
 import React, { memo } from 'react';
 import {
-  View, Text, StyleSheet, Platform, StatusBar,
+  View, Text, StyleSheet, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';

@@ -1,8 +1,7 @@
 ﻿import React, { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, StatusBar, Alert, Share,
+  Alert, Share,
 } from 'react-native';
 import { useTheme }            from '../../../hooks/useTheme';
 import { useTransactionStore } from '../../../store/transactionStore';
@@ -30,7 +29,7 @@ export function ExportScreen({ navigation }: any) {
       const title   = `FinTrack_${formatMonthYear(month).replace(' ', '_')}.${format}`;
 
       await Share.share({ title, message: content });
-    } catch (e) {
+    } catch {
       Alert.alert('Erro', 'Não foi possível exportar os dados.');
     } finally {
       setExporting(false);

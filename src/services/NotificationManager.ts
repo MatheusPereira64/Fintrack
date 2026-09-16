@@ -11,7 +11,6 @@
  */
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { processNotification, RawNotification } from '../modules/notifications/services/NotificationParser';
-import { TransactionRepository }                from '../database/repositories/TransactionRepository';
 import { NotificationRepository }               from '../database/repositories/NotificationRepository';
 import { BudgetRepository }                     from '../database/repositories/BudgetRepository';
 import { Logger }                               from './LoggerService';

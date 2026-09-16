@@ -1,11 +1,9 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, FlatList,
 } from 'react-native';
 import { useTheme }   from '../../../hooks/useTheme';
 import { AppHeader }  from '../../../components/AppHeader';
-import { AppButton }  from '../../../components/AppButton';
 import { Icon }       from '../../../components/Icon';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { getDatabase } from '../../../database/db';

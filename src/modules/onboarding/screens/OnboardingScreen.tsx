@@ -49,7 +49,6 @@ export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [userName, setUserName] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
   const completeOnboarding        = useSettingsStore(s => s.completeOnboarding);

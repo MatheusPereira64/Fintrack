@@ -1,15 +1,13 @@
-﻿import React, { useEffect, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+﻿import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { useTransactionStore } from '../../../store/transactionStore';
 import { useCategoryStore }    from '../../../store/categoryStore';
 import { useAccountStore }     from '../../../store/accountStore';
-import { Transaction }         from '../../../models/types';
 import { formatCurrency }      from '../../../utils/currency';
-import { formatDate, formatTime } from '../../../utils/date';
+import { formatDate } from '../../../utils/date';
 import { AppHeader } from '../../../components/AppHeader';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 

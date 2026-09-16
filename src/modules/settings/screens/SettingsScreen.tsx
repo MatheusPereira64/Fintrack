@@ -1,8 +1,7 @@
 ﻿import React, { useCallback, useState, useEffect } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, StatusBar, Switch, Alert, Modal,
+  Alert, Modal,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -31,7 +30,6 @@ interface SettingsGroupProps {
 
 function SettingsGroup({ title, children }: SettingsGroupProps) {
   const { colors, spacing, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   return (
     <View style={{ marginBottom: spacing.xl }}>
       <Text style={[
@@ -113,8 +111,7 @@ function SettingsRow({
 }
 
 export function SettingsScreen({ navigation }: any) {
-  const { colors, spacing, borderRadius, typography, shadows } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors, spacing, borderRadius, typography } = useTheme();
   const { settings, setTheme, setLanguage } = useSettingsStore();
   const { transactions }  = useTransactionStore();
   const { accounts }      = useAccountStore();

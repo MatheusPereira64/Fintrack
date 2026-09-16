@@ -157,7 +157,6 @@ function AppTabs() {
 
 export function AppNavigator() {
   const { settings } = useSettingsStore();
-  const { colors }   = useTheme();
 
   return (
     <NavigationContainer>

@@ -2,7 +2,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, Platform, StatusBar, ScrollView,
+  Modal, Alert, ScrollView,
 } from 'react-native';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { useTheme }       from '../../../hooks/useTheme';
@@ -18,7 +18,6 @@ const BudgetCard = memo(function BudgetCard({
   budget, onDelete,
 }: { budget: any; onDelete: (id: number) => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   const percent = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
   const overBudget = percent > 100;
   const nearLimit  = percent > 80;
@@ -113,7 +112,7 @@ export function BudgetScreen({ navigation }: any) {
       await syncSpent(currentMonth.year, currentMonth.month);
     };
     init();
-  }, [currentMonth]);
+  }, [currentMonth, loadBudgets, syncSpent]);
 
   const handleAdd = useCallback(async () => {
     const amt = parseFloat(amount.replace(',', '.'));

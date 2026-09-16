@@ -1,5 +1,4 @@
 ﻿import React, { memo } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -35,7 +34,6 @@ const MenuRow = memo(function MenuRow({
   item, onPress,
 }: { item: MenuItem; onPress: () => void }) {
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
     <TouchableOpacity
@@ -89,7 +87,7 @@ const MenuRow = memo(function MenuRow({
 });
 
 export function MoreMenuScreen({ navigation }: any) {
-  const { colors, spacing, borderRadius, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const listPad = useTabListPadding();
   const { goals }   = useGoalStore();
   const { budgets } = useBudgetStore();
