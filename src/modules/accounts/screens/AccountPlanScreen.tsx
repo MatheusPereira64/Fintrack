@@ -11,8 +11,15 @@ import { useAccountStore } from '../../../store/accountStore';
 import { formatCurrency } from '../../../utils/currency';
 import { simulateAccountPlan, PlanResult } from '../../../services/AccountPlanService';
 
-const HORIZONS = [3, 6, 12] as const;
+const HORIZON_PRESETS = [3, 6, 12, 24, 36] as const;
+const HORIZON_MIN = 1;
+const HORIZON_MAX = 60;
 const STORAGE_KEY = (id: number) => `@fintrack/plan/${id}`;
+
+function clampHorizon(n: number): number {
+  if (!Number.isFinite(n)) return 6;
+  return Math.min(HORIZON_MAX, Math.max(HORIZON_MIN, Math.floor(n)));
+}
 
 export function AccountPlanScreen({ route, navigation }: any) {
   const { accountId } = route.params as { accountId: number };
@@ -26,6 +33,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
   const [expense, setExpense] = useState('');
   const [yieldRate, setYieldRate] = useState('0,5');
   const [months, setMonths] = useState<number>(6);
+  const [customHorizon, setCustomHorizon] = useState('');
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -44,7 +52,13 @@ export function AccountPlanScreen({ route, navigation }: any) {
           } else if (account.monthlyYieldRate != null) {
             setYieldRate(String(account.monthlyYieldRate).replace('.', ','));
           }
-          if (saved.months) setMonths(saved.months);
+          if (saved.months) {
+            const h = clampHorizon(Number(saved.months));
+            setMonths(h);
+            if (!(HORIZON_PRESETS as readonly number[]).includes(h)) {
+              setCustomHorizon(String(h));
+            }
+          }
         } catch { /* ignore */ }
       } else if (account.monthlyYieldRate != null) {
         setYieldRate(String(account.monthlyYieldRate).replace('.', ','));
@@ -98,31 +112,8 @@ export function AccountPlanScreen({ route, navigation }: any) {
     return `${x},${y}`;
   }).join(' ');
 
-  const Field = ({
-    label, value, onChange, hint,
-  }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) => (
-    <View style={{ marginBottom: spacing.md }}>
-      <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-        {label}
-      </Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        keyboardType="decimal-pad"
-        placeholder="0,00"
-        placeholderTextColor={colors.placeholder}
-        style={[{
-          backgroundColor: colors.inputBackground,
-          borderRadius: borderRadius.lg,
-          padding: spacing.md,
-          color: colors.inputText,
-        }, typography.styles.bodyMedium]}
-      />
-      {hint ? (
-        <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: 4 }]}>{hint}</Text>
-      ) : null}
-    </View>
-  );
+  const isPresetHorizon = (HORIZON_PRESETS as readonly number[]).includes(months);
+  const chartDotStep = months > 18 ? 3 : months > 12 ? 2 : 1;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -153,9 +144,9 @@ export function AccountPlanScreen({ route, navigation }: any) {
           </Text>
         </View>
 
-        <Field label="Receita mensal simulada (R$)" value={income} onChange={setIncome} />
-        <Field label="Despesa mensal simulada (R$)" value={expense} onChange={setExpense} />
-        <Field
+        <PlanMoneyField label="Receita mensal simulada (R$)" value={income} onChange={setIncome} />
+        <PlanMoneyField label="Despesa mensal simulada (R$)" value={expense} onChange={setExpense} />
+        <PlanMoneyField
           label="Rendimento % a.m."
           value={yieldRate}
           onChange={setYieldRate}
@@ -169,28 +160,56 @@ export function AccountPlanScreen({ route, navigation }: any) {
         <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
           Horizonte
         </Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.xl }}>
-          {HORIZONS.map(h => {
-            const sel = months === h;
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          Horizonte
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.sm }}>
+          {HORIZON_PRESETS.map(h => {
+            const sel = months === h && customHorizon.trim() === '';
             return (
               <TouchableOpacity
                 key={h}
-                onPress={() => setMonths(h)}
+                onPress={() => { setCustomHorizon(''); setMonths(h); }}
                 style={{
-                  flex: 1,
+                  minWidth: '18%',
+                  flexGrow: 1,
                   paddingVertical: 10,
+                  paddingHorizontal: 8,
                   borderRadius: borderRadius.lg,
                   backgroundColor: sel ? colors.primary : colors.surfaceVariant,
                   alignItems: 'center',
                 }}
               >
                 <Text style={[typography.styles.labelLarge, { color: sel ? '#FFF' : colors.textSecondary }]}>
-                  {h} meses
+                  {h}m
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
+        <Text style={[typography.styles.caption, { color: colors.textTertiary, marginBottom: spacing.xs }]}>
+          Ou informe um período (1 a {HORIZON_MAX} meses)
+        </Text>
+        <TextInput
+          value={isPresetHorizon && customHorizon === '' ? String(months) : customHorizon}
+          onChangeText={text => {
+            const digits = text.replace(/[^\d]/g, '').slice(0, 2);
+            setCustomHorizon(digits);
+            if (digits === '') return;
+            setMonths(clampHorizon(parseInt(digits, 10)));
+          }}
+          keyboardType="number-pad"
+          maxLength={2}
+          placeholder="Ex.: 18"
+          placeholderTextColor={colors.placeholder}
+          style={[{
+            backgroundColor: colors.inputBackground,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            color: colors.inputText,
+            marginBottom: spacing.xl,
+          }, typography.styles.bodyMedium]}
+        />
 
         <View style={[styles.card, {
           backgroundColor: colors.card,
@@ -210,6 +229,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
                 strokeWidth={2.5}
               />
               {result.months.map((m, i) => {
+                if (i % chartDotStep !== 0 && i !== result.months.length - 1) return null;
                 const x = (i / Math.max(result.months.length - 1, 1)) * (chartW - 16) + 8;
                 const y = chartH - 8 - ((m.balance - minB) / range) * (chartH - 16);
                 return (
@@ -256,6 +276,36 @@ export function AccountPlanScreen({ route, navigation }: any) {
           </View>
         ))}
       </ScrollView>
+    </View>
+  );
+}
+
+function PlanMoneyField({
+  label, value, onChange, hint,
+}: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
+  const { colors, spacing, borderRadius, typography } = useTheme();
+  return (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+        {label}
+      </Text>
+      <TextInput
+        value={value}
+        onChangeText={text => onChange(text.replace(/[^\d,.]/g, ''))}
+        keyboardType="decimal-pad"
+        maxLength={15}
+        placeholder="0,00"
+        placeholderTextColor={colors.placeholder}
+        style={[{
+          backgroundColor: colors.inputBackground,
+          borderRadius: borderRadius.lg,
+          padding: spacing.md,
+          color: colors.inputText,
+        }, typography.styles.bodyMedium]}
+      />
+      {hint ? (
+        <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: 4 }]}>{hint}</Text>
+      ) : null}
     </View>
   );
 }

@@ -231,6 +231,7 @@ export const TransactionRepository = {
   async monthlyTotals(
     lastNMonths = 6,
   ): Promise<Array<{ year: number; month: number; income: number; expense: number }>> {
+    const db = await getDatabase();
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - (lastNMonths - 1), 1);
     const start = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;

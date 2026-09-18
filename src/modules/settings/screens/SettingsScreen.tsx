@@ -124,7 +124,7 @@ export function SettingsScreen({ navigation }: any) {
   const [showLangModal, setShowLangModal]   = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
-  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [appVersion, setAppVersion] = useState('1.0.1');
   const bottomPad = useSafeBottomPadding(24);
 
   useEffect(() => {
