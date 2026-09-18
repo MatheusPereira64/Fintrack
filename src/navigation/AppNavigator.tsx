@@ -3,6 +3,7 @@ import { Text, StyleSheet } from 'react-native';
 import { createNativeStackNavigator }     from '@react-navigation/native-stack';
 import { createBottomTabNavigator }        from '@react-navigation/bottom-tabs';
 import { NavigationContainer }             from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme }        from '../hooks/useTheme';
 import { useTabBarInsets } from '../hooks/useTabBarInsets';
@@ -86,6 +87,7 @@ function TabLabel({ label, color }: { label: string; color: string }) {
 }
 
 function AppTabs() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { bottom: bottomInset, tabBarHeight } = useTabBarInsets();
 
@@ -116,7 +118,7 @@ function AppTabs() {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label="Início" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.dashboard')} color={color} />,
           tabBarIcon: ({ focused, color }) => (
             <Icon name={focused ? 'home-active' : 'home'} size={22} color={color} />
           ),
@@ -126,7 +128,7 @@ function AppTabs() {
         name="Transactions"
         component={TransactionNavigator}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label="Transações" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.transactions')} color={color} />,
           tabBarIcon: ({ focused, color }) => (
             <Icon name={focused ? 'transactions-active' : 'transactions'} size={22} color={color} />
           ),
@@ -136,7 +138,7 @@ function AppTabs() {
         name="Accounts"
         component={AccountsNavigator}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label="Contas" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.accounts')} color={color} />,
           tabBarIcon: ({ focused, color }) => (
             <Icon name={focused ? 'accounts-active' : 'accounts'} size={22} color={color} />
           ),
@@ -146,7 +148,7 @@ function AppTabs() {
         name="More"
         component={MoreNavigator}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label="Mais" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.more')} color={color} />,
           tabBarIcon: ({ focused, color }) => (
             <Icon name={focused ? 'more-active' : 'more'} size={22} color={color} />
           ),

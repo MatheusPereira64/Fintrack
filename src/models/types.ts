@@ -230,7 +230,7 @@ export interface InsertGoal {
 
 export type AppTheme = 'light' | 'dark' | 'system';
 export type AppCurrency = 'BRL' | 'USD' | 'EUR';
-export type AppLanguage = 'pt-BR' | 'en-US';
+export type AppLanguage = 'pt-BR' | 'en' | 'es';
 
 export interface UserSettings {
   theme: AppTheme;

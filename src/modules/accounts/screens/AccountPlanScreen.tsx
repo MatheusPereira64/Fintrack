@@ -1,15 +1,21 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { SlideInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { AppHeader } from '../../../components/AppHeader';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { useAccountStore } from '../../../store/accountStore';
 import { formatCurrency } from '../../../utils/currency';
 import { simulateAccountPlan, PlanResult } from '../../../services/AccountPlanService';
+import { AccountNamedPlanService, AccountNamedPlan } from '../../../services/AccountNamedPlanService';
+import { CloseButton } from '../../../components/CloseButton';
+import { Icon } from '../../../components/Icon';
 
 const HORIZON_PRESETS = [3, 6, 12, 24, 36] as const;
 const HORIZON_MIN = 1;
@@ -23,7 +29,9 @@ function clampHorizon(n: number): number {
 
 export function AccountPlanScreen({ route, navigation }: any) {
   const { accountId } = route.params as { accountId: number };
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(24);
   const account = useAccountStore(s => s.accounts.find(a => a.id === accountId));
 
@@ -36,10 +44,32 @@ export function AccountPlanScreen({ route, navigation }: any) {
   const [customHorizon, setCustomHorizon] = useState('');
   const [hydrated, setHydrated] = useState(false);
 
+  const [savedPlans, setSavedPlans] = useState<AccountNamedPlan[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [planName, setPlanName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const loadSavedPlans = useCallback(async () => {
+    if (!account) return;
+    const plans = await AccountNamedPlanService.getPlansByAccount(account.id);
+    setSavedPlans(plans);
+  }, [account]);
+
+  useEffect(() => {
+    loadSavedPlans();
+  }, [loadSavedPlans]);
+
   useEffect(() => {
     if (!account) return;
     let cancelled = false;
     (async () => {
+      // Migrate legacy plan if exists
+      await AccountNamedPlanService.migrateLegacyPlan(account.id, 'Padrão');
+      await loadSavedPlans();
+      
+      // Try to load from legacy storage for current session
       const raw = await AsyncStorage.getItem(STORAGE_KEY(account.id));
       if (cancelled) return;
       if (raw) {
@@ -80,6 +110,87 @@ export function AccountPlanScreen({ route, navigation }: any) {
     months,
   }), [baseBalance, income, expense, yieldRate, months]);
 
+  const handleSavePlan = useCallback(async () => {
+    if (!account || !planName.trim()) {
+      Alert.alert(t('common.warning'), t('accountPlan.planNameRequired'));
+      return;
+    }
+    setSaving(true);
+    try {
+      if (currentPlanId) {
+        await AccountNamedPlanService.updatePlan(currentPlanId, {
+          name: planName.trim(),
+          income: parse(income),
+          expense: parse(expense),
+          yieldRate: parse(yieldRate),
+          months,
+        });
+      } else {
+        const newPlan = await AccountNamedPlanService.savePlan({
+          accountId: account.id,
+          name: planName.trim(),
+          income: parse(income),
+          expense: parse(expense),
+          yieldRate: parse(yieldRate),
+          months,
+        });
+        setCurrentPlanId(newPlan.id);
+      }
+      await loadSavedPlans();
+      setShowSaveModal(false);
+      setPlanName('');
+      Alert.alert(t('common.success'), t('accountPlan.planSaved'));
+    } catch {
+      Alert.alert(t('common.error'), t('accountPlan.planSaveError'));
+    } finally {
+      setSaving(false);
+    }
+  }, [account, planName, currentPlanId, income, expense, yieldRate, months, loadSavedPlans, t]);
+
+  const handleLoadPlan = useCallback((plan: AccountNamedPlan) => {
+    setIncome(String(plan.income).replace('.', ','));
+    setExpense(String(plan.expense).replace('.', ','));
+    setYieldRate(String(plan.yieldRate).replace('.', ','));
+    setMonths(plan.months);
+    setCurrentPlanId(plan.id);
+    if (!(HORIZON_PRESETS as readonly number[]).includes(plan.months)) {
+      setCustomHorizon(String(plan.months));
+    } else {
+      setCustomHorizon('');
+    }
+    setShowPlansModal(false);
+  }, []);
+
+  const handleDeletePlan = useCallback(async (plan: AccountNamedPlan) => {
+    Alert.alert(
+      t('accountPlan.deletePlanTitle'),
+      t('accountPlan.deletePlanMessage', { name: plan.name }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            await AccountNamedPlanService.deletePlan(plan.id);
+            if (currentPlanId === plan.id) {
+              setCurrentPlanId(null);
+            }
+            await loadSavedPlans();
+          },
+        },
+      ],
+    );
+  }, [currentPlanId, loadSavedPlans, t]);
+
+  const handleNewPlan = useCallback(() => {
+    setCurrentPlanId(null);
+    setIncome('');
+    setExpense('');
+    setYieldRate(account?.monthlyYieldRate != null ? String(account.monthlyYieldRate).replace('.', ',') : '0,5');
+    setMonths(6);
+    setCustomHorizon('');
+  }, [account]);
+
   useEffect(() => {
     if (!account || !hydrated) return;
     AsyncStorage.setItem(STORAGE_KEY(account.id), JSON.stringify({
@@ -95,7 +206,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
   if (!account) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.textSecondary }}>Conta não encontrada</Text>
+        <Text style={{ color: colors.textSecondary }}>{t('accountPlan.accountNotFound')}</Text>
       </View>
     );
   }
@@ -118,9 +229,21 @@ export function AccountPlanScreen({ route, navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Planejamento"
+        title={t('accountPlan.title')}
         subtitle={account.name}
         onClose={() => navigation.goBack()}
+        actions={[
+          {
+            icon: 'goal',
+            onPress: () => setShowPlansModal(true),
+            color: colors.primary,
+          },
+          {
+            icon: 'add',
+            onPress: () => handleNewPlan(),
+            color: colors.primary,
+          },
+        ]}
       />
 
       <ScrollView
@@ -134,34 +257,80 @@ export function AccountPlanScreen({ route, navigation }: any) {
           marginBottom: spacing.base,
         }]}>
           <Text style={[typography.styles.labelMedium, { color: colors.textSecondary }]}>
-            Saldo base (informado)
+            {t('accountPlan.baseBalance')}
           </Text>
           <Text style={[typography.styles.titleLarge, { color: colors.text, marginTop: 4 }]}>
             {formatCurrency(baseBalance)}
           </Text>
           <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: 4 }]}>
-            Simulação local — não cria transações reais
+            {t('accountPlan.localSimulation')}
           </Text>
         </View>
 
-        <PlanMoneyField label="Receita mensal simulada (R$)" value={income} onChange={setIncome} />
-        <PlanMoneyField label="Despesa mensal simulada (R$)" value={expense} onChange={setExpense} />
+        {currentPlanId && savedPlans.find(p => p.id === currentPlanId) && (
+          <View style={[{
+            backgroundColor: colors.card,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            marginBottom: spacing.base,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+                {t('accountPlan.currentPlan')}
+              </Text>
+              <Text style={[typography.styles.labelLarge, { color: colors.text }]}>
+                {savedPlans.find(p => p.id === currentPlanId)?.name}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                setPlanName(savedPlans.find(p => p.id === currentPlanId)?.name || '');
+                setShowSaveModal(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="edit" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={() => {
+            const currentPlan = savedPlans.find(p => p.id === currentPlanId);
+            setPlanName(currentPlan?.name || '');
+            setShowSaveModal(true);
+          }}
+          style={[{
+            backgroundColor: colors.primary,
+            borderRadius: borderRadius.full,
+            padding: spacing.md,
+            marginBottom: spacing.base,
+            alignItems: 'center',
+          }]}
+        >
+          <Text style={[typography.styles.labelLarge, { color: '#FFF' }]}>
+            {currentPlanId ? t('accountPlan.updatePlan') : t('accountPlan.savePlan')}
+          </Text>
+        </TouchableOpacity>
+
+        <PlanMoneyField label={t('accountPlan.monthlyIncome')} value={income} onChange={setIncome} />
+        <PlanMoneyField label={t('accountPlan.monthlyExpense')} value={expense} onChange={setExpense} />
         <PlanMoneyField
-          label="Rendimento % a.m."
+          label={t('accountPlan.yieldRate')}
           value={yieldRate}
           onChange={setYieldRate}
           hint={
             account.monthlyYieldRate != null
-              ? `Taxa cadastrada na conta: ${String(account.monthlyYieldRate).replace('.', ',')}% a.m.`
-              : 'Ex.: 0,5 para poupança aproximada'
+              ? t('accountPlan.accountYieldRate', { rate: String(account.monthlyYieldRate).replace('.', ',') })
+              : t('accountPlan.yieldHint')
           }
         />
 
         <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-          Horizonte
-        </Text>
-        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-          Horizonte
+          {t('accountPlan.horizon')}
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.sm }}>
           {HORIZON_PRESETS.map(h => {
@@ -188,7 +357,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
           })}
         </View>
         <Text style={[typography.styles.caption, { color: colors.textTertiary, marginBottom: spacing.xs }]}>
-          Ou informe um período (1 a {HORIZON_MAX} meses)
+          {t('accountPlan.horizonCustom', { max: HORIZON_MAX })}
         </Text>
         <TextInput
           value={isPresetHorizon && customHorizon === '' ? String(months) : customHorizon}
@@ -200,7 +369,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
           }}
           keyboardType="number-pad"
           maxLength={2}
-          placeholder="Ex.: 18"
+          placeholder={t('accountPlan.horizonPlaceholder')}
           placeholderTextColor={colors.placeholder}
           style={[{
             backgroundColor: colors.inputBackground,
@@ -218,7 +387,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
           marginBottom: spacing.base,
         }]}>
           <Text style={[typography.styles.titleSmall, { color: colors.text, marginBottom: spacing.md }]}>
-            Projeção
+            {t('accountPlan.projection')}
           </Text>
           <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
             <Svg width={chartW} height={chartH}>
@@ -245,19 +414,19 @@ export function AccountPlanScreen({ route, navigation }: any) {
             </Svg>
           </View>
 
-          <Metric label="Saldo final" value={formatCurrency(result.finalBalance)} color={colors.text} />
+          <Metric label={t('accountPlan.finalBalance')} value={formatCurrency(result.finalBalance)} color={colors.text} />
           <Metric
-            label={result.profitOrLoss >= 0 ? 'Lucro no período' : 'Prejuízo no período'}
+            label={result.profitOrLoss >= 0 ? t('accountPlan.profit') : t('accountPlan.loss')}
             value={formatCurrency(Math.abs(result.profitOrLoss))}
             color={result.profitOrLoss >= 0 ? colors.success : colors.error}
           />
-          <Metric label="Total receitas" value={formatCurrency(result.totalIncome)} color={colors.income} />
-          <Metric label="Total despesas" value={formatCurrency(result.totalExpense)} color={colors.expense} />
-          <Metric label="Rendimentos" value={formatCurrency(result.totalYield)} color={colors.primary} />
+          <Metric label={t('accountPlan.totalIncome')} value={formatCurrency(result.totalIncome)} color={colors.income} />
+          <Metric label={t('accountPlan.totalExpense')} value={formatCurrency(result.totalExpense)} color={colors.expense} />
+          <Metric label={t('accountPlan.totalYield')} value={formatCurrency(result.totalYield)} color={colors.primary} />
         </View>
 
         <Text style={[typography.styles.titleSmall, { color: colors.text, marginBottom: spacing.sm }]}>
-          Mês a mês
+          {t('accountPlan.monthByMonth')}
         </Text>
         {result.months.map(m => (
           <View
@@ -269,13 +438,160 @@ export function AccountPlanScreen({ route, navigation }: any) {
               marginBottom: spacing.xs,
             }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: colors.text }]}>Mês {m.month}</Text>
+            <Text style={[typography.styles.labelLarge, { color: colors.text }]}>{t('accountPlan.month', { number: m.month })}</Text>
             <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
               {formatCurrency(m.balance)}
             </Text>
           </View>
         ))}
       </ScrollView>
+
+      {/* Modal para salvar/atualizar plano */}
+      <Modal visible={showSaveModal} transparent animationType="slide">
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => { setShowSaveModal(false); setPlanName(''); }}
+          />
+          <Animated.View
+            entering={SlideInDown.duration(300)}
+            style={[styles.sheet, {
+              backgroundColor: colors.card,
+              borderTopLeftRadius: borderRadius['2xl'],
+              borderTopRightRadius: borderRadius['2xl'],
+              paddingTop: spacing.xl,
+              paddingHorizontal: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 16),
+            }]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+                {currentPlanId ? t('accountPlan.updatePlan') : t('accountPlan.savePlan')}
+              </Text>
+              <CloseButton onPress={() => { setShowSaveModal(false); setPlanName(''); }} />
+            </View>
+
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+              {t('accountPlan.planName')}
+            </Text>
+            <TextInput
+              value={planName}
+              onChangeText={setPlanName}
+              placeholder={t('accountPlan.planNamePlaceholder')}
+              placeholderTextColor={colors.placeholder}
+              style={[{
+                backgroundColor: colors.inputBackground,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                color: colors.inputText,
+                marginBottom: spacing.lg,
+              }, typography.styles.bodyMedium]}
+            />
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => { setShowSaveModal(false); setPlanName(''); }}
+                style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
+              >
+                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  {t('common.cancel')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSavePlan}
+                disabled={saving}
+                style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
+              >
+                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+                  {saving ? '...' : t('common.save')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Modal para listar planos salvos */}
+      <Modal visible={showPlansModal} transparent animationType="slide">
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowPlansModal(false)}
+          />
+          <Animated.View
+            entering={SlideInDown.duration(300)}
+            style={[styles.sheet, {
+              backgroundColor: colors.card,
+              borderTopLeftRadius: borderRadius['2xl'],
+              borderTopRightRadius: borderRadius['2xl'],
+              paddingTop: spacing.xl,
+              paddingHorizontal: spacing.xl,
+              paddingBottom: Math.max(insets.bottom, 16),
+              maxHeight: '80%',
+            }]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+                {t('accountPlan.savedPlans')}
+              </Text>
+              <CloseButton onPress={() => setShowPlansModal(false)} />
+            </View>
+
+            {savedPlans.length === 0 ? (
+              <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                <Icon name="goal" size={48} color={colors.textTertiary} />
+                <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
+                  {t('accountPlan.noPlans')}{'\n'}{t('accountPlan.noPlansHint')}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {savedPlans.map((plan) => (
+                  <TouchableOpacity
+                    key={plan.id}
+                    onPress={() => handleLoadPlan(plan)}
+                    onLongPress={() => handleDeletePlan(plan)}
+                    style={[{
+                      backgroundColor: currentPlanId === plan.id ? colors.surfaceVariant : colors.background,
+                      borderRadius: borderRadius.lg,
+                      padding: spacing.md,
+                      marginBottom: spacing.xs,
+                      borderLeftWidth: 3,
+                      borderLeftColor: currentPlanId === plan.id ? colors.primary : 'transparent',
+                    }]}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[typography.styles.labelLarge, { color: colors.text }]}>
+                          {plan.name}
+                        </Text>
+                        <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                          {t('accountPlan.planDetails', {
+                            months: plan.months,
+                            income: formatCurrency(plan.income),
+                            expense: formatCurrency(plan.expense),
+                          })}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleDeletePlan(plan)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Icon name="delete" size={18} color={colors.textTertiary} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.sm, textAlign: 'center' }]}>
+                  {t('accountPlan.planActions')}
+                </Text>
+              </ScrollView>
+            )}
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -324,4 +640,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   card: {},
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { width: '100%' },
+  btn: { padding: 12 },
 });

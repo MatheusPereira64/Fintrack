@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import './i18n/config';
 import { getDatabase }            from './database/db';
 import { useSettingsStore }       from './store/settingsStore';
 import { useAccountStore }        from './store/accountStore';
