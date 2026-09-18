@@ -2,6 +2,20 @@
  * @format
  */
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => undefined),
+    removeItem: jest.fn(async () => undefined),
+    multiGet: jest.fn(async () => []),
+    multiSet: jest.fn(async () => undefined),
+    clear: jest.fn(async () => undefined),
+  },
+}));
+
+jest.mock('../src/i18n/config', () => ({}));
+
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');
   const { View } = require('react-native');
