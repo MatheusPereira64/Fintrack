@@ -23,6 +23,7 @@ import { BudgetScreen }          from '../modules/budget/screens/BudgetScreen';
 import { InsightsScreen }        from '../modules/insights/screens/InsightsScreen';
 import { NotificationsScreen }   from '../modules/notifications/screens/NotificationsScreen';
 import { SettingsScreen }        from '../modules/settings/screens/SettingsScreen';
+import { UpdateDialog }          from '../components/UpdateDialog';
 import { PreferencesScreen }     from '../modules/settings/screens/PreferencesScreen';
 import { ExportScreen }          from '../modules/settings/screens/ExportScreen';
 import { MoreMenuScreen }        from '../modules/settings/screens/MoreMenuScreen';
@@ -159,15 +160,18 @@ export function AppNavigator() {
   const onboardingCompleted = useSettingsStore(s => s.settings.onboardingCompleted);
 
   return (
-    <NavigationContainer>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {!onboardingCompleted ? (
-          <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
-        ) : (
-          <RootStack.Screen name="App" component={AppTabs} />
-        )}
-      </RootStack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          {!onboardingCompleted ? (
+            <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
+          ) : (
+            <RootStack.Screen name="App" component={AppTabs} />
+          )}
+        </RootStack.Navigator>
+      </NavigationContainer>
+      <UpdateDialog />
+    </>
   );
 }
 

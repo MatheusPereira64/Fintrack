@@ -2,7 +2,7 @@
  * UpdateService — consulta releases do GitHub, baixa APK e instala
  * substituindo o app sem apagar dados (mesmo package + mesma assinatura).
  */
-import { Alert, Linking, NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { Logger } from './LoggerService';
 import {
@@ -10,6 +10,7 @@ import {
   parseVersionCodeFromBody,
   parseVersionTag,
 } from '../utils/version';
+import { useUpdateUiStore } from '../store/updateUiStore';
 
 const { UpdateModule } = NativeModules;
 
@@ -193,22 +194,17 @@ export const UpdateService = {
     const allowed = await UpdateModule.canRequestPackageInstalls();
     if (allowed) return true;
 
-    return new Promise(resolve => {
-      Alert.alert(
-        'Permissão necessária',
-        'Para instalar atualizações, permita que o FinTrack instale apps desconhecidos.',
-        [
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-          {
-            text: 'Abrir configurações',
-            onPress: async () => {
-              await UpdateModule.openUnknownSourcesSettings();
-              resolve(false);
-            },
-          },
-        ],
-      );
+    const action = await useUpdateUiStore.getState().present({
+      variant: 'permission',
+      title: 'Permissão necessária',
+      message: 'Para instalar atualizações, permita que o FinTrack instale apps de fontes desconhecidas.',
+      primaryLabel: 'Abrir configurações',
+      secondaryLabel: 'Agora não',
     });
+    if (action === 'primary') {
+      await UpdateModule.openUnknownSourcesSettings();
+    }
+    return false;
   },
 
   async installApk(path: string): Promise<void> {
@@ -253,35 +249,41 @@ export const UpdateService = {
       if (result.status !== 'update_available') return;
 
       const { remote, local } = result;
-      Alert.alert(
-        'Nova versão disponível',
-        `FinTrack ${remote.versionName} está disponível (você tem ${local.versionName}).\n\nA atualização substitui o app e mantém seus dados locais.`,
-        [
-          { text: 'Depois', style: 'cancel' },
-          {
-            text: 'Ver no GitHub',
-            onPress: () => Linking.openURL(remote.htmlUrl || RELEASES_PAGE),
-          },
-          {
-            text: 'Atualizar agora',
-            onPress: () => {
-              Alert.alert('Baixando atualização', 'Isso pode levar alguns segundos…');
-              this.downloadAndInstall(remote)
-                .catch(err => {
-                  Logger.error('Update', 'Falha na atualização automática', err);
-                  Alert.alert(
-                    'Não foi possível atualizar',
-                    `${String(err)}\n\nVocê também pode baixar em:\n${RELEASES_PAGE}`,
-                    [
-                      { text: 'OK', style: 'cancel' },
-                      { text: 'Abrir GitHub', onPress: () => Linking.openURL(RELEASES_PAGE) },
-                    ],
-                  );
-                });
-            },
-          },
-        ],
-      );
+      const ui = useUpdateUiStore.getState();
+      const action = await ui.present({
+        variant: 'update',
+        title: 'Nova versão disponível',
+        message: 'A atualização substitui o app e mantém seus dados locais (mesmo pacote e assinatura).',
+        primaryLabel: 'Atualizar agora',
+        secondaryLabel: 'Depois',
+        showGithub: true,
+        githubUrl: remote.htmlUrl || RELEASES_PAGE,
+        localVersion: local.versionName,
+        remoteVersion: remote.versionName,
+      });
+
+      if (action !== 'primary') return;
+
+      ui.present({
+        variant: 'progress',
+        title: 'Baixando atualização',
+        message: 'Isso pode levar alguns segundos. Não feche o app.',
+        dismissible: false,
+      });
+      try {
+        await this.downloadAndInstall(remote, pct => ui.setProgress(pct));
+        ui.close();
+      } catch (err) {
+        Logger.error('Update', 'Falha na atualização automática', err);
+        await ui.present({
+          variant: 'error',
+          title: 'Não foi possível atualizar',
+          message: `${String(err)}\n\nVocê também pode baixar o APK na página de releases.`,
+          primaryLabel: 'OK',
+          showGithub: true,
+          githubUrl: RELEASES_PAGE,
+        });
+      }
     } finally {
       checking = false;
     }
@@ -298,80 +300,113 @@ export const UpdateService = {
     try {
       onProgress?.(null);
       const result = await this.checkForUpdate();
+      const ui = useUpdateUiStore.getState();
 
       if (result.status === 'unsupported') {
-        Alert.alert('Atualizações', 'Atualização automática disponível apenas no Android.');
+        await ui.present({
+          variant: 'info',
+          title: 'Atualizações',
+          message: 'A atualização automática está disponível apenas no Android.',
+          primaryLabel: 'OK',
+        });
         return result;
       }
       if (result.status === 'error') {
-        Alert.alert('Erro', `Não foi possível verificar: ${result.message}`);
+        await ui.present({
+          variant: 'error',
+          title: 'Não foi possível verificar',
+          message: result.message,
+          primaryLabel: 'OK',
+        });
         return result;
       }
       if (result.status === 'up_to_date') {
         if (!result.remote) {
-          Alert.alert(
-            'Nenhuma release no GitHub',
-            `Você está na versão ${result.local.versionName}, mas ainda não há uma release publicada em ${RELEASES_PAGE}.`,
-            [
-              { text: 'OK', style: 'cancel' },
-              { text: 'Abrir GitHub', onPress: () => Linking.openURL(RELEASES_PAGE) },
-            ],
-          );
+          await ui.present({
+            variant: 'info',
+            title: 'Nenhuma release no GitHub',
+            message: `Você está na versão ${result.local.versionName}, mas ainda não há uma release publicada.`,
+            primaryLabel: 'OK',
+            showGithub: true,
+            githubUrl: RELEASES_PAGE,
+            localVersion: result.local.versionName,
+          });
           return result;
         }
         if (!result.remote.apkUrl) {
-          Alert.alert(
-            'Release sem APK',
-            `A release ${result.remote.name} existe, mas não tem um APK anexado. Abra a página para baixar manualmente.`,
-            [
-              { text: 'OK', style: 'cancel' },
-              { text: 'Abrir GitHub', onPress: () => Linking.openURL(result.remote!.htmlUrl || RELEASES_PAGE) },
-            ],
-          );
+          await ui.present({
+            variant: 'info',
+            title: 'Release sem APK',
+            message: `A release ${result.remote.name} existe, mas não tem um APK anexado. Abra a página para baixar manualmente.`,
+            primaryLabel: 'OK',
+            showGithub: true,
+            githubUrl: result.remote.htmlUrl || RELEASES_PAGE,
+          });
           return result;
         }
-        Alert.alert(
-          'App atualizado',
-          `Você já está na versão ${result.local.versionName}.`,
-        );
+        await ui.present({
+          variant: 'success',
+          title: 'App atualizado',
+          message: `Você já está na versão ${result.local.versionName}.`,
+          primaryLabel: 'OK',
+          localVersion: result.local.versionName,
+        });
         return result;
       }
 
       const { remote, local } = result;
       if (!remote.apkUrl) {
-        Alert.alert(
-          'Atualização encontrada',
-          `Versão ${remote.versionName} está no GitHub, mas a release não tem APK anexado.`,
-          [
-            { text: 'OK', style: 'cancel' },
-            { text: 'Abrir GitHub', onPress: () => Linking.openURL(remote.htmlUrl || RELEASES_PAGE) },
-          ],
-        );
+        await ui.present({
+          variant: 'info',
+          title: 'Atualização encontrada',
+          message: `A versão ${remote.versionName} está no GitHub, mas a release não tem APK anexado.`,
+          primaryLabel: 'OK',
+          showGithub: true,
+          githubUrl: remote.htmlUrl || RELEASES_PAGE,
+          localVersion: local.versionName,
+          remoteVersion: remote.versionName,
+        });
         return result;
       }
-      return await new Promise(resolve => {
-        Alert.alert(
-          'Atualização encontrada',
-          `Versão ${remote.versionName} disponível (atual: ${local.versionName}).\n\nDeseja baixar e instalar? Seus dados serão mantidos.`,
-          [
-            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(result) },
-            {
-              text: 'Atualizar',
-              onPress: async () => {
-                try {
-                  await this.downloadAndInstall(remote, pct => onProgress?.(pct));
-                  resolve(result);
-                } catch (err) {
-                  Alert.alert('Erro na atualização', String(err));
-                  resolve({ status: 'error', message: String(err) });
-                } finally {
-                  onProgress?.(null);
-                }
-              },
-            },
-          ],
-        );
+
+      const action = await ui.present({
+        variant: 'update',
+        title: 'Atualização encontrada',
+        message: 'Deseja baixar e instalar? Seus dados locais serão mantidos.',
+        primaryLabel: 'Atualizar',
+        secondaryLabel: 'Cancelar',
+        showGithub: true,
+        githubUrl: remote.htmlUrl || RELEASES_PAGE,
+        localVersion: local.versionName,
+        remoteVersion: remote.versionName,
       });
+
+      if (action !== 'primary') return result;
+
+      ui.present({
+        variant: 'progress',
+        title: 'Baixando atualização',
+        message: 'Isso pode levar alguns segundos. Não feche o app.',
+        dismissible: false,
+      });
+      try {
+        await this.downloadAndInstall(remote, pct => {
+          onProgress?.(pct);
+          ui.setProgress(pct);
+        });
+        ui.close();
+        return result;
+      } catch (err) {
+        await ui.present({
+          variant: 'error',
+          title: 'Erro na atualização',
+          message: String(err),
+          primaryLabel: 'OK',
+          showGithub: true,
+          githubUrl: RELEASES_PAGE,
+        });
+        return { status: 'error', message: String(err) };
+      }
     } finally {
       checking = false;
       onProgress?.(null);

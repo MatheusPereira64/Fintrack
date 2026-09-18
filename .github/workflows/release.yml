@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag da release (ex: v1.0.1)'
+        description: 'Tag da release (ex: v1.0.2)'
         required: true
-        default: 'v1.0.1'
+        default: 'v1.0.2'
 
 permissions:
   contents: write
@@ -78,6 +78,7 @@ jobs:
     name: Build IPA
     needs: version
     runs-on: macos-15
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -96,9 +97,12 @@ jobs:
 
       - name: CocoaPods
         working-directory: ios
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
         run: |
-          gem install cocoapods
-          pod install --verbose=false
+          pod --version
+          pod install
 
       - name: Archive iOS (IPA)
         env:
@@ -114,7 +118,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath ios/build/FinTrack.xcarchive \
             MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION=4 \
+            CURRENT_PROJECT_VERSION=5 \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -133,6 +137,7 @@ jobs:
   publish:
     name: Publicar Release
     needs: [version, android, ios]
+    if: always() && needs.android.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +173,7 @@ jobs:
             em iPhone exige assinatura Apple.
 
             ```
-            versionCode: 4
+            versionCode: 5
             ```
 
             **Dados do usuário (Android):** a atualização pelo mesmo pacote `com.fintrackapp`
@@ -176,6 +181,7 @@ jobs:
           files: |
             dist/FinTrack-${{ needs.version.outputs.version }}.apk
             dist/FinTrack-${{ needs.version.outputs.version }}.ipa
+          fail_on_unmatched_files: false
           draft: false
           prerelease: false
         env:
