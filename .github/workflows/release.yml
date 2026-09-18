@@ -4,13 +4,38 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag da release (ex: v1.0.1)'
+        required: true
+        default: 'v1.0.1'
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build APK e publicar Release
+  version:
+    name: Versão
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  android:
+    name: Build APK
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,21 +50,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # Não instalar o pacote legado "tools" (foi removido do sdkmanager).
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Ler versão do tag
-        id: ver
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Assemble Release APK
         working-directory: android
@@ -49,30 +65,117 @@ jobs:
         run: |
           mkdir -p dist
           APK=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
-          cp "$APK" "dist/FinTrack-${{ steps.ver.outputs.version }}.apk"
+          cp "$APK" "dist/FinTrack-${{ needs.version.outputs.version }}.apk"
           ls -lh dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/FinTrack-${{ needs.version.outputs.version }}.apk
+          if-no-files-found: error
+
+  ios:
+    name: Build IPA
+    needs: version
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: CocoaPods
+        working-directory: ios
+        run: |
+          gem install cocoapods
+          pod install --verbose=false
+
+      - name: Archive iOS (IPA)
+        env:
+          RCT_NO_LAUNCH_PACKAGER: 1
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.version.outputs.version }}"
+          mkdir -p ios/build dist
+          xcodebuild \
+            -workspace ios/FinTrackApp.xcworkspace \
+            -scheme FinTrackApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath ios/build/FinTrack.xcarchive \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION=4 \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            archive
+
+          chmod +x scripts/package-ios-ipa.sh
+          scripts/package-ios-ipa.sh "$VERSION"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: dist/FinTrack-${{ needs.version.outputs.version }}.ipa
+          if-no-files-found: error
+
+  publish:
+    name: Publicar Release
+    needs: [version, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Listar artefatos
+        run: ls -lh dist/
 
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: FinTrack ${{ steps.ver.outputs.version }}
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: FinTrack ${{ needs.version.outputs.version }}
           body: |
-            ## FinTrack ${{ steps.ver.outputs.version }}
+            ## FinTrack ${{ needs.version.outputs.version }}
 
-            Baixe o APK abaixo e instale no Android.
+            ### Android
+            Baixe **FinTrack-${{ needs.version.outputs.version }}.apk** e instale no aparelho.
 
             O app também verifica esta release automaticamente ao abrir
             (Configurações → Procurar atualizações).
+
+            ### iOS
+            Baixe **FinTrack-${{ needs.version.outputs.version }}.ipa** (pacote padrão do iOS).
+
+            A Apple não permite instalar um `.ipa` baixado da internet como no Android.
+            Use TestFlight, uma conta de desenvolvedor ou um sideload (AltStore / Sideloadly)
+            com certificado válido. Este IPA é o arquivo de distribuição; a instalação
+            em iPhone exige assinatura Apple.
 
             ```
             versionCode: 4
             ```
 
-            **Dados do usuário:** a atualização pelo mesmo pacote `com.fintrackapp`
+            **Dados do usuário (Android):** a atualização pelo mesmo pacote `com.fintrackapp`
             e mesma assinatura **não apaga** o banco SQLite local.
           files: |
-            dist/FinTrack-${{ steps.ver.outputs.version }}.apk
+            dist/FinTrack-${{ needs.version.outputs.version }}.apk
+            dist/FinTrack-${{ needs.version.outputs.version }}.ipa
           draft: false
           prerelease: false
         env:
