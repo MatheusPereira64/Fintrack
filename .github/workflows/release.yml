@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag da release (ex: v1.0.2)'
+        description: 'Tag da release (ex: v1.0.3)'
         required: true
-        default: 'v1.0.2'
+        default: 'v1.0.3'
 
 permissions:
   contents: write
@@ -118,7 +118,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath ios/build/FinTrack.xcarchive \
             MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION=5 \
+            CURRENT_PROJECT_VERSION=6 \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -173,7 +173,7 @@ jobs:
             em iPhone exige assinatura Apple.
 
             ```
-            versionCode: 5
+            versionCode: 6
             ```
 
             **Dados do usuário (Android):** a atualização pelo mesmo pacote `com.fintrackapp`
