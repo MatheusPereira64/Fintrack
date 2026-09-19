@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { Icon } from '../../../components/Icon';
 import { formatCurrency } from '../../../utils/currency';
@@ -12,6 +13,7 @@ interface Props {
 
 /** Médias + projeção de resultado do mês — foco em controle financeiro. */
 export const FinanceSnapshotCard = memo(function FinanceSnapshotCard({ refreshKey = 0 }: Props) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const [snap, setSnap] = useState<FinanceSnapshot | null>(null);
 
@@ -47,25 +49,25 @@ export const FinanceSnapshotCard = memo(function FinanceSnapshotCard({ refreshKe
       <View style={styles.titleRow}>
         <Icon name="chart-line" size={18} color={colors.primary} />
         <Text style={[typography.styles.titleSmall, { color: colors.text, marginLeft: spacing.sm }]}>
-          Controle financeiro
+          {t('financeSnapshot.title')}
         </Text>
       </View>
 
       <View style={[styles.row, { marginTop: spacing.md }]}>
         <Metric
-          label="Receita média"
+          label={t('financeSnapshot.avgIncome')}
           value={formatCurrency(snap.avgIncome)}
           color={colors.income}
           icon="income"
         />
         <Metric
-          label="Despesa média"
+          label={t('financeSnapshot.avgExpense')}
           value={formatCurrency(snap.avgExpense)}
           color={colors.expense}
           icon="expense"
         />
         <Metric
-          label="Resultado médio"
+          label={t('financeSnapshot.avgResult')}
           value={formatCurrency(snap.avgBalance)}
           color={snap.avgBalance >= 0 ? colors.income : colors.expense}
           icon={snap.avgBalance >= 0 ? 'trending-up' : 'trending-down'}
@@ -88,7 +90,9 @@ export const FinanceSnapshotCard = memo(function FinanceSnapshotCard({ refreshKe
             color: projectedPositive ? colors.success : colors.error,
             marginLeft: spacing.xs,
           }]}>
-            {projectedPositive ? 'Projeção: lucro no mês' : 'Projeção: prejuízo no mês'}
+            {projectedPositive
+              ? t('financeSnapshot.projectionProfit')
+              : t('financeSnapshot.projectionLoss')}
           </Text>
         </View>
         <Text style={[typography.styles.titleMedium, {
@@ -98,7 +102,7 @@ export const FinanceSnapshotCard = memo(function FinanceSnapshotCard({ refreshKe
           {formatCurrency(snap.projectedBalance)}
         </Text>
         <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-          Com base no ritmo de gastos até o dia {snap.dayOfMonth}/{snap.daysTotal}
+          {t('financeSnapshot.basedOnPace', { day: snap.dayOfMonth, total: snap.daysTotal })}
         </Text>
       </View>
     </Animated.View>

@@ -4,6 +4,7 @@ import {
   RefreshControl, Platform, StatusBar,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTabBarInsets } from '../../../hooks/useTabBarInsets';
 
 import { useTheme }             from '../../../hooks/useTheme';
@@ -25,6 +26,7 @@ import { subtractMonths, addMonths } from '../../../utils/date';
 import { formatCurrency }           from '../../../utils/currency';
 
 export function DashboardScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const { bottom: tabBarBottom, top: safeTop } = useTabBarInsets();
 
@@ -143,7 +145,7 @@ export function DashboardScreen({ navigation }: any) {
           <Icon name="auto" size={20} color="#FFF" />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
             <Text style={[typography.styles.labelLarge, { color: '#FFF' }]}>
-              Transação registrada
+              {t('dashboard.transactionRegistered')}
             </Text>
             <Text style={[typography.styles.bodySmall, { color: 'rgba(255,255,255,0.85)' }]} numberOfLines={1}>
               {toast.message} · {formatCurrency(toast.amount)}
@@ -171,10 +173,10 @@ export function DashboardScreen({ navigation }: any) {
         <View style={[styles.greeting, { paddingHorizontal: spacing.base, marginBottom: spacing.md }]}>
           <View>
             <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary }]}>
-              {userName ? `Olá, ${userName}` : 'Olá'}
+              {userName ? t('dashboard.helloName', { name: userName }) : t('dashboard.hello')}
             </Text>
             <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
-              Resumo financeiro
+              {t('dashboard.financialSummary')}
             </Text>
           </View>
           <TouchableOpacity
@@ -198,7 +200,7 @@ export function DashboardScreen({ navigation }: any) {
               typography.styles.caption,
               { color: notifOn ? colors.success : colors.warning, marginLeft: 4 },
             ]}>
-              {notifOn ? 'Ativo' : 'Inativo'}
+              {notifOn ? t('dashboard.active') : t('dashboard.inactive')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -234,7 +236,7 @@ export function DashboardScreen({ navigation }: any) {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, gap: 8 }}>
               <Icon name="insights" size={20} color={colors.primary} />
               <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                Insights
+                {t('dashboard.insights')}
               </Text>
             </View>
             {insights.map((insight, i) => (
@@ -269,14 +271,14 @@ export function DashboardScreen({ navigation }: any) {
         <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl }}>
           <View style={styles.sectionHeader}>
             <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-              Últimas movimentações
+              {t('dashboard.recentMovements')}
             </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Transactions')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
-                Ver todas →
+                {t('dashboard.seeAll')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -288,10 +290,10 @@ export function DashboardScreen({ navigation }: any) {
             ]}>
               <Icon name="bell" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
               <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
-                Nenhuma transação ainda
+                {t('dashboard.noTransactionsYet')}
               </Text>
               <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-                Quando você receber uma notificação do banco, ela aparecerá aqui automaticamente.
+                {t('dashboard.noTransactionsHint')}
               </Text>
             </View>
           ) : (
@@ -315,11 +317,11 @@ export function DashboardScreen({ navigation }: any) {
           <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl }}>
             <View style={styles.sectionHeader}>
               <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                Suas contas
+                {t('dashboard.yourAccounts')}
               </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
                 <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
-                  Gerenciar →
+                  {t('dashboard.manage')}
                 </Text>
               </TouchableOpacity>
             </View>

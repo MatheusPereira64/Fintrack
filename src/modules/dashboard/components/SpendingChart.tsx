@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 
 const { width } = Dimensions.get('window');
@@ -20,10 +21,13 @@ interface SpendingChartProps {
   data: MonthlyTotal[];
 }
 
-const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const MONTH_KEYS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const;
 
 export const SpendingChart = memo(function SpendingChart({ data }: SpendingChartProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
 
   const chart = useMemo(() => {
@@ -62,9 +66,9 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
       ];
     });
 
-    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(t => ({
-      y: PADDING.top + plotH * (1 - t),
-      label: `R$${Math.round((maxVal * t) / 1000)}k`,
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(tick => ({
+      y: PADDING.top + plotH * (1 - tick),
+      label: `R$${Math.round((maxVal * tick) / 1000)}k`,
     }));
 
     return { bars, yTicks, plotW, plotH };
@@ -88,7 +92,7 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
       },
     ]}>
       <Text style={[typography.styles.titleSmall, { color: colors.text, marginBottom: spacing.sm }]}>
-        Ultimos 6 meses
+        {t('spendingChart.title')}
       </Text>
 
       <Svg width={CHART_WIDTH - 16} height={CHART_HEIGHT}>
@@ -125,7 +129,7 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
               fill={colors.textSecondary}
               textAnchor="middle"
             >
-              {MONTH_SHORT[d.month - 1]}
+              {t(`common.monthsShort.${MONTH_KEYS[d.month - 1]}`)}
             </SvgText>
           );
         })}
@@ -146,11 +150,15 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.income }]} />
-          <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>Receitas</Text>
+          <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+            {t('spendingChart.income')}
+          </Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.expense }]} />
-          <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>Despesas</Text>
+          <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+            {t('spendingChart.expense')}
+          </Text>
         </View>
       </View>
     </Animated.View>

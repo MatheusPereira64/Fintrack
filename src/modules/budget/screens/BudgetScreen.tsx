@@ -5,6 +5,7 @@ import {
   Modal, Alert, ScrollView,
 } from 'react-native';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }       from '../../../hooks/useTheme';
 import { useBudgetStore } from '../../../store/budgetStore';
 import { useCategoryStore } from '../../../store/categoryStore';
@@ -17,6 +18,7 @@ import { formatCurrency, formatPercent } from '../../../utils/currency';
 const BudgetCard = memo(function BudgetCard({
   budget, onDelete,
 }: { budget: any; onDelete: (id: number) => void }) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const percent = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
   const overBudget = percent > 100;
@@ -27,10 +29,14 @@ const BudgetCard = memo(function BudgetCard({
   return (
     <Animated.View entering={FadeInDown.duration(300)}>
       <TouchableOpacity
-        onLongPress={() => Alert.alert('Excluir orçamento', 'Deseja remover este orçamento?', [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Excluir', style: 'destructive', onPress: () => onDelete(budget.id) },
-        ])}
+        onLongPress={() => Alert.alert(
+          t('budget.deleteTitle'),
+          t('budget.deleteMessage'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(budget.id) },
+          ],
+        )}
         activeOpacity={0.8}
         style={[{
           backgroundColor: colors.card,
@@ -50,10 +56,13 @@ const BudgetCard = memo(function BudgetCard({
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
-              {budget.categoryName ?? 'Todas as categorias'}
+              {budget.categoryName ?? t('budget.allCategories')}
             </Text>
             <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-              {formatCurrency(budget.spent)} de {formatCurrency(budget.amount)}
+              {t('budget.spentOf', {
+                spent: formatCurrency(budget.spent),
+                amount: formatCurrency(budget.amount),
+              })}
             </Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
@@ -64,7 +73,7 @@ const BudgetCard = memo(function BudgetCard({
             </Text>
             {overBudget && (
               <Text style={[typography.styles.caption, { color: colors.error }]}>
-                Excedido!
+                {t('budget.exceeded')}
               </Text>
             )}
           </View>
@@ -81,8 +90,8 @@ const BudgetCard = memo(function BudgetCard({
 
         <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: spacing.xs }]}>
           {overBudget
-            ? `Excedeu em ${formatCurrency(budget.spent - budget.amount)}`
-            : `Restam ${formatCurrency(budget.amount - budget.spent)}`}
+            ? t('budget.exceededBy', { amount: formatCurrency(budget.spent - budget.amount) })
+            : t('budget.remaining', { amount: formatCurrency(budget.amount - budget.spent) })}
         </Text>
       </TouchableOpacity>
     </Animated.View>
@@ -90,6 +99,7 @@ const BudgetCard = memo(function BudgetCard({
 });
 
 export function BudgetScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const budgets      = useBudgetStore(s => s.budgets);
@@ -123,7 +133,7 @@ export function BudgetScreen({ navigation }: any) {
   const handleAdd = useCallback(async () => {
     const amt = parseFloat(amount.replace(',', '.'));
     if (!amt || amt <= 0) {
-      Alert.alert('Atenção', 'Informe um valor válido para o orçamento.');
+      Alert.alert(t('common.warning'), t('budget.invalidAmount'));
       return;
     }
     setSaving(true);
@@ -139,18 +149,18 @@ export function BudgetScreen({ navigation }: any) {
       setAmount('');
       setCatId(undefined);
     } catch {
-      Alert.alert('Erro', 'Não foi possível criar o orçamento.');
+      Alert.alert(t('common.error'), t('budget.createError'));
     } finally {
       setSaving(false);
     }
-  }, [amount, catId, addBudget, syncSpent, currentMonth]);
+  }, [amount, catId, addBudget, syncSpent, currentMonth, t]);
 
   const handleDelete = useCallback((id: number) => { deleteBudget(id); }, [deleteBudget]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Orçamentos"
+        title={t('budget.title')}
         onClose={() => navigation.goBack()}
         actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
       />
@@ -170,10 +180,10 @@ export function BudgetScreen({ navigation }: any) {
           }]}>
             <Text style={{ fontSize: 48, textAlign: 'center' }}>📊</Text>
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
-              Nenhum orçamento ainda
+              {t('budget.noBudgets')}
             </Text>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-              Defina limites de gastos por categoria.
+              {t('budget.noBudgetsHint')}
             </Text>
           </View>
         }
@@ -202,19 +212,19 @@ export function BudgetScreen({ navigation }: any) {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Novo orçamento mensal
+                {t('budget.newBudget')}
               </Text>
               <CloseButton onPress={() => setShowModal(false)} />
             </View>
 
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Valor limite (R$) *
+              {t('budget.limitAmount')}
             </Text>
             <TextInput
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              placeholder="0,00"
+              placeholder={t('common.amountPlaceholder')}
               placeholderTextColor={colors.placeholder}
               style={[{
                 backgroundColor: colors.inputBackground,
@@ -226,7 +236,7 @@ export function BudgetScreen({ navigation }: any) {
             />
 
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Categoria (opcional)
+              {t('budget.categoryOptional')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
               <TouchableOpacity
@@ -237,7 +247,7 @@ export function BudgetScreen({ navigation }: any) {
                 }]}
               >
                 <Text style={[typography.styles.labelMedium, { color: !catId ? '#FFF' : colors.textSecondary }]}>
-                  Geral
+                  {t('budget.general')}
                 </Text>
               </TouchableOpacity>
               {categories.map(c => (
@@ -264,7 +274,9 @@ export function BudgetScreen({ navigation }: any) {
                 onPress={() => setShowModal(false)}
                 style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
               >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>Cancelar</Text>
+                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  {t('common.cancel')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAdd}
@@ -272,7 +284,7 @@ export function BudgetScreen({ navigation }: any) {
                 style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
               >
                 <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : 'Criar'}
+                  {saving ? '...' : t('common.create')}
                 </Text>
               </TouchableOpacity>
             </View>

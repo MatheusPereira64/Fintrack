@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Svg, { G, Path } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { formatCurrency, formatPercent } from '../../../utils/currency';
 
@@ -32,7 +33,9 @@ function describeSlice(
 }
 
 export const CategoryChart = memo(function CategoryChart({ data }: CategoryChartProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const othersLabel = t('categoryChart.others');
 
   const pie = useMemo(() => {
     if (data.length === 0) return null;
@@ -42,7 +45,7 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
     const others = data.slice(5).reduce((s, c) => s + c.total, 0);
     const slices = [
       ...top5.map(c => ({ label: c.name, value: c.total, color: c.color })),
-      ...(others > 0 ? [{ label: 'Outros', value: others, color: colors.textTertiary }] : []),
+      ...(others > 0 ? [{ label: othersLabel, value: others, color: colors.textTertiary }] : []),
     ];
 
     const cx = 80;
@@ -63,7 +66,7 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
     });
 
     return { paths, total, top5, others };
-  }, [colors.textTertiary, data]);
+  }, [colors.textTertiary, data, othersLabel]);
 
   if (!pie) return null;
 
@@ -83,7 +86,7 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
       },
     ]}>
       <Text style={[typography.styles.titleSmall, { color: colors.text, marginBottom: spacing.sm }]}>
-        Gastos por categoria
+        {t('categoryChart.title')}
       </Text>
 
       <View style={styles.row}>
@@ -119,7 +122,7 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
             <View style={styles.listItem}>
               <View style={[styles.colorDot, { backgroundColor: colors.textTertiary }]} />
               <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-                Outros · {formatCurrency(pie.others)}
+                {othersLabel} · {formatCurrency(pie.others)}
               </Text>
             </View>
           )}

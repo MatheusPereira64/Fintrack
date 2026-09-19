@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }     from '../../../hooks/useTheme';
 import { useGoalStore } from '../../../store/goalStore';
 import { AppHeader }    from '../../../components/AppHeader';
@@ -18,23 +19,21 @@ import { formatDate }         from '../../../utils/date';
 
 interface GoalPreset {
   key: GoalCategory;
-  label: string;
   icon: AppIconName;
-  defaultTitle: string;
   color: string;
 }
 
 const GOAL_PRESETS: GoalPreset[] = [
-  { key: 'house',       label: 'Casa',        icon: 'home-city',  defaultTitle: 'Casa própria',        color: '#2563EB' },
-  { key: 'wedding',     label: 'Casamento',   icon: 'ring',       defaultTitle: 'Casamento',           color: '#EC4899' },
-  { key: 'car',         label: 'Carro',       icon: 'car',        defaultTitle: 'Carro novo',          color: '#0891B2' },
-  { key: 'travel',      label: 'Viagem',      icon: 'plane',      defaultTitle: 'Viagem',              color: '#7C3AED' },
-  { key: 'emergency',   label: 'Reserva',     icon: 'shield',     defaultTitle: 'Reserva de emergência', color: '#16A34A' },
-  { key: 'education',   label: 'Educação',    icon: 'education',  defaultTitle: 'Educação / Curso',    color: '#D97706' },
-  { key: 'health',      label: 'Saúde',       icon: 'health',     defaultTitle: 'Saúde',               color: '#DC2626' },
-  { key: 'electronics', label: 'Eletrônicos', icon: 'laptop',     defaultTitle: 'Eletrônicos',         color: '#6366F1' },
-  { key: 'purchase',    label: 'Compra',      icon: 'shopping',   defaultTitle: 'Compra especial',     color: '#F97316' },
-  { key: 'custom',      label: 'Outro',       icon: 'goal',       defaultTitle: '',                    color: '#7C3AED' },
+  { key: 'house',       icon: 'home-city',  color: '#2563EB' },
+  { key: 'wedding',     icon: 'ring',       color: '#EC4899' },
+  { key: 'car',         icon: 'car',        color: '#0891B2' },
+  { key: 'travel',      icon: 'plane',      color: '#7C3AED' },
+  { key: 'emergency',   icon: 'shield',     color: '#16A34A' },
+  { key: 'education',   icon: 'education',  color: '#D97706' },
+  { key: 'health',      icon: 'health',     color: '#DC2626' },
+  { key: 'electronics', icon: 'laptop',     color: '#6366F1' },
+  { key: 'purchase',    icon: 'shopping',   color: '#F97316' },
+  { key: 'custom',      icon: 'goal',       color: '#7C3AED' },
 ];
 
 const COLORS = ['#7C3AED', '#DC2626', '#2563EB', '#16A34A', '#D97706', '#0891B2', '#EC4899', '#6366F1'];
@@ -62,6 +61,7 @@ function parseISODate(iso: string): Date {
 const GoalCard = memo(function GoalCard({
   goal, onDelete,
 }: { goal: Goal; onDelete: (id: number) => void }) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const progress  = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const remaining = goal.targetAmount - goal.currentAmount;
@@ -71,10 +71,14 @@ const GoalCard = memo(function GoalCard({
     <Animated.View entering={FadeInDown.duration(350)}>
       <TouchableOpacity
         onLongPress={() => {
-          Alert.alert('Excluir meta', `Excluir "${goal.title}"?`, [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Excluir', style: 'destructive', onPress: () => onDelete(goal.id) },
-          ]);
+          Alert.alert(
+            t('goals.deleteGoalTitle'),
+            t('goals.deleteGoalMessage', { title: goal.title }),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(goal.id) },
+            ],
+          );
         }}
         activeOpacity={0.8}
         style={[{
@@ -99,7 +103,7 @@ const GoalCard = memo(function GoalCard({
             <Text style={[typography.styles.titleSmall, { color: colors.text }]}>{goal.title}</Text>
             {goal.deadline && (
               <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-                Prazo: {formatDate(goal.deadline, 'short')}
+                {t('goals.deadlineText', { date: formatDate(goal.deadline, 'short') })}
               </Text>
             )}
           </View>
@@ -119,10 +123,10 @@ const GoalCard = memo(function GoalCard({
 
         <View style={styles.goalFooter}>
           <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-            {formatCurrency(goal.currentAmount)} de {formatCurrency(goal.targetAmount)}
+            {formatCurrency(goal.currentAmount)} {t('goals.of')} {formatCurrency(goal.targetAmount)}
           </Text>
           <Text style={[typography.styles.caption, { color: colors.textTertiary }]}>
-            Faltam {formatCurrency(remaining)}
+            {t('goals.remaining', { amount: formatCurrency(remaining) })}
           </Text>
         </View>
       </TouchableOpacity>
@@ -131,6 +135,7 @@ const GoalCard = memo(function GoalCard({
 });
 
 export function GoalsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const goals             = useGoalStore(s => s.goals);
@@ -153,6 +158,9 @@ export function GoalsScreen({ navigation }: any) {
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
+  const getDefaultTitle = (key: GoalCategory) =>
+    key === 'custom' ? '' : t(`goals.defaultTitles.${key}`);
+
   const resetForm = () => {
     setTitle(''); setTarget(''); setCurrent(''); setDeadline('');
     setCategory('custom'); setIcon('goal'); setColor(COLORS[0]);
@@ -163,8 +171,13 @@ export function GoalsScreen({ navigation }: any) {
     setCategory(preset.key);
     setIcon(preset.icon);
     setColor(preset.color);
-    if (!title.trim() || GOAL_PRESETS.some(p => p.defaultTitle && p.defaultTitle === title.trim())) {
-      if (preset.defaultTitle) setTitle(preset.defaultTitle);
+    const defaultTitle = getDefaultTitle(preset.key);
+    const isPresetTitle = GOAL_PRESETS.some(p => {
+      const dt = getDefaultTitle(p.key);
+      return dt && dt === title.trim();
+    });
+    if (!title.trim() || isPresetTitle) {
+      if (defaultTitle) setTitle(defaultTitle);
     }
   };
 
@@ -182,7 +195,7 @@ export function GoalsScreen({ navigation }: any) {
     const currentAmt = parseFloat(current.replace(',', '.')) || 0;
 
     if (!title.trim() || !targetAmt) {
-      Alert.alert('Atenção', 'Preencha o nome e o valor da meta.');
+      Alert.alert(t('common.warning'), t('goals.validationError'));
       return;
     }
     setSaving(true);
@@ -199,11 +212,11 @@ export function GoalsScreen({ navigation }: any) {
       setShowModal(false);
       resetForm();
     } catch {
-      Alert.alert('Erro', 'Não foi possível criar a meta.');
+      Alert.alert(t('common.error'), t('goals.createError'));
     } finally {
       setSaving(false);
     }
-  }, [title, target, current, deadline, category, icon, color, addGoal]);
+  }, [title, target, current, deadline, category, icon, color, addGoal, t]);
 
   const handleDelete = useCallback((id: number) => { deleteGoal(id); }, [deleteGoal]);
 
@@ -214,7 +227,7 @@ export function GoalsScreen({ navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Metas"
+        title={t('goals.title')}
         onClose={() => navigation.goBack()}
         actions={[{
           icon: 'add',
@@ -231,7 +244,7 @@ export function GoalsScreen({ navigation }: any) {
           shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
         }]}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            Progresso total das metas
+            {t('goals.totalProgress')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1 }}>
@@ -263,10 +276,10 @@ export function GoalsScreen({ navigation }: any) {
           }]}>
             <Icon name="goal" size={48} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
-              Nenhuma meta ainda
+              {t('goals.noGoals')}
             </Text>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-              Defina objetivos como casa, casamento ou viagem e acompanhe o progresso.
+              {t('goals.noGoalsHint')}
             </Text>
           </View>
         }
@@ -296,7 +309,7 @@ export function GoalsScreen({ navigation }: any) {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                Nova meta
+                {t('goals.newGoal')}
               </Text>
               <CloseButton onPress={() => { setShowModal(false); resetForm(); }} />
             </View>
@@ -307,7 +320,7 @@ export function GoalsScreen({ navigation }: any) {
               contentContainerStyle={{ paddingBottom: spacing.md }}
             >
               <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                Tipo da meta
+                {t('goals.goalType')}
               </Text>
               <View style={[styles.presetGrid, { marginBottom: spacing.lg }]}>
                 {GOAL_PRESETS.map(preset => {
@@ -332,7 +345,7 @@ export function GoalsScreen({ navigation }: any) {
                         }]}
                         numberOfLines={1}
                       >
-                        {preset.label}
+                        {t(`goals.presets.${preset.key}`)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -340,9 +353,9 @@ export function GoalsScreen({ navigation }: any) {
               </View>
 
               {[
-                { label: 'Nome da meta *', val: title, setter: setTitle, placeholder: 'Ex: Casa própria', numeric: false },
-                { label: 'Valor alvo (R$) *', val: target, setter: setTarget, placeholder: '0,00', numeric: true },
-                { label: 'Valor atual (R$)', val: current, setter: setCurrent, placeholder: '0,00', numeric: true },
+                { label: t('goals.goalName'), val: title, setter: setTitle, placeholder: t('goals.goalNamePlaceholder'), numeric: false },
+                { label: t('goals.targetAmount'), val: target, setter: setTarget, placeholder: t('goals.valuePlaceholder'), numeric: true },
+                { label: t('goals.currentAmount'), val: current, setter: setCurrent, placeholder: t('goals.valuePlaceholder'), numeric: true },
               ].map((f, i) => (
                 <View key={i} style={{ marginBottom: spacing.md }}>
                   <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -363,7 +376,7 @@ export function GoalsScreen({ navigation }: any) {
               ))}
 
               <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                Prazo
+                {t('goals.deadline')}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
@@ -380,7 +393,7 @@ export function GoalsScreen({ navigation }: any) {
                   marginLeft: spacing.sm,
                   flex: 1,
                 }]}>
-                  {deadline ? formatDate(deadline, 'medium') : 'Selecionar no calendário'}
+                  {deadline ? formatDate(deadline, 'medium') : t('goals.deadlinePlaceholder')}
                 </Text>
                 {deadline ? (
                   <TouchableOpacity
@@ -408,7 +421,7 @@ export function GoalsScreen({ navigation }: any) {
                       style={{ alignSelf: 'flex-end', paddingVertical: spacing.sm }}
                     >
                       <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
-                        Confirmar data
+                        {t('goals.confirmDate')}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -416,7 +429,7 @@ export function GoalsScreen({ navigation }: any) {
               )}
 
               <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                Cor
+                {t('goals.color')}
               </Text>
               <View style={[styles.colorRow, { marginBottom: spacing.lg }]}>
                 {COLORS.map(c => (
@@ -444,7 +457,9 @@ export function GoalsScreen({ navigation }: any) {
                 onPress={() => { setShowModal(false); resetForm(); }}
                 style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
               >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>Cancelar</Text>
+                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  {t('common.cancel')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAdd}
@@ -452,7 +467,7 @@ export function GoalsScreen({ navigation }: any) {
                 style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
               >
                 <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : 'Criar'}
+                  {saving ? '...' : t('common.create')}
                 </Text>
               </TouchableOpacity>
             </View>

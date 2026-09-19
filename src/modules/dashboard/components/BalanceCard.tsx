@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle,
   withSpring, withTiming, FadeInDown,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }     from '../../../hooks/useTheme';
 import { Icon }         from '../../../components/Icon';
 import { AnimatedNumber } from '../../../components/AnimatedNumber';
@@ -22,6 +23,7 @@ interface BalanceCardProps {
 export const BalanceCard = memo(function BalanceCard({
   totalBalance, income, expense, count, currentDate, onPrevMonth, onNextMonth,
 }: BalanceCardProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const scale = useSharedValue(0.95);
   const opacity = useSharedValue(0);
@@ -68,7 +70,7 @@ export const BalanceCard = memo(function BalanceCard({
         </View>
 
         <Text style={[typography.styles.labelMedium, styles.label]}>
-          Patrimônio total
+          {t('balanceCard.totalWealth')}
         </Text>
         <AnimatedNumber
           value={totalBalance}
@@ -82,13 +84,13 @@ export const BalanceCard = memo(function BalanceCard({
           <View style={styles.metric}>
             <Icon name="income" size={18} color="#86EFAC" />
             <AnimatedNumber value={income} style={[typography.styles.titleSmall, styles.incomeText]} duration={700} />
-            <Text style={styles.metricLabel}>Receitas</Text>
+            <Text style={styles.metricLabel}>{t('balanceCard.income')}</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
           <View style={styles.metric}>
             <Icon name="expense" size={18} color="#FCA5A5" />
             <AnimatedNumber value={expense} style={[typography.styles.titleSmall, styles.expenseText]} duration={700} />
-            <Text style={styles.metricLabel}>Despesas</Text>
+            <Text style={styles.metricLabel}>{t('balanceCard.expense')}</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
           <View style={styles.metric}>
@@ -102,13 +104,15 @@ export const BalanceCard = memo(function BalanceCard({
               style={[typography.styles.titleSmall, isPositive ? styles.incomeText : styles.expenseText]}
               duration={700}
             />
-            <Text style={styles.metricLabel}>Saldo</Text>
+            <Text style={styles.metricLabel}>{t('balanceCard.balance')}</Text>
           </View>
         </View>
 
         <View style={[styles.countBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
           <Text style={styles.countText}>
-            {count} transaç{count === 1 ? 'ão' : 'ões'} no mês
+            {count === 1
+              ? t('balanceCard.transactionCount', { count })
+              : t('balanceCard.transactionCountPlural', { count })}
           </Text>
         </View>
       </View>
