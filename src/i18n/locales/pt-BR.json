@@ -529,6 +529,7 @@
   "updateDialog": {
     "current": "Atual",
     "new": "Nova",
+    "build": "Build",
     "preparingDownload": "Preparando download…",
     "viewOnGithub": "Ver no GitHub"
   },
@@ -540,6 +541,8 @@
     "installPermissionDenied": "Permissão de instalação negada. Ative em Configurações e tente de novo.",
     "newVersionTitle": "Nova versão disponível",
     "newVersionMessage": "A atualização substitui o app e mantém seus dados locais (mesmo pacote e assinatura).",
+    "patchUpdateTitle": "Há uma atualização disponível",
+    "patchBuildLine": "{{version}} (build {{from}} → {{to}})",
     "updateNow": "Atualizar agora",
     "later": "Depois",
     "downloadingTitle": "Baixando atualização",

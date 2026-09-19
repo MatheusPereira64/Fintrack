@@ -29,3 +29,18 @@ export function parseVersionCodeFromBody(body?: string | null): number | null {
   const m = body.match(/versionCode\s*[:=]\s*(\d+)/i);
   return m ? parseInt(m[1], 10) : null;
 }
+
+export type UpdateKind = 'marketing' | 'patch';
+
+/**
+ * Classifica uma atualização já detectada para UX.
+ * Prioridade: versionName mais novo → marketing; senão versionCode maior → patch.
+ */
+export function classifyUpdateKind(
+  local: { versionName: string; versionCode: number },
+  remote: { versionName: string; versionCode: number | null },
+): UpdateKind | null {
+  if (isNewerVersion(remote.versionName, local.versionName)) return 'marketing';
+  if (remote.versionCode != null && remote.versionCode > local.versionCode) return 'patch';
+  return null;
+}

@@ -36,6 +36,8 @@ export const UpdateDialog = memo(function UpdateDialog() {
   const githubUrl = useUpdateUiStore(s => s.githubUrl);
   const localVersion = useUpdateUiStore(s => s.localVersion);
   const remoteVersion = useUpdateUiStore(s => s.remoteVersion);
+  const versionSummary = useUpdateUiStore(s => s.versionSummary);
+  const updateKind = useUpdateUiStore(s => s.updateKind);
   const dismissible = useUpdateUiStore(s => s.dismissible);
   const progress = useUpdateUiStore(s => s.progress);
   const respond = useUpdateUiStore(s => s.respond);
@@ -115,7 +117,19 @@ export const UpdateDialog = memo(function UpdateDialog() {
             </Text>
           </View>
 
-          {(localVersion || remoteVersion) ? (
+          {updateKind === 'patch' && versionSummary ? (
+            <View style={[styles.versions, styles.versionSummaryWrap, {
+              backgroundColor: colors.surfaceVariant,
+              borderRadius: borderRadius.lg,
+            }]}>
+              <Text style={[typography.styles.labelSmall, { color: colors.textTertiary }]}>
+                {t('updateDialog.build')}
+              </Text>
+              <Text style={[typography.styles.titleSmall, { color: colors.text, marginTop: 4, textAlign: 'center' }]}>
+                {versionSummary}
+              </Text>
+            </View>
+          ) : (localVersion || remoteVersion) ? (
             <View style={[styles.versions, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.lg }]}>
               {localVersion ? (
                 <View style={styles.versionCol}>
@@ -210,6 +224,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 20,
     gap: 8,
+  },
+  versionSummaryWrap: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   versionCol: { alignItems: 'center', flex: 1 },
   track: { height: 8, overflow: 'hidden' },

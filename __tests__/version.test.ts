@@ -1,4 +1,10 @@
-import { compareSemver, isNewerVersion, parseVersionCodeFromBody, parseVersionTag } from '../src/utils/version';
+import {
+  classifyUpdateKind,
+  compareSemver,
+  isNewerVersion,
+  parseVersionCodeFromBody,
+  parseVersionTag,
+} from '../src/utils/version';
 
 describe('version utils', () => {
   it('parseVersionTag remove prefixo v', () => {
@@ -22,5 +28,38 @@ describe('version utils', () => {
     expect(parseVersionCodeFromBody('versionCode: 12\nNotas')).toBe(12);
     expect(parseVersionCodeFromBody('versionCode = 3')).toBe(3);
     expect(parseVersionCodeFromBody('sem codigo')).toBeNull();
+  });
+
+  it('classifyUpdateKind: mesmo versionName + versionCode maior → patch', () => {
+    expect(
+      classifyUpdateKind(
+        { versionName: '1.0.3', versionCode: 6 },
+        { versionName: '1.0.3', versionCode: 7 },
+      ),
+    ).toBe('patch');
+  });
+
+  it('classifyUpdateKind: versionName mais novo → marketing (prioridade sobre code)', () => {
+    expect(
+      classifyUpdateKind(
+        { versionName: '1.0.2', versionCode: 5 },
+        { versionName: '1.0.3', versionCode: 7 },
+      ),
+    ).toBe('marketing');
+  });
+
+  it('classifyUpdateKind: sem avanço de nome nem code → null', () => {
+    expect(
+      classifyUpdateKind(
+        { versionName: '1.0.3', versionCode: 7 },
+        { versionName: '1.0.3', versionCode: 7 },
+      ),
+    ).toBeNull();
+    expect(
+      classifyUpdateKind(
+        { versionName: '1.0.3', versionCode: 7 },
+        { versionName: '1.0.3', versionCode: null },
+      ),
+    ).toBeNull();
   });
 });
