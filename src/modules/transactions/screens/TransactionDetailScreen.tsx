@@ -138,6 +138,15 @@ export function TransactionDetailScreen({ route, navigation }: any) {
             label={t('transactionDetail.recurring')}
             value={transaction.isRecurring ? t('common.yes') : t('common.no')}
           />
+          {transaction.installmentCurrent != null && transaction.installmentTotal != null && (
+            <DetailRow
+              label={t('transactionDetail.installment')}
+              value={t('transactionDetail.installmentOf', {
+                current: transaction.installmentCurrent,
+                total: transaction.installmentTotal,
+              })}
+            />
+          )}
           {transaction.sourceNotification && (
             <View style={{ paddingVertical: spacing.md }}>
               <Text style={[typography.styles.bodySmall, { color: colors.textSecondary }]}>

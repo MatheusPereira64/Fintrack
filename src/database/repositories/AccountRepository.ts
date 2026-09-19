@@ -10,6 +10,10 @@ function rowToAccount(row: any): Account {
     informedBalance:  row.informed_balance ?? row.balance,
     monthlyYieldRate: row.monthly_yield_rate ?? undefined,
     limit:            row.limit ?? undefined,
+    usedLimit:        row.used_limit ?? null,
+    invoiceAmount:    row.invoice_amount ?? null,
+    closingDay:       row.closing_day ?? null,
+    dueDay:           row.due_day ?? null,
     color:            row.color,
     bankName:         row.bank_name ?? undefined,
     createdAt:        row.created_at,
@@ -44,8 +48,11 @@ export const AccountRepository = {
     const db = await getDatabase();
     const informed = data.informedBalance ?? data.balance;
     const [result] = await db.executeSql(
-      `INSERT INTO accounts (name, type, balance, informed_balance, monthly_yield_rate, "limit", color, bank_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO accounts (
+         name, type, balance, informed_balance, monthly_yield_rate,
+         "limit", used_limit, invoice_amount, closing_day, due_day,
+         color, bank_name
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.name,
         data.type,
@@ -53,6 +60,10 @@ export const AccountRepository = {
         informed,
         data.monthlyYieldRate ?? null,
         data.limit ?? null,
+        data.usedLimit ?? null,
+        data.invoiceAmount ?? null,
+        data.closingDay ?? null,
+        data.dueDay ?? null,
         data.color,
         data.bankName ?? null,
       ],
@@ -74,6 +85,10 @@ export const AccountRepository = {
     if (data.monthlyYieldRate !== undefined) { fields.push('monthly_yield_rate = ?'); values.push(data.monthlyYieldRate); }
     if (data.color            !== undefined) { fields.push('color = ?');             values.push(data.color); }
     if (data.limit            !== undefined) { fields.push('"limit" = ?');           values.push(data.limit); }
+    if (data.usedLimit        !== undefined) { fields.push('used_limit = ?');        values.push(data.usedLimit); }
+    if (data.invoiceAmount    !== undefined) { fields.push('invoice_amount = ?');    values.push(data.invoiceAmount); }
+    if (data.closingDay       !== undefined) { fields.push('closing_day = ?');       values.push(data.closingDay); }
+    if (data.dueDay           !== undefined) { fields.push('due_day = ?');           values.push(data.dueDay); }
     if (data.bankName         !== undefined) { fields.push('bank_name = ?');         values.push(data.bankName); }
 
     if (fields.length === 0) return;

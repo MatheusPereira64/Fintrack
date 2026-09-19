@@ -2,7 +2,8 @@ import { getDatabase } from '../db';
 import { Transaction, InsertTransaction } from '../../models/types';
 
 const TX_COLS = `id, account_id, category_id, cost_center_id, date, amount, description,
-  type, is_recurring, tags, bank_name, source_notification, created_at`;
+  type, is_recurring, installment_current, installment_total,
+  tags, bank_name, source_notification, created_at`;
 
 export const MONTH_PAGE_SIZE = 500;
 export const MONTH_HARD_CAP = 2000;
@@ -18,6 +19,8 @@ function rowToTransaction(r: any): Transaction {
     description:        r.description,
     type:               r.type,
     isRecurring:        r.is_recurring === 1,
+    installmentCurrent: r.installment_current ?? null,
+    installmentTotal:   r.installment_total ?? null,
     tags:               r.tags ? JSON.parse(r.tags) : [],
     bankName:           r.bank_name ?? undefined,
     sourceNotification: r.source_notification ?? undefined,
@@ -122,8 +125,9 @@ export const TransactionRepository = {
     const [r] = await db.executeSql(
       `INSERT INTO transactions
         (account_id, category_id, cost_center_id, date, amount, description,
-         type, is_recurring, tags, bank_name, source_notification)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         type, is_recurring, installment_current, installment_total,
+         tags, bank_name, source_notification)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.accountId,
         data.categoryId ?? null,
@@ -133,6 +137,8 @@ export const TransactionRepository = {
         data.description,
         data.type,
         data.isRecurring ? 1 : 0,
+        data.installmentCurrent ?? null,
+        data.installmentTotal ?? null,
         tags,
         data.bankName ?? null,
         data.sourceNotification ?? null,
@@ -165,13 +171,15 @@ export const TransactionRepository = {
     const fields: string[] = [];
     const values: unknown[] = [];
 
-    if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
-    if (data.amount      !== undefined) { fields.push('amount = ?');      values.push(data.amount); }
-    if (data.categoryId  !== undefined) { fields.push('category_id = ?'); values.push(data.categoryId); }
-    if (data.date        !== undefined) { fields.push('date = ?');        values.push(data.date); }
-    if (data.type        !== undefined) { fields.push('type = ?');        values.push(data.type); }
-    if (data.tags        !== undefined) { fields.push('tags = ?');        values.push(JSON.stringify(data.tags)); }
-    if (data.isRecurring !== undefined) { fields.push('is_recurring = ?');values.push(data.isRecurring ? 1 : 0); }
+    if (data.description         !== undefined) { fields.push('description = ?'); values.push(data.description); }
+    if (data.amount              !== undefined) { fields.push('amount = ?');      values.push(data.amount); }
+    if (data.categoryId          !== undefined) { fields.push('category_id = ?'); values.push(data.categoryId); }
+    if (data.date                !== undefined) { fields.push('date = ?');        values.push(data.date); }
+    if (data.type                !== undefined) { fields.push('type = ?');        values.push(data.type); }
+    if (data.tags                !== undefined) { fields.push('tags = ?');        values.push(JSON.stringify(data.tags)); }
+    if (data.isRecurring         !== undefined) { fields.push('is_recurring = ?');values.push(data.isRecurring ? 1 : 0); }
+    if (data.installmentCurrent  !== undefined) { fields.push('installment_current = ?'); values.push(data.installmentCurrent); }
+    if (data.installmentTotal    !== undefined) { fields.push('installment_total = ?');   values.push(data.installmentTotal); }
 
     if (fields.length === 0) return;
     values.push(id);
@@ -288,5 +296,22 @@ export const TransactionRepository = {
       [start, end],
     );
     return r.rows.item(0).total;
+  },
+
+  /** Compras parceladas ainda em aberto (parcela atual < total). */
+  async findOpenInstallments(accountId: number, limit = 200): Promise<Transaction[]> {
+    const db = await getDatabase();
+    const [r] = await db.executeSql(
+      `SELECT ${TX_COLS} FROM transactions
+       WHERE account_id = ?
+         AND installment_total IS NOT NULL
+         AND installment_total > 1
+         AND installment_current IS NOT NULL
+         AND installment_current < installment_total
+       ORDER BY date DESC, id DESC
+       LIMIT ?`,
+      [accountId, limit],
+    );
+    return collectRows(r);
   },
 };

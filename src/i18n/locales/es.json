@@ -226,6 +226,15 @@
     "calculatedBalance": "Saldo calculado (transacciones)",
     "reconcileButton": "Ajustar saldo calculado",
     "creditLimit": "Límite de la tarjeta",
+    "usedLimit": "Límite utilizado",
+    "usedLimitPlaceholder": "Importe usado del límite",
+    "usedLimitHint": "Indica manualmente. Si está vacío, la app usa el saldo (valor absoluto).",
+    "invoiceAmount": "Factura actual",
+    "invoiceAmountPlaceholder": "Importe de la factura abierta/cerrada",
+    "closingDay": "Día de cierre",
+    "dueDay": "Día de vencimiento",
+    "dayPlaceholder": "Ej.: 10",
+    "cycleHint": "Días del mes (1–31) de cierre y vencimiento de la factura.",
     "type": "Tipo",
     "yieldRate": "Rendimiento (% mensual)",
     "yieldPlaceholderSavings": "Ej.: 0,5",
@@ -274,7 +283,17 @@
     "yieldRate": "Rendimiento ~{{rate}}% mens.",
     "yieldMonth": "≈ {{amount}}/mes",
     "plan": "Planificar",
-    "limitUsed": "Límite utilizado"
+    "limitUsed": "Límite utilizado",
+    "limitUsedOf": "{{used}} de {{total}}",
+    "currentInvoice": "Factura actual",
+    "cycleLabel": "Ciclo",
+    "invoiceAndInstallments": "Factura y cuotas",
+    "cycle": {
+      "open": "Abierta",
+      "closed": "Cerrada",
+      "overdue": "Vencida",
+      "unknown": "—"
+    }
   },
   "transactions": {
     "title": "Transacciones",
@@ -315,6 +334,8 @@
     "date": "Fecha",
     "bank": "Banco",
     "recurring": "Recurrente",
+    "installment": "Cuota",
+    "installmentOf": "{{current}} de {{total}}",
     "originalNotification": "Notificación original"
   },
   "addTransaction": {
@@ -332,14 +353,36 @@
     "category": "Categoría",
     "none": "Ninguna",
     "repeatMonthly": "Repetir mensualmente",
-    "repeatHint": "Se registra automáticamente cada mes"
+    "repeatHint": "Se registra automáticamente cada mes",
+    "installments": "Cuotas (tarjeta)",
+    "installmentsHint": "Opcional. Ej.: 3 de 12. Déjalo vacío si es al contado.",
+    "installmentCurrent": "Actual",
+    "installmentTotal": "Total",
+    "installmentOf": "de",
+    "installmentInvalid": "Indica cuotas válidas (ej.: 3 de 12)."
   },
   "swipeableTransaction": {
     "deleteTitle": "Eliminar transacción",
     "deleteMessage": "¿Eliminar \"{{description}}\"?"
   },
   "transactionItem": {
-    "auto": "auto"
+    "auto": "auto",
+    "installment": "{{current}}/{{total}}"
+  },
+  "accountCredit": {
+    "title": "Factura y cuotas",
+    "notFound": "Cuenta de tarjeta no encontrada",
+    "currentInvoice": "Factura actual",
+    "cycleStatus": "Estado del ciclo",
+    "closingDay": "Cierre",
+    "dueDay": "Vencimiento",
+    "dayOfMonth": "Día {{day}}",
+    "usedLimit": "Límite utilizado",
+    "manualOverrideHint": "Saldo, factura y límites se pueden ajustar manualmente al editar la cuenta.",
+    "upcomingInstallments": "Próximas cuotas",
+    "upcomingHint": "Proyección según compras a plazos registradas (próximos 12 meses).",
+    "noInstallments": "No hay cuotas futuras.",
+    "installmentOf": "{{current}} de {{total}}"
   },
   "budget": {
     "title": "Presupuestos",

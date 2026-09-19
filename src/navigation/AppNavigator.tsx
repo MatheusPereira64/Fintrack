@@ -19,6 +19,7 @@ import { TransactionDetailScreen } from '../modules/transactions/screens/Transac
 import { AddTransactionScreen }  from '../modules/transactions/screens/AddTransactionScreen';
 import { AccountsScreen }        from '../modules/accounts/screens/AccountsScreen';
 import { AccountPlanScreen }     from '../modules/accounts/screens/AccountPlanScreen';
+import { AccountCreditScreen }   from '../modules/accounts/screens/AccountCreditScreen';
 import { GoalsScreen }           from '../modules/goals/screens/GoalsScreen';
 import { BudgetScreen }          from '../modules/budget/screens/BudgetScreen';
 import { InsightsScreen }        from '../modules/insights/screens/InsightsScreen';
@@ -50,8 +51,9 @@ function TransactionNavigator() {
 function AccountsNavigator() {
   return (
     <AccStack.Navigator screenOptions={{ headerShown: false }}>
-      <AccStack.Screen name="AccountsList" component={AccountsScreen} />
-      <AccStack.Screen name="AccountPlan"  component={AccountPlanScreen} />
+      <AccStack.Screen name="AccountsList"  component={AccountsScreen} />
+      <AccStack.Screen name="AccountPlan"   component={AccountPlanScreen} />
+      <AccStack.Screen name="AccountCredit" component={AccountCreditScreen} />
     </AccStack.Navigator>
   );
 }

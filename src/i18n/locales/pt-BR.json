@@ -226,6 +226,15 @@
     "calculatedBalance": "Saldo calculado (transações)",
     "reconcileButton": "Ajustar saldo calculado",
     "creditLimit": "Limite do cartão",
+    "usedLimit": "Limite utilizado",
+    "usedLimitPlaceholder": "Valor usado do limite",
+    "usedLimitHint": "Informe manualmente. Se vazio, o app usa o saldo (valor absoluto).",
+    "invoiceAmount": "Fatura atual",
+    "invoiceAmountPlaceholder": "Valor da fatura aberta/fechada",
+    "closingDay": "Dia de fechamento",
+    "dueDay": "Dia de vencimento",
+    "dayPlaceholder": "Ex: 10",
+    "cycleHint": "Dias do mês (1–31) do fechamento e do vencimento da fatura.",
     "type": "Tipo",
     "yieldRate": "Rendimento (% a.m.)",
     "yieldPlaceholderSavings": "Ex: 0,5",
@@ -274,7 +283,17 @@
     "yieldRate": "Rendimento ~{{rate}}% a.m.",
     "yieldMonth": "≈ {{amount}}/mês",
     "plan": "Planejar",
-    "limitUsed": "Limite utilizado"
+    "limitUsed": "Limite utilizado",
+    "limitUsedOf": "{{used}} de {{total}}",
+    "currentInvoice": "Fatura atual",
+    "cycleLabel": "Ciclo",
+    "invoiceAndInstallments": "Fatura e parcelas",
+    "cycle": {
+      "open": "Aberta",
+      "closed": "Fechada",
+      "overdue": "Em atraso",
+      "unknown": "—"
+    }
   },
   "transactions": {
     "title": "Transações",
@@ -315,6 +334,8 @@
     "date": "Data",
     "bank": "Banco",
     "recurring": "Recorrente",
+    "installment": "Parcela",
+    "installmentOf": "{{current}} de {{total}}",
     "originalNotification": "Notificação original"
   },
   "addTransaction": {
@@ -332,14 +353,36 @@
     "category": "Categoria",
     "none": "Nenhuma",
     "repeatMonthly": "Repetir mensalmente",
-    "repeatHint": "Lançado automaticamente todo mês"
+    "repeatHint": "Lançado automaticamente todo mês",
+    "installments": "Parcelas (cartão)",
+    "installmentsHint": "Opcional. Ex.: 3 de 12. Deixe em branco se à vista.",
+    "installmentCurrent": "Atual",
+    "installmentTotal": "Total",
+    "installmentOf": "de",
+    "installmentInvalid": "Informe parcelas válidas (ex.: 3 de 12)."
   },
   "swipeableTransaction": {
     "deleteTitle": "Excluir transação",
     "deleteMessage": "Excluir \"{{description}}\"?"
   },
   "transactionItem": {
-    "auto": "auto"
+    "auto": "auto",
+    "installment": "{{current}}/{{total}}"
+  },
+  "accountCredit": {
+    "title": "Fatura e parcelas",
+    "notFound": "Conta de cartão não encontrada",
+    "currentInvoice": "Fatura atual",
+    "cycleStatus": "Status do ciclo",
+    "closingDay": "Fechamento",
+    "dueDay": "Vencimento",
+    "dayOfMonth": "Dia {{day}}",
+    "usedLimit": "Limite utilizado",
+    "manualOverrideHint": "Saldo, fatura e limites podem ser ajustados manualmente na edição da conta.",
+    "upcomingInstallments": "Próximas parcelas",
+    "upcomingHint": "Projeção com base nas compras parceladas cadastradas (próximos 12 meses).",
+    "noInstallments": "Nenhuma parcela futura encontrada.",
+    "installmentOf": "{{current}} de {{total}}"
   },
   "budget": {
     "title": "Orçamentos",
