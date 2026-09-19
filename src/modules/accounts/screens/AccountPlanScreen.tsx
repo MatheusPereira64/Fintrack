@@ -66,7 +66,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
     let cancelled = false;
     (async () => {
       // Migrate legacy plan if exists
-      await AccountNamedPlanService.migrateLegacyPlan(account.id, 'Padrão');
+      await AccountNamedPlanService.migrateLegacyPlan(account.id, t('accountPlan.defaultPlanName'));
       await loadSavedPlans();
       
       // Try to load from legacy storage for current session
@@ -599,6 +599,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
 function PlanMoneyField({
   label, value, onChange, hint,
 }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   return (
     <View style={{ marginBottom: spacing.md }}>
@@ -610,7 +611,7 @@ function PlanMoneyField({
         onChangeText={text => onChange(text.replace(/[^\d,.]/g, ''))}
         keyboardType="decimal-pad"
         maxLength={15}
-        placeholder="0,00"
+        placeholder={t('common.amountPlaceholder')}
         placeholderTextColor={colors.placeholder}
         style={[{
           backgroundColor: colors.inputBackground,

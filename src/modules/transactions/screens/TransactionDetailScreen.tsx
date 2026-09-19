@@ -23,7 +23,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
   const accounts        = useAccountStore(s => s.accounts);
 
-  const transaction = transactions.find(t => t.id === transactionId);
+  const transaction = transactions.find(tx => tx.id === transactionId);
   const category    = transaction?.categoryId ? getCategoryById(transaction.categoryId) : undefined;
   const account     = transaction ? accounts.find(a => a.id === transaction.accountId) : undefined;
 

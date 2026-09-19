@@ -1,13 +1,21 @@
 import { Transaction, Account } from '../models/types';
 import { formatDate } from '../utils/date';
+import i18n from '../i18n/config';
 
 export const ExportService = {
   toCSV(transactions: Transaction[], accounts: Account[]): string {
     const accountMap = new Map(accounts.map(a => [a.id, a.name]));
 
     const header = [
-      'ID', 'Data', 'Descrição', 'Valor', 'Tipo', 'Conta',
-      'Banco', 'Recorrente', 'Auto-registrado',
+      i18n.t('exportService.headerId'),
+      i18n.t('exportService.headerDate'),
+      i18n.t('exportService.headerDescription'),
+      i18n.t('exportService.headerAmount'),
+      i18n.t('exportService.headerType'),
+      i18n.t('exportService.headerAccount'),
+      i18n.t('exportService.headerBank'),
+      i18n.t('exportService.headerRecurring'),
+      i18n.t('exportService.headerAuto'),
     ].join(',');
 
     const rows = transactions.map(tx => [
@@ -18,8 +26,8 @@ export const ExportService = {
       tx.type,
       `"${accountMap.get(tx.accountId) ?? ''}"`,
       `"${tx.bankName ?? ''}"`,
-      tx.isRecurring ? 'Sim' : 'Não',
-      tx.sourceNotification ? 'Sim' : 'Não',
+      tx.isRecurring ? i18n.t('common.yes') : i18n.t('common.no'),
+      tx.sourceNotification ? i18n.t('common.yes') : i18n.t('common.no'),
     ].join(','));
 
     return [header, ...rows].join('\n');

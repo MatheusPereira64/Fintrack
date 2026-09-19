@@ -90,7 +90,8 @@
     "deletePlanMessage": "Excluir \"{{name}}\"?",
     "planSaved": "Plano salvo com sucesso!",
     "planSaveError": "Não foi possível salvar o plano.",
-    "planNameRequired": "Digite um nome para o plano."
+    "planNameRequired": "Digite um nome para o plano.",
+    "defaultPlanName": "Padrão"
   },
   "goals": {
     "title": "Metas",
@@ -594,5 +595,40 @@
   },
   "closeButton": {
     "accessibilityLabel": "Fechar"
+  },
+  "app": {
+    "initError": "Erro ao inicializar"
+  },
+  "recurringService": {
+    "createdTitle": "{{count}} transação recorrente criada",
+    "createdMessage": "Suas transações recorrentes de {{month}}/{{year}} foram registradas automaticamente.",
+    "createdTitlePlural": "{{count}} transações recorrentes criadas"
+  },
+  "notificationManager": {
+    "budgetExceededTitle": "Orçamento excedido",
+    "budgetExceededMessage": "Você ultrapassou o orçamento de {{category}}: {{amount}}",
+    "categoryFallback": "categoria"
+  },
+  "importService": {
+    "unsupportedFormat": "Formato não reconhecido. Use .ofx ou .csv",
+    "readError": "Erro ao ler arquivo",
+    "emptyCsv": "CSV vazio ou com apenas cabeçalho",
+    "imported": "Importado",
+    "bankFallback": "Banco"
+  },
+  "exportService": {
+    "headerId": "ID",
+    "headerDate": "Data",
+    "headerDescription": "Descrição",
+    "headerAmount": "Valor",
+    "headerType": "Tipo",
+    "headerAccount": "Conta",
+    "headerBank": "Banco",
+    "headerRecurring": "Recorrente",
+    "headerAuto": "Auto-registrado"
+  },
+  "accountBalance": {
+    "notFound": "Conta não encontrada",
+    "adjustmentDescription": "Ajuste de saldo"
   }
 }

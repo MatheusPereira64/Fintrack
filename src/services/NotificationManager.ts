@@ -9,6 +9,8 @@ import { Logger }                               from './LoggerService';
 import { useTransactionStore }                  from '../store/transactionStore';
 import { useAccountStore }                      from '../store/accountStore';
 import { invalidateAccountCache }               from './accountCache';
+import i18n from '../i18n/config';
+import { formatCurrency } from '../utils/currency';
 
 const { NotificationModule } = NativeModules;
 const EVENT_NAME              = 'onBankNotification';
@@ -127,13 +129,16 @@ class _NotificationManager {
       for (const budget of budgets) {
         if (budget.categoryId !== categoryId) continue;
 
-        const categoryLabel = budget.categoryName ?? 'categoria';
+        const categoryLabel = budget.categoryName ?? i18n.t('notificationManager.categoryFallback');
         const newSpent = (budget.spent ?? 0) + Math.abs(amount);
         if (newSpent > budget.amount && (budget.spent ?? 0) <= budget.amount) {
           await NotificationRepository.insert({
             type:    'budget_alert',
-            title:   'Orçamento excedido',
-            message: `Você ultrapassou o orçamento de ${categoryLabel}: R$ ${budget.amount.toFixed(2).replace('.', ',')}`,
+            title:   i18n.t('notificationManager.budgetExceededTitle'),
+            message: i18n.t('notificationManager.budgetExceededMessage', {
+              category: categoryLabel,
+              amount: formatCurrency(budget.amount),
+            }),
             metadata: JSON.stringify({ categoryName: categoryLabel, budgetId: budget.id }),
           });
           Logger.warn('NotificationManager', `Orçamento excedido: ${categoryLabel}`);

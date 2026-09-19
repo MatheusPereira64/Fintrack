@@ -87,7 +87,7 @@ export function TransactionsScreen({ navigation }: any) {
 
   // ── Bancos únicos nas transações ───────────────────────────────────────────
   const uniqueBanks = useMemo(() => {
-    const banks = new Set(transactions.map(t => t.bankName).filter(Boolean) as string[]);
+    const banks = new Set(transactions.map(tx => tx.bankName).filter(Boolean) as string[]);
     return Array.from(banks).sort();
   }, [transactions]);
 
@@ -96,23 +96,23 @@ export function TransactionsScreen({ navigation }: any) {
     let list = [...transactions];
 
     // Tipo
-    if (typeFilter === 'income')  list = list.filter(t => t.amount > 0);
-    if (typeFilter === 'expense') list = list.filter(t => t.amount < 0);
+    if (typeFilter === 'income')  list = list.filter(tx => tx.amount > 0);
+    if (typeFilter === 'expense') list = list.filter(tx => tx.amount < 0);
 
     // Busca textual
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(t =>
-        t.description.toLowerCase().includes(q) ||
-        (t.bankName?.toLowerCase().includes(q) ?? false),
+      list = list.filter(tx =>
+        tx.description.toLowerCase().includes(q) ||
+        (tx.bankName?.toLowerCase().includes(q) ?? false),
       );
     }
 
     // Filtros avançados
-    if (advanced.categoryId) list = list.filter(t => t.categoryId === advanced.categoryId);
-    if (advanced.bankName)   list = list.filter(t => t.bankName === advanced.bankName);
-    if (advanced.minAmount !== undefined) list = list.filter(t => Math.abs(t.amount) >= advanced.minAmount!);
-    if (advanced.maxAmount !== undefined) list = list.filter(t => Math.abs(t.amount) <= advanced.maxAmount!);
+    if (advanced.categoryId) list = list.filter(tx => tx.categoryId === advanced.categoryId);
+    if (advanced.bankName)   list = list.filter(tx => tx.bankName === advanced.bankName);
+    if (advanced.minAmount !== undefined) list = list.filter(tx => Math.abs(tx.amount) >= advanced.minAmount!);
+    if (advanced.maxAmount !== undefined) list = list.filter(tx => Math.abs(tx.amount) <= advanced.maxAmount!);
 
     // Ordenação
     list.sort((a, b) => {

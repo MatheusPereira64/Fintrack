@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 
 import './i18n/config';
 import { getDatabase }            from './database/db';
@@ -20,6 +21,7 @@ import { UpdateService }          from './services/UpdateService';
 type BootstrapStatus = 'loading' | 'ready' | 'error';
 
 export default function App() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<BootstrapStatus>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -100,7 +102,7 @@ export default function App() {
   if (status === 'error') {
     return (
       <View style={styles.splash}>
-        <Text style={[styles.splashTitle, { color: '#EF4444' }]}>Erro ao inicializar</Text>
+        <Text style={[styles.splashTitle, { color: '#EF4444' }]}>{t('app.initError')}</Text>
         <Text style={styles.errorText}>{errorMsg}</Text>
       </View>
     );

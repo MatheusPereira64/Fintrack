@@ -1,5 +1,6 @@
 import { AccountRepository } from '../database/repositories/AccountRepository';
 import { TransactionRepository } from '../database/repositories/TransactionRepository';
+import i18n from '../i18n/config';
 
 /** Ajusta o saldo calculado para bater com o saldo informado (cria transação de ajuste). */
 export async function reconcileAccountBalance(
@@ -7,7 +8,7 @@ export async function reconcileAccountBalance(
   targetInformedBalance: number,
 ): Promise<void> {
   const account = await AccountRepository.findById(accountId);
-  if (!account) throw new Error('Conta não encontrada');
+  if (!account) throw new Error(i18n.t('accountBalance.notFound'));
 
   const diff = targetInformedBalance - account.balance;
 
@@ -16,7 +17,7 @@ export async function reconcileAccountBalance(
       accountId,
       date:        new Date().toISOString().slice(0, 10),
       amount:      diff,
-      description: 'Ajuste de saldo',
+      description: i18n.t('accountBalance.adjustmentDescription'),
       type:        diff > 0 ? 'income' : 'expense',
       isRecurring: false,
     });

@@ -11,6 +11,7 @@ import DocumentPicker, { DocumentPickerResponse } from 'react-native-document-pi
 import RNFS from 'react-native-fs';
 import { InsertTransaction, TransactionType } from '../models/types';
 import { Logger } from './LoggerService';
+import i18n from '../i18n/config';
 
 export interface ImportCandidate extends Partial<InsertTransaction> {
   description:  string;
@@ -59,10 +60,10 @@ export async function parseImportFile(file: DocumentPickerResponse): Promise<Imp
     if (name.endsWith('.csv') || content.includes(',')) {
       return parseCSV(content, name);
     }
-    return { success: false, candidates: [], total: 0, errors: ['Formato não reconhecido. Use .ofx ou .csv'], fileType: 'unknown' };
+    return { success: false, candidates: [], total: 0, errors: [i18n.t('importService.unsupportedFormat')], fileType: 'unknown' };
   } catch (e: any) {
     Logger.error('ImportService', 'Erro ao parsear arquivo', e);
-    return { success: false, candidates: [], total: 0, errors: [e.message ?? 'Erro ao ler arquivo'] };
+    return { success: false, candidates: [], total: 0, errors: [e.message ?? i18n.t('importService.readError')] };
   }
 }
 
@@ -127,7 +128,7 @@ function parseOFXSGML(text: string): ImportResult {
       if (inTx && current.TRNAMT) {
         const value = parseFloat((current.TRNAMT ?? '0').replace(',', '.'));
         candidates.push({
-          description: sanitize(current.MEMO ?? current.NAME ?? 'Importado'),
+          description: sanitize(current.MEMO ?? current.NAME ?? i18n.t('importService.imported')),
           amount:      value,
           type:        value < 0 ? 'expense' : 'income',
           date:        ofxDateToISO(current.DTPOSTED ?? ''),
@@ -152,7 +153,7 @@ function parseCSV(content: string, filename: string): ImportResult {
   const candidates: ImportCandidate[] = [];
   const errors: string[] = [];
   const lines = content.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return { success: false, candidates: [], total: 0, errors: ['CSV vazio ou com apenas cabeçalho'], fileType: 'csv' };
+  if (lines.length < 2) return { success: false, candidates: [], total: 0, errors: [i18n.t('importService.emptyCsv')], fileType: 'csv' };
 
   const headers = splitCSV(lines[0]).map(h => h.toLowerCase().trim().replace(/['"]/g, ''));
   const bank    = detectBankFromCSV(headers, filename);
@@ -179,7 +180,7 @@ function parseCSVRow(row: Record<string, string>, bankName: string): ImportCandi
   // Tenta encontrar campos padrão
   const desc = row['description'] ?? row['descrição'] ?? row['descricao'] ??
                row['title'] ?? row['memo'] ?? row['estabelecimento'] ??
-               row['nome'] ?? row['historico'] ?? 'Importado';
+               row['nome'] ?? row['historico'] ?? i18n.t('importService.imported');
 
   const amtRaw = row['amount'] ?? row['valor'] ?? row['value'] ??
                  row['debit'] ?? row['credit'] ?? row['débito'] ??
@@ -263,7 +264,7 @@ function detectBankFromOFX(content: string): string {
   if (/santander/i.test(content)) return 'Santander';
   if (/caixa/i.test(content))    return 'Caixa';
   if (/c6/i.test(content))       return 'C6 Bank';
-  return 'Banco';
+  return i18n.t('importService.bankFallback');
 }
 
 function detectBankFromCSV(headers: string[], filename: string): string {
@@ -274,5 +275,5 @@ function detectBankFromCSV(headers: string[], filename: string): string {
   if (all.includes('bradesco'))  return 'Bradesco';
   if (all.includes('c6'))        return 'C6 Bank';
   if (all.includes('bb') || all.includes('brasil')) return 'Banco do Brasil';
-  return 'Banco';
+  return i18n.t('importService.bankFallback');
 }

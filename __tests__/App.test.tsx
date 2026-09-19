@@ -14,7 +14,22 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
-jest.mock('../src/i18n/config', () => ({}));
+jest.mock('../src/i18n/config', () => ({
+  __esModule: true,
+  default: {
+    t: (key: string) => key,
+    language: 'pt-BR',
+    changeLanguage: jest.fn(async () => undefined),
+  },
+}));
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'pt-BR', changeLanguage: jest.fn(async () => undefined) },
+  }),
+  initReactI18next: { type: '3rdParty', init: jest.fn() },
+}));
 
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');

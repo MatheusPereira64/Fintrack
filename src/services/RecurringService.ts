@@ -5,6 +5,7 @@ import { TransactionRepository } from '../database/repositories/TransactionRepos
 import { AccountRepository }     from '../database/repositories/AccountRepository';
 import { NotificationRepository } from '../database/repositories/NotificationRepository';
 import { Logger }                 from './LoggerService';
+import i18n from '../i18n/config';
 
 export const RecurringService = {
   async processCurrentMonth(): Promise<number> {
@@ -50,10 +51,16 @@ export const RecurringService = {
       }
 
       if (created > 0) {
+        const titleKey = created === 1
+          ? 'recurringService.createdTitle'
+          : 'recurringService.createdTitlePlural';
         await NotificationRepository.insert({
           type:    'info',
-          title:   `${created} transaç${created === 1 ? 'ão recorrente criada' : 'ões recorrentes criadas'}`,
-          message: `Suas transações recorrentes de ${getMonthName(month)}/${year} foram registradas automaticamente.`,
+          title:   i18n.t(titleKey, { count: created }),
+          message: i18n.t('recurringService.createdMessage', {
+            month: getMonthName(month),
+            year,
+          }),
           metadata: JSON.stringify({ month, year, count: created }),
         });
       }
@@ -66,5 +73,7 @@ export const RecurringService = {
 };
 
 function getMonthName(month: number): string {
-  return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month - 1] ?? String(month);
+  const keys = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'] as const;
+  const key = keys[month - 1];
+  return key ? i18n.t(`common.monthsShort.${key}`) : String(month);
 }
