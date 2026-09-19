@@ -453,7 +453,7 @@
     "language": "Idioma",
     "langPtBr": "Português (BR)",
     "langEnUs": "English (US)",
-    "langComingSoon": "* A tradução completa para inglês estará disponível em breve.",
+    "langComingSoon": "A interface é atualizada imediatamente ao trocar o idioma.",
     "groupExport": "Exportação",
     "exportCsv": "Exportar CSV",
     "exportCsvSubtitle": "{{count}} transações neste mês",
@@ -489,7 +489,8 @@
     "resetAction": "Resetar",
     "resetDoneTitle": "Concluído",
     "resetDoneMessage": "Todos os dados foram removidos. Reinicie o app.",
-    "resetError": "Falha ao resetar os dados."
+    "resetError": "Falha ao resetar os dados.",
+    "langHint": "A interface é atualizada imediatamente ao trocar o idioma."
   },
   "import": {
     "title": "Importar Extrato",

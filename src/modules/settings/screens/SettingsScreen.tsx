@@ -19,11 +19,12 @@ import { AppHeader } from '../../../components/AppHeader';
 import { CloseButton } from '../../../components/CloseButton';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { UpdateService, RELEASES_PAGE } from '../../../services/UpdateService';
+import { AppLanguage } from '../../../models/types';
 
 import { Share, NativeModules, Linking, ActivityIndicator } from 'react-native';
 
 type ThemeOption = 'light' | 'dark' | 'system';
-type LanguageOption = 'pt-BR' | 'en-US';
+type LanguageOption = AppLanguage;
 
 interface SettingsGroupProps {
   title:    string;
@@ -113,7 +114,7 @@ function SettingsRow({
 }
 
 export function SettingsScreen({ navigation }: any) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const settings = useSettingsStore(s => s.settings);
   const setTheme = useSettingsStore(s => s.setTheme);
@@ -253,12 +254,19 @@ export function SettingsScreen({ navigation }: any) {
   ], [t]);
 
   const LANG_OPTIONS: Array<{ key: LanguageOption; label: string }> = useMemo(() => [
-    { key: 'pt-BR', label: t('settings.langPtBr') },
-    { key: 'en-US', label: t('settings.langEnUs') },
+    { key: 'pt-BR', label: t('languages.pt-BR') },
+    { key: 'en',    label: t('languages.en') },
+    { key: 'es',    label: t('languages.es') },
   ], [t]);
 
   const currentThemeLabel = THEME_OPTIONS.find(opt => opt.key === settings.theme)?.label ?? t('settings.themeSystem');
-  const currentLangLabel  = LANG_OPTIONS.find(l => l.key === (settings.language ?? 'pt-BR'))?.label ?? t('settings.langPtBr');
+  const currentLangLabel  = LANG_OPTIONS.find(l => l.key === (settings.language ?? 'pt-BR'))?.label ?? t('languages.pt-BR');
+
+  const handleLanguageSelect = useCallback(async (languageCode: LanguageOption) => {
+    await i18n.changeLanguage(languageCode);
+    await setLanguage?.(languageCode);
+    setShowLangModal(false);
+  }, [i18n, setLanguage]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -510,7 +518,7 @@ export function SettingsScreen({ navigation }: any) {
             {LANG_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.key}
-                onPress={() => { setLanguage?.(opt.key); setShowLangModal(false); }}
+                onPress={() => { void handleLanguageSelect(opt.key); }}
                 style={[{
                   flexDirection: 'row', alignItems: 'center', gap: 12,
                   backgroundColor: (settings.language ?? 'pt-BR') === opt.key ? `${colors.primary}15` : 'transparent',
@@ -529,7 +537,7 @@ export function SettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-              {t('settings.langComingSoon')}
+              {t('settings.langHint')}
             </Text>
           </View>
         </View>
