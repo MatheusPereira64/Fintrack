@@ -85,6 +85,16 @@ export const TransactionItem = memo(function TransactionItem({
           <Text style={[typography.styles.titleSmall, { color: amtColor }]}>
             {isIncome ? '+' : ''}{formatCurrency(transaction.amount)}
           </Text>
+          {transaction.installmentCurrent != null && transaction.installmentTotal != null && (
+            <View style={[styles.autoBadge, { backgroundColor: `${colors.warning}25` }]}>
+              <Text style={[typography.styles.caption, { color: colors.warning }]}>
+                {t('transactionItem.installment', {
+                  current: transaction.installmentCurrent,
+                  total: transaction.installmentTotal,
+                })}
+              </Text>
+            </View>
+          )}
           {transaction.sourceNotification && (
             <View style={[styles.autoBadge, { backgroundColor: `${colors.primary}20` }]}>
               <Text style={[typography.styles.caption, { color: colors.primary }]}>

@@ -7,6 +7,7 @@ import { ParsedTransaction, Transaction, Account } from '../../../models/types';
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
 import { getAccountsCached }     from '../../../services/accountCache';
 import { CategoryRepository }    from '../../../database/repositories/CategoryRepository';
+import { parseInstallments }     from '../../../utils/installmentParser';
 
 export interface RawNotification {
   packageName: string;
@@ -75,6 +76,15 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
     return { success: false, ignored: true };
   }
 
+  // Parcelas: extrai do texto bruto; se ambíguo, deixa em branco (manual depois).
+  if (parsed.installmentCurrent == null || parsed.installmentTotal == null) {
+    const installments = parseInstallments(fullText);
+    if (installments) {
+      parsed.installmentCurrent = installments.current;
+      parsed.installmentTotal = installments.total;
+    }
+  }
+
   try {
     const accounts = await getAccountsCached();
     if (accounts.length === 0) {
@@ -94,6 +104,8 @@ export async function processNotification(raw: RawNotification): Promise<ParseRe
       description:        parsed.description,
       type:               parsed.type,
       isRecurring:        false,
+      installmentCurrent: parsed.installmentCurrent ?? null,
+      installmentTotal:   parsed.installmentTotal ?? null,
       bankName:           parsed.bankName,
       sourceNotification: `${raw.title} | ${raw.text}`,
     });

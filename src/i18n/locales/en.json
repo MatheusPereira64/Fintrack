@@ -226,6 +226,15 @@
     "calculatedBalance": "Calculated balance (transactions)",
     "reconcileButton": "Adjust calculated balance",
     "creditLimit": "Card limit",
+    "usedLimit": "Used limit",
+    "usedLimitPlaceholder": "Amount of limit used",
+    "usedLimitHint": "Enter manually. If empty, the app uses the balance (absolute value).",
+    "invoiceAmount": "Current invoice",
+    "invoiceAmountPlaceholder": "Open/closed invoice amount",
+    "closingDay": "Closing day",
+    "dueDay": "Due day",
+    "dayPlaceholder": "E.g.: 10",
+    "cycleHint": "Days of the month (1–31) for invoice closing and due date.",
     "type": "Type",
     "yieldRate": "Yield (% per month)",
     "yieldPlaceholderSavings": "E.g.: 0.5",
@@ -274,7 +283,17 @@
     "yieldRate": "Yield ~{{rate}}% /mo",
     "yieldMonth": "≈ {{amount}}/mo",
     "plan": "Plan",
-    "limitUsed": "Limit used"
+    "limitUsed": "Limit used",
+    "limitUsedOf": "{{used}} of {{total}}",
+    "currentInvoice": "Current invoice",
+    "cycleLabel": "Cycle",
+    "invoiceAndInstallments": "Invoice & installments",
+    "cycle": {
+      "open": "Open",
+      "closed": "Closed",
+      "overdue": "Overdue",
+      "unknown": "—"
+    }
   },
   "transactions": {
     "title": "Transactions",
@@ -315,6 +334,8 @@
     "date": "Date",
     "bank": "Bank",
     "recurring": "Recurring",
+    "installment": "Installment",
+    "installmentOf": "{{current}} of {{total}}",
     "originalNotification": "Original notification"
   },
   "addTransaction": {
@@ -332,14 +353,36 @@
     "category": "Category",
     "none": "None",
     "repeatMonthly": "Repeat monthly",
-    "repeatHint": "Posted automatically every month"
+    "repeatHint": "Posted automatically every month",
+    "installments": "Installments (card)",
+    "installmentsHint": "Optional. E.g.: 3 of 12. Leave blank for one-time.",
+    "installmentCurrent": "Current",
+    "installmentTotal": "Total",
+    "installmentOf": "of",
+    "installmentInvalid": "Enter valid installments (e.g.: 3 of 12)."
   },
   "swipeableTransaction": {
     "deleteTitle": "Delete transaction",
     "deleteMessage": "Delete \"{{description}}\"?"
   },
   "transactionItem": {
-    "auto": "auto"
+    "auto": "auto",
+    "installment": "{{current}}/{{total}}"
+  },
+  "accountCredit": {
+    "title": "Invoice & installments",
+    "notFound": "Credit card account not found",
+    "currentInvoice": "Current invoice",
+    "cycleStatus": "Cycle status",
+    "closingDay": "Closing",
+    "dueDay": "Due",
+    "dayOfMonth": "Day {{day}}",
+    "usedLimit": "Used limit",
+    "manualOverrideHint": "Balance, invoice, and limits can be adjusted manually when editing the account.",
+    "upcomingInstallments": "Upcoming installments",
+    "upcomingHint": "Projection based on installment purchases on file (next 12 months).",
+    "noInstallments": "No upcoming installments found.",
+    "installmentOf": "{{current}} of {{total}}"
   },
   "budget": {
     "title": "Budgets",

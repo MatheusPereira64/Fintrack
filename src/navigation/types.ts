@@ -28,6 +28,7 @@ export type TransactionStackParamList = {
 export type AccountStackParamList = {
   AccountsList:  undefined;
   AccountPlan:   { accountId: number };
+  AccountCredit: { accountId: number };
 };
 
 // ─── Stack "Mais" ─────────────────────────────────────────────────────────────
