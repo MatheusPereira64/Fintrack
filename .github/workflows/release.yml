@@ -118,7 +118,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath ios/build/FinTrack.xcarchive \
             MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION=6 \
+            CURRENT_PROJECT_VERSION=7 \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -173,7 +173,7 @@ jobs:
             em iPhone exige assinatura Apple.
 
             ```
-            versionCode: 6
+            versionCode: 7
             ```
 
             **Dados do usuário (Android):** a atualização pelo mesmo pacote `com.fintrackapp`
