@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { Icon, AppIconName } from '../../../components/Icon';
 import { AppHeader } from '../../../components/AppHeader';
@@ -24,18 +25,19 @@ const SEVERITY_ICONS: Record<string, AppIconName> = {
   critical: 'error',
 };
 
-const SEVERITY_LABELS: Record<string, string> = {
-  info:     'Dica',
-  warning:  'Atenção',
-  critical: 'Urgente',
-};
-
 export function InsightsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading]   = useState(true);
   const [snapKey, setSnapKey]   = useState(0);
+
+  const severityLabels: Record<string, string> = {
+    info:     t('insights.severityInfo'),
+    warning:  t('insights.severityWarning'),
+    critical: t('insights.severityCritical'),
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,7 +54,7 @@ export function InsightsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title="Insights" onClose={() => navigation.goBack()} />
+      <AppHeader title={t('insights.title')} onClose={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
@@ -67,7 +69,7 @@ export function InsightsScreen({ navigation }: any) {
           marginTop: spacing.xl,
           marginBottom: spacing.md,
         }]}>
-          Sugestões
+          {t('insights.suggestions')}
         </Text>
 
         {loading && insights.length === 0 ? (
@@ -80,10 +82,10 @@ export function InsightsScreen({ navigation }: any) {
           }]}>
             <Icon name="chart-bar" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
-              Sem insights ainda
+              {t('insights.empty')}
             </Text>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-              Registre transações e atualize o saldo das contas para receber médias, projeções e sugestões.
+              {t('insights.emptyHint')}
             </Text>
           </View>
         ) : insights.map((insight, idx) => {
@@ -117,7 +119,7 @@ export function InsightsScreen({ navigation }: any) {
                     marginTop: 4,
                   }]}>
                     <Text style={[typography.styles.caption, { color: badgeColor }]}>
-                      {SEVERITY_LABELS[insight.severity] ?? insight.severity}
+                      {severityLabels[insight.severity] ?? insight.severity}
                     </Text>
                   </View>
                 </View>

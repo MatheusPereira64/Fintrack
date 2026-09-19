@@ -7,6 +7,7 @@ import { Insight, InsightType, NotificationSeverity } from '../models/types';
 import { TransactionRepository } from '../database/repositories/TransactionRepository';
 import { NotificationRepository } from '../database/repositories/NotificationRepository';
 import { formatCurrency } from '../utils/currency';
+import i18n from '../i18n/config';
 
 function now(): { year: number; month: number } {
   const d = new Date();
@@ -106,8 +107,12 @@ export const InsightService = {
     if (snapshot.monthsSampled >= 2) {
       insights.push(makeInsight(
         'spending_pattern',
-        'Médias dos últimos meses',
-        `Receita média ${formatCurrency(snapshot.avgIncome)} · Despesa média ${formatCurrency(snapshot.avgExpense)} · Resultado médio ${formatCurrency(snapshot.avgBalance)}.`,
+        i18n.t('insightService.averagesTitle'),
+        i18n.t('insightService.averagesDescription', {
+          avgIncome: formatCurrency(snapshot.avgIncome),
+          avgExpense: formatCurrency(snapshot.avgExpense),
+          avgBalance: formatCurrency(snapshot.avgBalance),
+        }),
         snapshot.avgBalance >= 0 ? 'info' : 'warning',
         snapshot,
       ));
@@ -118,10 +123,18 @@ export const InsightService = {
       const profit = snapshot.projectedBalance >= 0;
       insights.push(makeInsight(
         profit ? 'savings_opportunity' : 'anomaly',
-        profit ? 'Projeção: mês no azul' : 'Projeção: risco de prejuízo',
         profit
-          ? `No ritmo atual, o mês fecha com cerca de ${formatCurrency(snapshot.projectedBalance)} de sobra (despesa projetada ${formatCurrency(snapshot.projectedExpense)}).`
-          : `No ritmo atual, as despesas podem chegar a ${formatCurrency(snapshot.projectedExpense)} e o mês fechar com ${formatCurrency(Math.abs(snapshot.projectedBalance))} no vermelho.`,
+          ? i18n.t('insightService.projectionProfitTitle')
+          : i18n.t('insightService.projectionLossTitle'),
+        profit
+          ? i18n.t('insightService.projectionProfitDescription', {
+              balance: formatCurrency(snapshot.projectedBalance),
+              expense: formatCurrency(snapshot.projectedExpense),
+            })
+          : i18n.t('insightService.projectionLossDescription', {
+              expense: formatCurrency(snapshot.projectedExpense),
+              balance: formatCurrency(Math.abs(snapshot.projectedBalance)),
+            }),
         profit ? 'info' : 'warning',
         { projectedBalance: snapshot.projectedBalance, projectedExpense: snapshot.projectedExpense },
       ));
@@ -133,10 +146,18 @@ export const InsightService = {
       if (Math.abs(change) > 15) {
         insights.push(makeInsight(
           change > 0 ? 'anomaly' : 'savings_opportunity',
-          change > 0 ? 'Gastos aumentaram' : 'Ótimo controle de gastos',
           change > 0
-            ? `Despesas subiram ${Math.abs(change).toFixed(0)}% vs. mês passado (${formatCurrency(prevSums.expense)} → ${formatCurrency(curSums.expense)}). Revise categorias e atualize saldos nas contas.`
-            : `Despesas caíram ${Math.abs(change).toFixed(0)}% vs. mês passado. Mantenha o hábito de registrar e atualizar saldos.`,
+            ? i18n.t('insightService.spendingUpTitle')
+            : i18n.t('insightService.spendingDownTitle'),
+          change > 0
+            ? i18n.t('insightService.spendingUpDescription', {
+                percent: Math.abs(change).toFixed(0),
+                prev: formatCurrency(prevSums.expense),
+                cur: formatCurrency(curSums.expense),
+              })
+            : i18n.t('insightService.spendingDownDescription', {
+                percent: Math.abs(change).toFixed(0),
+              }),
           change > 0 ? 'warning' : 'info',
           { change, curExpense: curSums.expense, prevExpense: prevSums.expense },
         ));
@@ -152,8 +173,12 @@ export const InsightService = {
       if (pct > 35) {
         insights.push(makeInsight(
           'spending_pattern',
-          `${top.name} concentra seus gastos`,
-          `${top.name} representa ${pct.toFixed(0)}% das despesas (${formatCurrency(top.total)}). Considere um teto mensal nessa categoria.`,
+          i18n.t('insightService.categoryConcentrationTitle', { name: top.name }),
+          i18n.t('insightService.categoryConcentrationDescription', {
+            name: top.name,
+            percent: pct.toFixed(0),
+            amount: formatCurrency(top.total),
+          }),
           pct > 60 ? 'warning' : 'info',
           { categoryId: top.categoryId, amount: top.total, percentage: pct },
         ));
@@ -165,8 +190,10 @@ export const InsightService = {
       const over = curSums.expense - snapshot.avgExpense;
       insights.push(makeInsight(
         'anomaly',
-        'Despesas acima da média',
-        `Você já gastou ${formatCurrency(over)} a mais que a média dos últimos meses. Atualize o saldo das contas e revise o orçamento.`,
+        i18n.t('insightService.aboveAverageTitle'),
+        i18n.t('insightService.aboveAverageDescription', {
+          amount: formatCurrency(over),
+        }),
         'warning',
         { over, avgExpense: snapshot.avgExpense, curExpense: curSums.expense },
       ));
@@ -176,8 +203,8 @@ export const InsightService = {
     if (curSums.income === 0 && curSums.expense > 0) {
       insights.push(makeInsight(
         'anomaly',
-        'Nenhuma receita registrada',
-        'Há despesas neste mês, mas nenhuma receita. Cadastre o salário ou Pix recebidos para o FinTrack projetar o resultado corretamente.',
+        i18n.t('insightService.noIncomeTitle'),
+        i18n.t('insightService.noIncomeDescription'),
         'warning',
       ));
     }
@@ -187,8 +214,12 @@ export const InsightService = {
     if (balance < 0) {
       insights.push(makeInsight(
         'anomaly',
-        'Mês no vermelho até agora',
-        `Despesas (${formatCurrency(curSums.expense)}) superam receitas (${formatCurrency(curSums.income)}) em ${formatCurrency(Math.abs(balance))}.`,
+        i18n.t('insightService.inRedTitle'),
+        i18n.t('insightService.inRedDescription', {
+          expense: formatCurrency(curSums.expense),
+          income: formatCurrency(curSums.income),
+          balance: formatCurrency(Math.abs(balance)),
+        }),
         'critical',
         { balance, income: curSums.income, expense: curSums.expense },
       ));
@@ -198,8 +229,10 @@ export const InsightService = {
     if (autoCount > 0) {
       insights.push(makeInsight(
         'spending_pattern',
-        `${autoCount} movimentações via notificação`,
-        `O FinTrack registrou ${autoCount} transação${autoCount > 1 ? 'ões' : ''} automaticamente. Confira se os valores batem com o app do banco.`,
+        i18n.t('insightService.autoTransactionsTitle', { count: autoCount }),
+        autoCount > 1
+          ? i18n.t('insightService.autoTransactionsDescriptionPlural', { count: autoCount })
+          : i18n.t('insightService.autoTransactionsDescription', { count: autoCount }),
         'info',
         { count: autoCount },
       ));
@@ -238,17 +271,24 @@ export const InsightService = {
       if (Math.abs(change) > 15) {
         insights.push(makeInsight(
           change > 0 ? 'anomaly' : 'savings_opportunity',
-          change > 0 ? 'Gastos aumentaram' : 'Ótimo controle de gastos',
           change > 0
-            ? `Gastos aumentaram ${Math.abs(change).toFixed(0)}% vs. mês passado.`
-            : `Gastos reduziram ${Math.abs(change).toFixed(0)}% vs. mês passado.`,
+            ? i18n.t('insightService.spendingUpTitle')
+            : i18n.t('insightService.spendingDownTitle'),
+          change > 0
+            ? i18n.t('insightService.spendingUpShort', { percent: Math.abs(change).toFixed(0) })
+            : i18n.t('insightService.spendingDownShort', { percent: Math.abs(change).toFixed(0) }),
           change > 0 ? 'warning' : 'info',
         ));
       }
     }
 
     if (curIncome === 0 && curExpenses > 0) {
-      insights.push(makeInsight('anomaly', 'Sem receitas no mês', 'Nenhuma receita registrada este mês.', 'warning'));
+      insights.push(makeInsight(
+        'anomaly',
+        i18n.t('insightService.noIncomeMonthTitle'),
+        i18n.t('insightService.noIncomeMonthDescription'),
+        'warning',
+      ));
     }
 
     const catMap = new Map(categories.map(c => [c.id, c]));
@@ -266,10 +306,14 @@ export const InsightService = {
       const pct   = (topAmt / total) * 100;
       if (pct > 35) {
         const cat = catMap.get(topId);
+        const name = cat?.name ?? i18n.t('insightService.noCategory');
         insights.push(makeInsight(
           'spending_pattern',
-          `${cat?.name ?? 'Sem categoria'} concentra gastos`,
-          `${cat?.name ?? 'Sem categoria'} representa ${pct.toFixed(0)}% das despesas.`,
+          i18n.t('insightService.categoryConcentrationShortTitle', { name }),
+          i18n.t('insightService.categoryConcentrationShortDescription', {
+            name,
+            percent: pct.toFixed(0),
+          }),
           'info',
         ));
       }

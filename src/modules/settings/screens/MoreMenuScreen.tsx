@@ -1,8 +1,9 @@
-﻿import React, { memo } from 'react';
+﻿import React, { memo, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }          from '../../../hooks/useTheme';
 import { useGoalStore }      from '../../../store/goalStore';
 import { useBudgetStore }    from '../../../store/budgetStore';
@@ -19,16 +20,6 @@ interface MenuItem {
   badge?:   number | string;
   color?:   string;
 }
-
-const MENU_ITEMS: MenuItem[] = [
-  { icon: 'goal',     label: 'Metas',         subtitle: 'Acompanhe seus objetivos financeiros', route: 'Goals',         color: '#059669' },
-  { icon: 'budget',   label: 'Orçamentos',    subtitle: 'Controle seus limites de gastos',      route: 'Budget',        color: '#D97706' },
-  { icon: 'insights', label: 'Insights',      subtitle: 'Análise automática das suas finanças', route: 'Insights',      color: '#7C3AED' },
-  { icon: 'bell',     label: 'Notificações',  subtitle: 'Alertas e avisos do sistema',          route: 'Notifications', color: '#2563EB' },
-  { icon: 'category', label: 'Categorias',    subtitle: 'Gerencie e crie categorias',           route: 'Categories',    color: '#0891B2' },
-  { icon: 'settings', label: 'Configurações', subtitle: 'Tema, notificações e exportação',      route: 'Settings',      color: '#6B7280' },
-  { icon: 'import',   label: 'Importar extrato', subtitle: 'Importe OFX ou CSV do seu banco', route: 'Import',        color: '#059669' },
-];
 
 const MenuRow = memo(function MenuRow({
   item, onPress,
@@ -87,6 +78,7 @@ const MenuRow = memo(function MenuRow({
 });
 
 export function MoreMenuScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, typography } = useTheme();
   const listPad = useTabListPadding();
   const goals   = useGoalStore(s => s.goals);
@@ -100,15 +92,25 @@ export function MoreMenuScreen({ navigation }: any) {
     Budget:  overBudgets   > 0 ? overBudgets.toString() : undefined,
   };
 
+  const menuItems: MenuItem[] = useMemo(() => [
+    { icon: 'goal',     label: t('moreMenu.goals'),         subtitle: t('moreMenu.goalsSubtitle'),         route: 'Goals',         color: '#059669' },
+    { icon: 'budget',   label: t('moreMenu.budgets'),       subtitle: t('moreMenu.budgetsSubtitle'),       route: 'Budget',        color: '#D97706' },
+    { icon: 'insights', label: t('moreMenu.insights'),      subtitle: t('moreMenu.insightsSubtitle'),      route: 'Insights',      color: '#7C3AED' },
+    { icon: 'bell',     label: t('moreMenu.notifications'), subtitle: t('moreMenu.notificationsSubtitle'), route: 'Notifications', color: '#2563EB' },
+    { icon: 'category', label: t('moreMenu.categories'),    subtitle: t('moreMenu.categoriesSubtitle'),    route: 'Categories',    color: '#0891B2' },
+    { icon: 'settings', label: t('moreMenu.settings'),      subtitle: t('moreMenu.settingsSubtitle'),      route: 'Settings',      color: '#6B7280' },
+    { icon: 'import',   label: t('moreMenu.import'),        subtitle: t('moreMenu.importSubtitle'),        route: 'Import',        color: '#059669' },
+  ], [t]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title="Mais" />
+      <AppHeader title={t('moreMenu.title')} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         showsVerticalScrollIndicator={false}
       >
-        {MENU_ITEMS.map((item, i) => (
+        {menuItems.map((item, i) => (
           <Animated.View key={item.route} entering={FadeInDown.delay(i * 50).duration(350)}>
             <MenuRow
               item={{ ...item, badge: badgeMap[item.route] }}
@@ -123,7 +125,7 @@ export function MoreMenuScreen({ navigation }: any) {
           textAlign: 'center',
           marginTop: spacing.xl,
         }]}>
-          FinTrack v2.0.0 · Monitor Financeiro Inteligente
+          {t('moreMenu.version', { version: '2.0.0' })}
         </Text>
       </ScrollView>
     </View>

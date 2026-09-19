@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, FlatList,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme }   from '../../../hooks/useTheme';
 import { AppHeader }  from '../../../components/AppHeader';
 import { Icon }       from '../../../components/Icon';
@@ -11,6 +12,7 @@ import { AppNotification } from '../../../models/types';
 import { formatDate }      from '../../../utils/date';
 
 export function NotificationsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -51,7 +53,7 @@ export function NotificationsScreen({ navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Notificações"
+        title={t('notifications.title')}
         onClose={() => navigation.goBack()}
         actions={[{ icon: 'check-circle', onPress: markAllRead }]}
       />
@@ -64,7 +66,7 @@ export function NotificationsScreen({ navigation }: any) {
           <View style={[styles.empty, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.xl, padding: spacing.xl }]}>
             <Icon name="bell" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.sm }]}>
-              Nenhuma notificação
+              {t('notifications.empty')}
             </Text>
           </View>
         }

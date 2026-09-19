@@ -4,6 +4,7 @@ import {
   Modal, Alert,
 } from 'react-native';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { AppHeader } from '../../../components/AppHeader';
@@ -19,6 +20,7 @@ const PRESET_COLORS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#14B8A6',
 const CategoryRow = memo(function CategoryRow({
   category, onDelete,
 }: { category: Category; onDelete: (id: number) => void }) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
 
   return (
@@ -42,16 +44,22 @@ const CategoryRow = memo(function CategoryRow({
         <View style={{ flex: 1 }}>
           <Text style={[typography.styles.bodyLarge, { color: colors.text }]}>{category.name}</Text>
           <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-            {category.isSystem ? '🔒 Padrão do sistema' : '✏️ Personalizada'}
+            {category.isSystem
+              ? `🔒 ${t('categories.systemDefault')}`
+              : `✏️ ${t('categories.custom')}`}
           </Text>
         </View>
         <View style={[{ width: 12, height: 12, borderRadius: 6, backgroundColor: category.color }]} />
         {!category.isSystem && (
           <TouchableOpacity
-            onPress={() => Alert.alert('Excluir', `Excluir "${category.name}"?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Excluir', style: 'destructive', onPress: () => onDelete(category.id) },
-            ])}
+            onPress={() => Alert.alert(
+              t('categories.deleteTitle'),
+              t('categories.deleteMessage', { name: category.name }),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(category.id) },
+              ],
+            )}
             style={{ marginLeft: spacing.md, padding: spacing.xs }}
           >
             <Text style={{ color: colors.error }}>✕</Text>
@@ -63,6 +71,7 @@ const CategoryRow = memo(function CategoryRow({
 });
 
 export function CategoriesScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
   const categories     = useCategoryStore(s => s.categories);
@@ -80,7 +89,7 @@ export function CategoriesScreen({ navigation }: any) {
 
   const handleAdd = useCallback(async () => {
     if (!name.trim()) {
-      Alert.alert('Atenção', 'Digite o nome da categoria.');
+      Alert.alert(t('common.warning'), t('categories.nameRequired'));
       return;
     }
     setSaving(true);
@@ -89,18 +98,18 @@ export function CategoriesScreen({ navigation }: any) {
       setShowModal(false);
       setName(''); setIcon(PRESET_ICONS[0]); setColor(PRESET_COLORS[0]);
     } catch {
-      Alert.alert('Erro', 'Não foi possível criar a categoria.');
+      Alert.alert(t('common.error'), t('categories.createError'));
     } finally {
       setSaving(false);
     }
-  }, [name, color, icon, addCategory]);
+  }, [name, color, icon, addCategory, t]);
 
   const handleDelete = useCallback((id: number) => { deleteCategory(id); }, [deleteCategory]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Categorias"
+        title={t('categories.title')}
         onClose={() => navigation.goBack()}
         actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
       />
@@ -117,7 +126,7 @@ export function CategoriesScreen({ navigation }: any) {
             color: colors.textSecondary, marginBottom: spacing.sm,
             textTransform: 'uppercase', letterSpacing: 0.8,
           }]}>
-            {categories.length} categorias
+            {t('categories.count', { count: categories.length })}
           </Text>
         }
       />
@@ -141,7 +150,7 @@ export function CategoriesScreen({ navigation }: any) {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Nova categoria
+                {t('categories.newCategory')}
               </Text>
               <CloseButton onPress={() => setShowModal(false)} />
             </View>
@@ -157,18 +166,18 @@ export function CategoriesScreen({ navigation }: any) {
             }]}>
               <Text style={{ fontSize: 32, marginBottom: 4 }}>{icon}</Text>
               <Text style={[typography.styles.titleSmall, { color }]}>
-                {name || 'Nome da categoria'}
+                {name || t('categories.namePreview')}
               </Text>
             </View>
 
             {/* Nome */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Nome *
+              {t('categories.nameLabel')}
             </Text>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Ex: Academia, Pet, Presentes..."
+              placeholder={t('categories.namePlaceholder')}
               placeholderTextColor={colors.placeholder}
               style={[{
                 backgroundColor: colors.inputBackground,
@@ -181,7 +190,7 @@ export function CategoriesScreen({ navigation }: any) {
 
             {/* Ícones */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Ícone
+              {t('categories.icon')}
             </Text>
             <View style={[styles.iconGrid, { marginBottom: spacing.lg }]}>
               {PRESET_ICONS.map(ic => (
@@ -203,7 +212,7 @@ export function CategoriesScreen({ navigation }: any) {
 
             {/* Cores */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Cor
+              {t('categories.color')}
             </Text>
             <View style={[styles.colorRow, { marginBottom: spacing.xl }]}>
               {PRESET_COLORS.map(c => (
@@ -231,7 +240,9 @@ export function CategoriesScreen({ navigation }: any) {
                 onPress={() => setShowModal(false)}
                 style={[{ flex: 1, backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.full, padding: 12 }]}
               >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>Cancelar</Text>
+                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+                  {t('common.cancel')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAdd}
@@ -239,7 +250,7 @@ export function CategoriesScreen({ navigation }: any) {
                 style={[{ flex: 1, backgroundColor: colors.primary, borderRadius: borderRadius.full, padding: 12 }]}
               >
                 <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : 'Criar'}
+                  {saving ? '...' : t('common.create')}
                 </Text>
               </TouchableOpacity>
             </View>

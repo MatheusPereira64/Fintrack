@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Dimensions, Platform, NativeModules, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useAccountStore } from '../../../store/accountStore';
@@ -12,39 +13,8 @@ import { Logo } from '../../../components/Logo';
 const { width } = Dimensions.get('window');
 const { NotificationModule } = NativeModules;
 
-const STEPS = [
-  {
-    emoji: '💜',
-    title: 'Bem-vindo ao FinTrack',
-    subtitle: 'Seu monitor financeiro inteligente',
-    description:
-      'Acompanhe automaticamente suas finanças monitorando as notificações dos seus aplicativos bancários. Sem cadastrar nada na mão.',
-  },
-  {
-    emoji: '🔔',
-    title: 'Monitoramento automático',
-    subtitle: 'Basta receber a notificação do banco',
-    description:
-      'O FinTrack lê as notificações do Nubank, Inter, Itaú, Bradesco e outros. Cada Pix, compra ou transferência é registrado automaticamente.',
-  },
-  {
-    emoji: '📊',
-    title: 'Insights financeiros',
-    subtitle: 'Entenda seus gastos',
-    description:
-      'Veja gráficos, categorias e relatórios mensais. O FinTrack analisa seus padrões e te ajuda a economizar.',
-  },
-  {
-    emoji: '🔐',
-    title: 'Permissão necessária',
-    subtitle: 'Para funcionar, precisamos de acesso',
-    description:
-      'Na próxima tela, você será direcionado para Configurações → Acesso a Notificações. Ative o FinTrack para começar o monitoramento.',
-    isPermissionStep: true,
-  },
-];
-
 export function OnboardingScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
@@ -55,11 +25,39 @@ export function OnboardingScreen() {
   const setNotificationPermission = useSettingsStore(s => s.setNotificationPermission);
   const loadAccounts               = useAccountStore(s => s.loadAccounts);
 
-  const step = STEPS[currentStep];
-  const isLast = currentStep === STEPS.length - 1;
+  const steps = useMemo(() => [
+    {
+      emoji: '💜',
+      title: t('onboarding.step1Title'),
+      subtitle: t('onboarding.step1Subtitle'),
+      description: t('onboarding.step1Description'),
+    },
+    {
+      emoji: '🔔',
+      title: t('onboarding.step2Title'),
+      subtitle: t('onboarding.step2Subtitle'),
+      description: t('onboarding.step2Description'),
+    },
+    {
+      emoji: '📊',
+      title: t('onboarding.step3Title'),
+      subtitle: t('onboarding.step3Subtitle'),
+      description: t('onboarding.step3Description'),
+    },
+    {
+      emoji: '🔐',
+      title: t('onboarding.step4Title'),
+      subtitle: t('onboarding.step4Subtitle'),
+      description: t('onboarding.step4Description'),
+      isPermissionStep: true,
+    },
+  ], [t]);
+
+  const step = steps[currentStep];
+  const isLast = currentStep === steps.length - 1;
 
   const goNext = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
       scrollRef.current?.scrollTo({ x: (currentStep + 1) * width, animated: true });
     }
@@ -137,7 +135,9 @@ export function OnboardingScreen() {
             ]}
           >
             <Text style={[typography.styles.titleSmall, { color: '#FFFFFF', textAlign: 'center' }]}>
-              {permissionGranted ? '✅ Permissão concedida!' : '🔔 Conceder acesso às notificações'}
+              {permissionGranted
+                ? `✅ ${t('onboarding.permissionGranted')}`
+                : `🔔 ${t('onboarding.grantPermission')}`}
             </Text>
           </TouchableOpacity>
         )}
@@ -145,7 +145,7 @@ export function OnboardingScreen() {
 
       {/* Indicadores de passo */}
       <View style={styles.dots}>
-        {STEPS.map((_, i) => (
+        {steps.map((_, i) => (
           <View
             key={i}
             style={[
@@ -176,7 +176,7 @@ export function OnboardingScreen() {
         activeOpacity={0.85}
       >
         <Text style={[typography.styles.titleMedium, { color: '#FFFFFF', textAlign: 'center' }]}>
-          {isLast ? '🚀 Começar' : 'Próximo →'}
+          {isLast ? `🚀 ${t('onboarding.start')}` : t('onboarding.next')}
         </Text>
       </TouchableOpacity>
     </View>

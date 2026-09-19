@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { Icon } from './Icon';
 
@@ -15,15 +16,16 @@ export const CloseButton = memo(function CloseButton({
   onPress,
   size = 22,
   style,
-  accessibilityLabel = 'Fechar',
+  accessibilityLabel,
 }: CloseButtonProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius } = useTheme();
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? t('closeButton.accessibilityLabel')}
       hitSlop={12}
       style={({ pressed }) => [
         styles.btn,

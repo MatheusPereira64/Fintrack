@@ -11,9 +11,9 @@ import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { Icon } from '../../../components/Icon';
 
 const LANGUAGES = [
-  { code: 'pt-BR', label: 'Português (Brasil)', flag: '🇧🇷' },
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'pt-BR', flag: '🇧🇷' },
+  { code: 'en', flag: '🇺🇸' },
+  { code: 'es', flag: '🇪🇸' },
 ] as const;
 
 export function PreferencesScreen({ navigation }: any) {
@@ -112,7 +112,7 @@ export function PreferencesScreen({ navigation }: any) {
                   color: i18n.language === lang.code ? colors.primary : colors.text,
                   fontWeight: i18n.language === lang.code ? '600' : '400',
                 }]}>
-                  {lang.label}
+                  {t(`languages.${lang.code}`)}
                 </Text>
               </View>
               {i18n.language === lang.code && (

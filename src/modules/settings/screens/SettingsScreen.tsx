@@ -1,9 +1,10 @@
-﻿import React, { useCallback, useState, useEffect } from 'react';
+﻿import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, Modal,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme }          from '../../../hooks/useTheme';
 import { useSettingsStore }  from '../../../store/settingsStore';
@@ -112,6 +113,7 @@ function SettingsRow({
 }
 
 export function SettingsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const settings = useSettingsStore(s => s.settings);
   const setTheme = useSettingsStore(s => s.setTheme);
@@ -150,12 +152,12 @@ export function SettingsScreen({ navigation }: any) {
       if (mod?.openNotificationSettings) {
         await mod.openNotificationSettings();
       } else {
-        Alert.alert('Info', 'Vá em Configurações → Acesso a Notificações → FinTrack');
+        Alert.alert(t('common.info'), t('settings.notificationSettingsHint'));
       }
     } catch {
-      Alert.alert('Info', 'Vá em Configurações → Acesso a Notificações → FinTrack');
+      Alert.alert(t('common.info'), t('settings.notificationSettingsHint'));
     }
-  }, []);
+  }, [t]);
 
   const handleExportCSV = useCallback(async () => {
     setIsExporting(true);
@@ -168,11 +170,11 @@ export function SettingsScreen({ navigation }: any) {
       });
       Logger.info('Settings', 'Exportação CSV concluída', { count: txs.length });
     } catch {
-      Alert.alert('Erro', 'Não foi possível exportar o CSV.');
+      Alert.alert(t('common.error'), t('settings.exportCsvError'));
     } finally {
       setIsExporting(false);
     }
-  }, [accounts]);
+  }, [accounts, t]);
 
   const handleExportJSON = useCallback(async () => {
     setIsExporting(true);
@@ -184,20 +186,20 @@ export function SettingsScreen({ navigation }: any) {
         message: json,
       });
     } catch {
-      Alert.alert('Erro', 'Não foi possível exportar o JSON.');
+      Alert.alert(t('common.error'), t('settings.exportJsonError'));
     } finally {
       setIsExporting(false);
     }
-  }, [accounts]);
+  }, [accounts, t]);
 
   const handleResetData = useCallback(() => {
     Alert.alert(
-      '⚠️ Resetar todos os dados',
-      'Esta ação é irreversível. Todas as transações, contas e configurações serão apagadas permanentemente.',
+      t('settings.resetTitle'),
+      t('settings.resetMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text:  'Resetar',
+          text:  t('settings.resetAction'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -213,15 +215,15 @@ export function SettingsScreen({ navigation }: any) {
                 monthly_income = NULL, budget_limit = NULL, user_name = NULL
                 WHERE id = 1`);
               Logger.warn('Settings', 'Reset completo executado pelo usuário');
-              Alert.alert('✅ Concluído', 'Todos os dados foram removidos. Reinicie o app.');
+              Alert.alert(t('settings.resetDoneTitle'), t('settings.resetDoneMessage'));
             } catch {
-              Alert.alert('Erro', 'Falha ao resetar os dados.');
+              Alert.alert(t('common.error'), t('settings.resetError'));
             }
           },
         },
       ],
     );
-  }, []);
+  }, [t]);
 
   const handleBackup = useCallback(async () => {
     try {
@@ -233,35 +235,35 @@ export function SettingsScreen({ navigation }: any) {
       });
       Logger.info('Settings', 'Backup gerado', { transactions: txs.length, accounts: accounts.length });
     } catch {
-      Alert.alert('Erro', 'Não foi possível gerar o backup.');
+      Alert.alert(t('common.error'), t('settings.backupError'));
     }
-  }, [accounts]);
+  }, [accounts, t]);
 
   const handleClearLogs = useCallback(() => {
-    Alert.alert('Limpar logs', 'Deseja remover todos os logs de depuração?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Limpar', onPress: () => Logger.clearLogs() },
+    Alert.alert(t('settings.clearLogsTitle'), t('settings.clearLogsMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('settings.clearLogsAction'), onPress: () => Logger.clearLogs() },
     ]);
-  }, []);
+  }, [t]);
 
-  const THEME_OPTIONS: Array<{ key: ThemeOption; label: string; icon: AppIconName }> = [
-    { key: 'light',  label: 'Claro',    icon: 'sun' },
-    { key: 'dark',   label: 'Escuro',   icon: 'moon' },
-    { key: 'system', label: 'Sistema',  icon: 'monitor' },
-  ];
+  const THEME_OPTIONS: Array<{ key: ThemeOption; label: string; icon: AppIconName }> = useMemo(() => [
+    { key: 'light',  label: t('settings.themeLight'),  icon: 'sun' },
+    { key: 'dark',   label: t('settings.themeDark'),   icon: 'moon' },
+    { key: 'system', label: t('settings.themeSystem'), icon: 'monitor' },
+  ], [t]);
 
-  const LANG_OPTIONS: Array<{ key: LanguageOption; label: string }> = [
-    { key: 'pt-BR', label: 'Português (BR)' },
-    { key: 'en-US', label: 'English (US)' },
-  ];
+  const LANG_OPTIONS: Array<{ key: LanguageOption; label: string }> = useMemo(() => [
+    { key: 'pt-BR', label: t('settings.langPtBr') },
+    { key: 'en-US', label: t('settings.langEnUs') },
+  ], [t]);
 
-  const currentThemeLabel = THEME_OPTIONS.find(t => t.key === settings.theme)?.label ?? 'Sistema';
-  const currentLangLabel  = LANG_OPTIONS.find(l => l.key === (settings.language ?? 'pt-BR'))?.label ?? 'Português';
+  const currentThemeLabel = THEME_OPTIONS.find(opt => opt.key === settings.theme)?.label ?? t('settings.themeSystem');
+  const currentLangLabel  = LANG_OPTIONS.find(l => l.key === (settings.language ?? 'pt-BR'))?.label ?? t('settings.langPtBr');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Configurações"
+        title={t('settings.title')}
         onClose={() => navigation.goBack()}
       />
 
@@ -271,10 +273,10 @@ export function SettingsScreen({ navigation }: any) {
       >
         {/* ── Conta ─────────────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(50).duration(400)}>
-          <SettingsGroup title="Conta">
+          <SettingsGroup title={t('settings.groupAccount')}>
             <SettingsRow
-              icon="user" title="Preferências pessoais"
-              subtitle={settings.userName ?? 'Nome, renda, limite mensal'}
+              icon="user" title={t('settings.personalPreferences')}
+              subtitle={settings.userName ?? t('settings.personalPreferencesSubtitle')}
               onPress={() => navigation.navigate('Preferences')}
               first last
             />
@@ -282,14 +284,16 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-          <SettingsGroup title="Atualizações">
+          <SettingsGroup title={t('settings.groupUpdates')}>
             <SettingsRow
               icon="download"
-              title="Procurar atualizações"
+              title={t('settings.checkUpdates')}
               subtitle={
                 checkingUpdate
-                  ? (updateProgress != null ? `Baixando… ${updateProgress}%` : 'Verificando no GitHub…')
-                  : `Versão instalada: ${appVersion}`
+                  ? (updateProgress != null
+                    ? t('settings.downloading', { percent: updateProgress })
+                    : t('settings.checkingGithub'))
+                  : t('settings.installedVersion', { version: appVersion })
               }
               onPress={handleCheckUpdates}
               disabled={checkingUpdate}
@@ -298,8 +302,8 @@ export function SettingsScreen({ navigation }: any) {
             />
             <SettingsRow
               icon="share"
-              title="Releases no GitHub"
-              subtitle="Baixar APK manualmente"
+              title={t('settings.githubReleases')}
+              subtitle={t('settings.downloadApkManually')}
               onPress={() => Linking.openURL(RELEASES_PAGE)}
               last
             />
@@ -307,10 +311,12 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
-          <SettingsGroup title="Notificações">
+          <SettingsGroup title={t('settings.groupNotifications')}>
             <SettingsRow
-              icon="bell" title="Acesso a notificações"
-              subtitle={settings.notificationPermissionGranted ? 'Permissão concedida' : 'Permissão necessária'}
+              icon="bell" title={t('settings.notificationAccess')}
+              subtitle={settings.notificationPermissionGranted
+                ? t('settings.permissionGranted')
+                : t('settings.permissionRequired')}
               onPress={handleCheckPermission}
               right={
                 <View style={[{
@@ -321,15 +327,15 @@ export function SettingsScreen({ navigation }: any) {
                   <Text style={[typography.styles.caption, {
                     color: settings.notificationPermissionGranted ? colors.success : colors.warning,
                   }]}>
-                    {settings.notificationPermissionGranted ? 'Ativo' : 'Ativar'}
+                    {settings.notificationPermissionGranted ? t('settings.active') : t('settings.activate')}
                   </Text>
                 </View>
               }
               first
             />
             <SettingsRow
-              icon="bank" title="Bancos monitorados"
-              subtitle="Nubank, Inter, Itaú, Bradesco, BB e mais"
+              icon="bank" title={t('settings.monitoredBanks')}
+              subtitle={t('settings.monitoredBanksSubtitle')}
               onPress={() => {}}
               last
             />
@@ -337,15 +343,15 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(150).duration(400)}>
-          <SettingsGroup title="Aparência">
+          <SettingsGroup title={t('settings.groupAppearance')}>
             <SettingsRow
-              icon="palette" title="Tema"
+              icon="palette" title={t('settings.theme')}
               subtitle={currentThemeLabel}
               onPress={() => setShowThemeModal(true)}
               first
             />
             <SettingsRow
-              icon="language" title="Idioma"
+              icon="language" title={t('settings.language')}
               subtitle={currentLangLabel}
               onPress={() => setShowLangModal(true)}
               last
@@ -354,23 +360,23 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
-          <SettingsGroup title="Exportação">
+          <SettingsGroup title={t('settings.groupExport')}>
             <SettingsRow
-              icon="export" title="Exportar CSV"
-              subtitle={`${txCount} transações neste mês`}
+              icon="export" title={t('settings.exportCsv')}
+              subtitle={t('settings.exportCsvSubtitle', { count: txCount })}
               onPress={handleExportCSV}
               disabled={isExporting}
               first
             />
             <SettingsRow
-              icon="file" title="Exportar JSON"
-              subtitle="Formato completo com todos os campos"
+              icon="file" title={t('settings.exportJson')}
+              subtitle={t('settings.exportJsonSubtitle')}
               onPress={handleExportJSON}
               disabled={isExporting}
             />
             <SettingsRow
-              icon="download" title="Exportar Excel (CSV)"
-              subtitle="Compatível com Excel e Google Sheets"
+              icon="download" title={t('settings.exportExcel')}
+              subtitle={t('settings.exportExcelSubtitle')}
               onPress={() => navigation.navigate('Export')}
               last
             />
@@ -378,29 +384,29 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(250).duration(400)}>
-          <SettingsGroup title="Backup e Segurança">
+          <SettingsGroup title={t('settings.groupBackup')}>
             <SettingsRow
-              icon="upload" title="Fazer backup"
-              subtitle="Exporta todos os dados em formato JSON"
+              icon="upload" title={t('settings.backup')}
+              subtitle={t('settings.backupSubtitle')}
               onPress={handleBackup}
               first
             />
             <SettingsRow
-              icon="lock" title="Privacidade"
-              subtitle="Todos os dados são armazenados localmente"
+              icon="lock" title={t('settings.privacy')}
+              subtitle={t('settings.privacySubtitle')}
               onPress={() => Alert.alert(
-                'Privacidade',
-                'O FinTrack armazena todos os seus dados exclusivamente no seu dispositivo. Nenhuma informação financeira é enviada para servidores externos.\n\nPermissões utilizadas:\n• Acesso a notificações: para detectar transações bancárias automaticamente.',
+                t('settings.privacy'),
+                t('settings.privacyMessage'),
               )}
             />
             <SettingsRow
-              icon="shield" title="Dados locais"
-              subtitle="Sem envio de notificações para servidores"
+              icon="shield" title={t('settings.localData')}
+              subtitle={t('settings.localDataSubtitle')}
               first={false} last
               onPress={() => {}}
               right={
                 <View style={[{ backgroundColor: `${colors.success}20`, borderRadius: borderRadius.full, paddingHorizontal: 8, paddingVertical: 3 }]}>
-                  <Text style={[typography.styles.caption, { color: colors.success }]}>Seguro</Text>
+                  <Text style={[typography.styles.caption, { color: colors.success }]}>{t('settings.secure')}</Text>
                 </View>
               }
             />
@@ -408,15 +414,15 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
-          <SettingsGroup title="Sobre">
+          <SettingsGroup title={t('settings.groupAbout')}>
             <SettingsRow
-              icon="phone" title="FinTrack"
-              subtitle={`Versão ${appVersion} — Controle financeiro inteligente`}
+              icon="phone" title={t('settings.appName')}
+              subtitle={t('settings.appSubtitle', { version: appVersion })}
               first
             />
             <SettingsRow
-              icon="file" title="Logs de depuração"
-              subtitle="Ver e limpar logs do sistema"
+              icon="file" title={t('settings.debugLogs')}
+              subtitle={t('settings.debugLogsSubtitle')}
               onPress={handleClearLogs}
               last
             />
@@ -424,10 +430,10 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(350).duration(400)}>
-          <SettingsGroup title="Zona de perigo">
+          <SettingsGroup title={t('settings.groupDanger')}>
             <SettingsRow
-              icon="trash" title="Resetar todos os dados"
-              subtitle="Remove permanentemente transações, contas e configurações"
+              icon="trash" title={t('settings.resetData')}
+              subtitle={t('settings.resetDataSubtitle')}
               onPress={handleResetData}
               isDestructive
               first last
@@ -452,7 +458,7 @@ export function SettingsScreen({ navigation }: any) {
           }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Tema
+                {t('settings.theme')}
               </Text>
               <CloseButton onPress={() => setShowThemeModal(false)} />
             </View>
@@ -497,7 +503,7 @@ export function SettingsScreen({ navigation }: any) {
           }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Idioma
+                {t('settings.language')}
               </Text>
               <CloseButton onPress={() => setShowLangModal(false)} />
             </View>
@@ -523,7 +529,7 @@ export function SettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-              * A tradução completa para inglês estará disponível em breve.
+              {t('settings.langComingSoon')}
             </Text>
           </View>
         </View>

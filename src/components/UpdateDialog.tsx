@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator, Linking,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../hooks/useTheme';
 import { useSafeBottomPadding } from '../hooks/useScreenPadding';
@@ -21,6 +22,7 @@ const VARIANT_ICON: Record<UpdateDialogVariant, AppIconName> = {
 };
 
 export const UpdateDialog = memo(function UpdateDialog() {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(20);
 
@@ -117,7 +119,7 @@ export const UpdateDialog = memo(function UpdateDialog() {
             <View style={[styles.versions, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.lg }]}>
               {localVersion ? (
                 <View style={styles.versionCol}>
-                  <Text style={[typography.styles.labelSmall, { color: colors.textTertiary }]}>Atual</Text>
+                  <Text style={[typography.styles.labelSmall, { color: colors.textTertiary }]}>{t('updateDialog.current')}</Text>
                   <Text style={[typography.styles.titleSmall, { color: colors.text }]}>{localVersion}</Text>
                 </View>
               ) : null}
@@ -126,7 +128,7 @@ export const UpdateDialog = memo(function UpdateDialog() {
               ) : null}
               {remoteVersion ? (
                 <View style={styles.versionCol}>
-                  <Text style={[typography.styles.labelSmall, { color: colors.primary }]}>Nova</Text>
+                  <Text style={[typography.styles.labelSmall, { color: colors.primary }]}>{t('updateDialog.new')}</Text>
                   <Text style={[typography.styles.titleSmall, { color: colors.primary }]}>{remoteVersion}</Text>
                 </View>
               ) : null}
@@ -147,7 +149,7 @@ export const UpdateDialog = memo(function UpdateDialog() {
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : null}
                 <Text style={[typography.styles.labelLarge, { color: colors.textSecondary }]}>
-                  {progress == null || progress === 0 ? 'Preparando download…' : `${pct}%`}
+                  {progress == null || progress === 0 ? t('updateDialog.preparingDownload') : `${pct}%`}
                 </Text>
               </View>
             </View>
@@ -174,7 +176,7 @@ export const UpdateDialog = memo(function UpdateDialog() {
             ) : null}
             {showGithub && githubUrl ? (
               <AppButton
-                label="Ver no GitHub"
+                label={t('updateDialog.viewOnGithub')}
                 onPress={openGithub}
                 variant="ghost"
                 fullWidth

@@ -1,6 +1,11 @@
 /**
  * Utilitários de data para o FinTrack
  */
+import i18n from '../i18n/config';
+
+function currentLocale(): string {
+  return i18n.language || 'pt-BR';
+}
 
 export function now(): string {
   return new Date().toISOString();
@@ -42,19 +47,19 @@ export function formatDate(
     long:   { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' },
   }[style] as Intl.DateTimeFormatOptions;
 
-  return new Intl.DateTimeFormat('pt-BR', options).format(date);
+  return new Intl.DateTimeFormat(currentLocale(), options).format(date);
 }
 
 export function formatTime(dateStr: string | Date): string {
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-  return new Intl.DateTimeFormat('pt-BR', {
+  return new Intl.DateTimeFormat(currentLocale(), {
     hour:   '2-digit',
     minute: '2-digit',
   }).format(date);
 }
 
 export function formatMonthYear(date: Date = new Date()): string {
-  const raw = new Intl.DateTimeFormat('pt-BR', {
+  const raw = new Intl.DateTimeFormat(currentLocale(), {
     month: 'long',
     year:  'numeric',
   }).format(date);
@@ -62,7 +67,7 @@ export function formatMonthYear(date: Date = new Date()): string {
 }
 
 export function formatShortMonth(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date);
+  return new Intl.DateTimeFormat(currentLocale(), { month: 'short' }).format(date);
 }
 
 function formatRelative(date: Date): string {
@@ -72,11 +77,11 @@ function formatRelative(date: Date): string {
   const hrs  = Math.floor(diff / 3_600_000);
   const days = Math.floor(diff / 86_400_000);
 
-  if (mins < 1)  return 'Agora mesmo';
-  if (mins < 60) return `Há ${mins} min`;
-  if (hrs  < 24) return `Há ${hrs}h`;
-  if (days === 1) return 'Ontem';
-  if (days < 7)   return `Há ${days} dias`;
+  if (mins < 1)  return i18n.t('dates.justNow');
+  if (mins < 60) return i18n.t('dates.minutesAgo', { count: mins });
+  if (hrs  < 24) return i18n.t('dates.hoursAgo', { count: hrs });
+  if (days === 1) return i18n.t('dates.yesterday');
+  if (days < 7)   return i18n.t('dates.daysAgo', { count: days });
 
   return formatDate(date, 'short');
 }

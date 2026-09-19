@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, Share,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme }            from '../../../hooks/useTheme';
 import { useTransactionStore } from '../../../store/transactionStore';
 import { useAccountStore }     from '../../../store/accountStore';
@@ -14,6 +15,7 @@ import { AppHeader } from '../../../components/AppHeader';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 export function ExportScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
   const currentMonth = useTransactionStore(s => s.currentMonth);
@@ -41,7 +43,7 @@ export function ExportScreen({ navigation }: any) {
 
       await Share.share({ title, message: content });
     } catch {
-      Alert.alert('Erro', 'Não foi possível exportar os dados.');
+      Alert.alert(t('common.error'), t('export.error'));
     } finally {
       setExporting(false);
     }
@@ -49,20 +51,20 @@ export function ExportScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title="Exportar dados" onClose={() => navigation.goBack()} />
+      <AppHeader title={t('export.title')} onClose={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
         <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginBottom: spacing.xl }]}>
-          Exporte suas transações para análise em planilhas ou outros apps.
+          {t('export.description')}
         </Text>
 
         <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-          {transactions.length} transações disponíveis
+          {t('export.availableCount', { count: transactions.length })}
         </Text>
 
         {[
-          { format: 'csv' as const, icon: '📊', title: 'Exportar CSV', subtitle: 'Compatível com Excel, Google Sheets' },
-          { format: 'json' as const, icon: '🔧', title: 'Exportar JSON', subtitle: 'Para desenvolvedores e apps' },
+          { format: 'csv' as const, icon: '📊', title: t('export.exportCsv'), subtitle: t('export.exportCsvSubtitle') },
+          { format: 'json' as const, icon: '🔧', title: t('export.exportJson'), subtitle: t('export.exportJsonSubtitle') },
         ].map(opt => (
           <TouchableOpacity
             key={opt.format}
@@ -90,7 +92,7 @@ export function ExportScreen({ navigation }: any) {
 
         {transactions.length === 0 && (
           <Text style={[typography.styles.bodySmall, { color: colors.warning, textAlign: 'center', marginTop: spacing.lg }]}>
-            Nenhuma transação para exportar neste mês.
+            {t('export.noneThisMonth')}
           </Text>
         )}
       </ScrollView>

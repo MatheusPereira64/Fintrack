@@ -11,6 +11,7 @@ import {
   parseVersionTag,
 } from '../utils/version';
 import { useUpdateUiStore } from '../store/updateUiStore';
+import i18n from '../i18n/config';
 
 const { UpdateModule } = NativeModules;
 
@@ -183,7 +184,7 @@ export const UpdateService = {
     }).promise;
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
-      throw new Error(`Download falhou (HTTP ${result.statusCode})`);
+      throw new Error(i18n.t('updateService.downloadFailed', { status: result.statusCode }));
     }
 
     return dest;
@@ -196,10 +197,10 @@ export const UpdateService = {
 
     const action = await useUpdateUiStore.getState().present({
       variant: 'permission',
-      title: 'Permissão necessária',
-      message: 'Para instalar atualizações, permita que o FinTrack instale apps de fontes desconhecidas.',
-      primaryLabel: 'Abrir configurações',
-      secondaryLabel: 'Agora não',
+      title: i18n.t('updateService.permissionTitle'),
+      message: i18n.t('updateService.permissionMessage'),
+      primaryLabel: i18n.t('updateService.openSettings'),
+      secondaryLabel: i18n.t('updateService.notNow'),
     });
     if (action === 'primary') {
       await UpdateModule.openUnknownSourcesSettings();
@@ -213,7 +214,7 @@ export const UpdateService = {
       allowed = await this.ensureInstallPermission();
     }
     if (!allowed) {
-      throw new Error('Permissão de instalação negada. Ative em Configurações e tente de novo.');
+      throw new Error(i18n.t('updateService.installPermissionDenied'));
     }
     await UpdateModule.installApk(path);
   },
@@ -224,7 +225,7 @@ export const UpdateService = {
    */
   async downloadAndInstall(remote: RemoteRelease, onProgress?: (pct: number) => void): Promise<void> {
     if (!remote.apkUrl) {
-      throw new Error('Release sem APK anexado');
+      throw new Error(i18n.t('updateService.noApkAttached'));
     }
     Logger.info('Update', 'Baixando atualização', { tag: remote.tagName });
     const path = await this.downloadApk(
@@ -252,10 +253,10 @@ export const UpdateService = {
       const ui = useUpdateUiStore.getState();
       const action = await ui.present({
         variant: 'update',
-        title: 'Nova versão disponível',
-        message: 'A atualização substitui o app e mantém seus dados locais (mesmo pacote e assinatura).',
-        primaryLabel: 'Atualizar agora',
-        secondaryLabel: 'Depois',
+        title: i18n.t('updateService.newVersionTitle'),
+        message: i18n.t('updateService.newVersionMessage'),
+        primaryLabel: i18n.t('updateService.updateNow'),
+        secondaryLabel: i18n.t('updateService.later'),
         showGithub: true,
         githubUrl: remote.htmlUrl || RELEASES_PAGE,
         localVersion: local.versionName,
@@ -266,8 +267,8 @@ export const UpdateService = {
 
       ui.present({
         variant: 'progress',
-        title: 'Baixando atualização',
-        message: 'Isso pode levar alguns segundos. Não feche o app.',
+        title: i18n.t('updateService.downloadingTitle'),
+        message: i18n.t('updateService.downloadingMessage'),
         dismissible: false,
       });
       try {
@@ -277,9 +278,9 @@ export const UpdateService = {
         Logger.error('Update', 'Falha na atualização automática', err);
         await ui.present({
           variant: 'error',
-          title: 'Não foi possível atualizar',
-          message: `${String(err)}\n\nVocê também pode baixar o APK na página de releases.`,
-          primaryLabel: 'OK',
+          title: i18n.t('updateService.updateFailedTitle'),
+          message: i18n.t('updateService.updateFailedMessage', { error: String(err) }),
+          primaryLabel: i18n.t('common.ok'),
           showGithub: true,
           githubUrl: RELEASES_PAGE,
         });
@@ -294,7 +295,7 @@ export const UpdateService = {
     onProgress?: (pct: number | null) => void,
   ): Promise<UpdateCheckResult> {
     if (checking) {
-      return { status: 'error', message: 'Já existe uma verificação em andamento.' };
+      return { status: 'error', message: i18n.t('updateService.checkInProgress') };
     }
     checking = true;
     try {
@@ -305,18 +306,18 @@ export const UpdateService = {
       if (result.status === 'unsupported') {
         await ui.present({
           variant: 'info',
-          title: 'Atualizações',
-          message: 'A atualização automática está disponível apenas no Android.',
-          primaryLabel: 'OK',
+          title: i18n.t('updateService.updatesTitle'),
+          message: i18n.t('updateService.androidOnly'),
+          primaryLabel: i18n.t('common.ok'),
         });
         return result;
       }
       if (result.status === 'error') {
         await ui.present({
           variant: 'error',
-          title: 'Não foi possível verificar',
+          title: i18n.t('updateService.checkFailedTitle'),
           message: result.message,
-          primaryLabel: 'OK',
+          primaryLabel: i18n.t('common.ok'),
         });
         return result;
       }
@@ -324,9 +325,9 @@ export const UpdateService = {
         if (!result.remote) {
           await ui.present({
             variant: 'info',
-            title: 'Nenhuma release no GitHub',
-            message: `Você está na versão ${result.local.versionName}, mas ainda não há uma release publicada.`,
-            primaryLabel: 'OK',
+            title: i18n.t('updateService.noReleaseTitle'),
+            message: i18n.t('updateService.noReleaseMessage', { version: result.local.versionName }),
+            primaryLabel: i18n.t('common.ok'),
             showGithub: true,
             githubUrl: RELEASES_PAGE,
             localVersion: result.local.versionName,
@@ -336,9 +337,9 @@ export const UpdateService = {
         if (!result.remote.apkUrl) {
           await ui.present({
             variant: 'info',
-            title: 'Release sem APK',
-            message: `A release ${result.remote.name} existe, mas não tem um APK anexado. Abra a página para baixar manualmente.`,
-            primaryLabel: 'OK',
+            title: i18n.t('updateService.releaseNoApkTitle'),
+            message: i18n.t('updateService.releaseNoApkMessage', { name: result.remote.name }),
+            primaryLabel: i18n.t('common.ok'),
             showGithub: true,
             githubUrl: result.remote.htmlUrl || RELEASES_PAGE,
           });
@@ -346,9 +347,9 @@ export const UpdateService = {
         }
         await ui.present({
           variant: 'success',
-          title: 'App atualizado',
-          message: `Você já está na versão ${result.local.versionName}.`,
-          primaryLabel: 'OK',
+          title: i18n.t('updateService.upToDateTitle'),
+          message: i18n.t('updateService.upToDateMessage', { version: result.local.versionName }),
+          primaryLabel: i18n.t('common.ok'),
           localVersion: result.local.versionName,
         });
         return result;
@@ -358,9 +359,9 @@ export const UpdateService = {
       if (!remote.apkUrl) {
         await ui.present({
           variant: 'info',
-          title: 'Atualização encontrada',
-          message: `A versão ${remote.versionName} está no GitHub, mas a release não tem APK anexado.`,
-          primaryLabel: 'OK',
+          title: i18n.t('updateService.updateFoundTitle'),
+          message: i18n.t('updateService.updateFoundNoApk', { version: remote.versionName }),
+          primaryLabel: i18n.t('common.ok'),
           showGithub: true,
           githubUrl: remote.htmlUrl || RELEASES_PAGE,
           localVersion: local.versionName,
@@ -371,10 +372,10 @@ export const UpdateService = {
 
       const action = await ui.present({
         variant: 'update',
-        title: 'Atualização encontrada',
-        message: 'Deseja baixar e instalar? Seus dados locais serão mantidos.',
-        primaryLabel: 'Atualizar',
-        secondaryLabel: 'Cancelar',
+        title: i18n.t('updateService.updateFoundTitle'),
+        message: i18n.t('updateService.updateFoundMessage'),
+        primaryLabel: i18n.t('updateService.update'),
+        secondaryLabel: i18n.t('common.cancel'),
         showGithub: true,
         githubUrl: remote.htmlUrl || RELEASES_PAGE,
         localVersion: local.versionName,
@@ -385,8 +386,8 @@ export const UpdateService = {
 
       ui.present({
         variant: 'progress',
-        title: 'Baixando atualização',
-        message: 'Isso pode levar alguns segundos. Não feche o app.',
+        title: i18n.t('updateService.downloadingTitle'),
+        message: i18n.t('updateService.downloadingMessage'),
         dismissible: false,
       });
       try {
@@ -399,9 +400,9 @@ export const UpdateService = {
       } catch (err) {
         await ui.present({
           variant: 'error',
-          title: 'Erro na atualização',
+          title: i18n.t('updateService.updateErrorTitle'),
           message: String(err),
-          primaryLabel: 'OK',
+          primaryLabel: i18n.t('common.ok'),
           showGithub: true,
           githubUrl: RELEASES_PAGE,
         });

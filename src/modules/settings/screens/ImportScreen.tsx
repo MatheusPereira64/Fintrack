@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }            from '../../../hooks/useTheme';
 import { useAccountStore }     from '../../../store/accountStore';
 import { useTransactionStore } from '../../../store/transactionStore';
@@ -19,6 +20,7 @@ import {
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
 
 export function ImportScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(24);
@@ -44,7 +46,10 @@ export function ImportScreen({ navigation }: any) {
 
       const result = await parseImportFile(file);
       if (!result.success || result.candidates.length === 0) {
-        Alert.alert('Nenhuma transação encontrada', result.errors.join('\n') || 'Arquivo vazio ou formato não suportado.');
+        Alert.alert(
+          t('import.noTransactionsTitle'),
+          result.errors.join('\n') || t('import.emptyOrUnsupported'),
+        );
         setLoading(false);
         return;
       }
@@ -53,19 +58,19 @@ export function ImportScreen({ navigation }: any) {
       setSelected(new Set(result.candidates.map((_, i) => i)));
       setFileInfo({ name: file.name ?? 'arquivo', count: result.candidates.length });
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Não foi possível ler o arquivo.');
+      Alert.alert(t('common.error'), e.message ?? t('import.readError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleSave = useCallback(async () => {
     if (!defaultAccountId) {
-      Alert.alert('Atenção', 'Crie uma conta primeiro antes de importar.');
+      Alert.alert(t('common.warning'), t('import.needAccount'));
       return;
     }
     if (selected.size === 0) {
-      Alert.alert('Atenção', 'Selecione ao menos uma transação para importar.');
+      Alert.alert(t('common.warning'), t('import.needSelection'));
       return;
     }
 
@@ -90,13 +95,18 @@ export function ImportScreen({ navigation }: any) {
       setSelected(new Set());
       setFileInfo(null);
       await loadByMonth(currentMonth.year, currentMonth.month);
-      Alert.alert('Importação concluída', `${count} transaç${count === 1 ? 'ão importada' : 'ões importadas'} com sucesso.`);
+      Alert.alert(
+        t('import.doneTitle'),
+        count === 1
+          ? t('import.doneMessage', { count })
+          : t('import.doneMessagePlural', { count }),
+      );
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Falha ao importar transações.');
+      Alert.alert(t('common.error'), e.message ?? t('import.importError'));
     } finally {
       setSaving(false);
     }
-  }, [candidates, selected, defaultAccountId, currentMonth, loadByMonth]);
+  }, [candidates, selected, defaultAccountId, currentMonth, loadByMonth, t]);
 
   const toggleAll = () => {
     if (selected.size === candidates.length) {
@@ -109,8 +119,8 @@ export function ImportScreen({ navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Importar Extrato"
-        subtitle="OFX · CSV"
+        title={t('import.title')}
+        subtitle={t('import.subtitle')}
         onClose={() => navigation.goBack()}
       />
 
@@ -124,10 +134,10 @@ export function ImportScreen({ navigation }: any) {
                 <Icon name="import" size={48} color={colors.primary} />
               </View>
               <Text style={[typography.styles.headlineSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.xl }]}>
-                Importe seu extrato
+                {t('import.headline')}
               </Text>
               <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm }]}>
-                Suporta arquivos .OFX e .CSV exportados do Nubank, Inter, Itaú, Bradesco, BB e outros.
+                {t('import.description')}
               </Text>
 
               {imported > 0 && (
@@ -140,13 +150,15 @@ export function ImportScreen({ navigation }: any) {
                 }]}>
                   <Icon name="check-circle" size={20} color={colors.success} />
                   <Text style={[typography.styles.labelLarge, { color: colors.success }]}>
-                    {imported} transaç{imported === 1 ? 'ão importada' : 'ões importadas'} nesta sessão
+                    {imported === 1
+                      ? t('import.importedSession', { count: imported })
+                      : t('import.importedSessionPlural', { count: imported })}
                   </Text>
                 </View>
               )}
 
               <AppButton
-                label="Selecionar arquivo"
+                label={t('import.selectFile')}
                 icon="download"
                 variant="primary"
                 size="lg"
@@ -155,8 +167,7 @@ export function ImportScreen({ navigation }: any) {
               />
 
               <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.lg, textAlign: 'center' }]}>
-                No app do seu banco: Extrato {'>'} Exportar {'>'} OFX ou CSV{'\n'}
-                Os dados ficam apenas no seu dispositivo.
+                {t('import.hint')}
               </Text>
             </Animated.View>
           )}
@@ -179,12 +190,12 @@ export function ImportScreen({ navigation }: any) {
                 {fileInfo?.name}
               </Text>
               <Text style={[typography.styles.bodySmall, { color: colors.textSecondary }]}>
-                {selected.size} de {fileInfo?.count} selecionadas
+                {t('import.selectedOf', { selected: selected.size, total: fileInfo?.count })}
               </Text>
             </View>
             <TouchableOpacity onPress={toggleAll}>
               <Text style={[typography.styles.labelMedium, { color: colors.primary }]}>
-                {selected.size === candidates.length ? 'Desmarcar todas' : 'Selecionar todas'}
+                {selected.size === candidates.length ? t('import.deselectAll') : t('import.selectAll')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -255,13 +266,13 @@ export function ImportScreen({ navigation }: any) {
             gap:           spacing.sm,
           }]}>
             <AppButton
-              label="Cancelar"
+              label={t('common.cancel')}
               variant="secondary"
               onPress={() => { setCandidates([]); setSelected(new Set()); setFileInfo(null); }}
               style={{ flex: 1 }}
             />
             <AppButton
-              label={`Importar ${selected.size}`}
+              label={t('import.importCount', { count: selected.size })}
               variant="primary"
               icon="import"
               loading={saving}
