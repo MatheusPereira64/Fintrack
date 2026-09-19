@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useTheme }       from '../hooks/useTheme';
 import { Account }        from '../models/types';
 import { formatCurrency } from '../utils/currency';
@@ -19,17 +20,18 @@ interface AccountCardProps {
   index?:       number;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  checking:    'Conta Corrente',
-  savings:     'Poupança',
-  credit_card: 'Cartão de Crédito',
-  investment:  'Investimentos',
-  wallet:      'Carteira',
+const TYPE_I18N_KEYS: Record<string, string> = {
+  checking:    'checking',
+  savings:     'savings',
+  credit_card: 'creditCard',
+  investment:  'investment',
+  wallet:      'wallet',
 };
 
 export const AccountCard = memo(function AccountCard({
   account, onPress, onLongPress, onPlan, index = 0,
 }: AccountCardProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
 
   const isCredit        = account.type === 'credit_card';
@@ -91,7 +93,9 @@ export const AccountCard = memo(function AccountCard({
         </View>
 
         <Text style={[typography.styles.labelSmall, { color: 'rgba(255,255,255,0.8)', marginTop: spacing.sm }]}>
-          {TYPE_LABELS[account.type] ?? account.type}
+          {TYPE_I18N_KEYS[account.type]
+            ? t(`accountCard.types.${TYPE_I18N_KEYS[account.type]}`)
+            : account.type}
         </Text>
         <Text style={[typography.styles.bodyMedium, { color: '#FFF', fontWeight: '600' }]}>
           {account.name}
@@ -99,7 +103,7 @@ export const AccountCard = memo(function AccountCard({
 
         <View style={{ marginTop: spacing.sm }}>
           <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
-            Saldo calculado
+            {t('accountCard.calculatedBalance')}
           </Text>
           <Text style={[typography.styles.titleLarge, { color: '#FFF' }]}>
             {formatCurrency(calculated)}
@@ -108,7 +112,7 @@ export const AccountCard = memo(function AccountCard({
 
         <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
           <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
-            Saldo informado
+            {t('accountCard.informedBalance')}
           </Text>
           <Text style={[typography.styles.labelLarge, {
             color: diverges ? '#FDE68A' : 'rgba(255,255,255,0.95)',
@@ -121,13 +125,13 @@ export const AccountCard = memo(function AccountCard({
         {showYield && (
           <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
             <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
-              Rendimento ~{String(yieldRate).replace('.', ',')}% a.m.
+              {t('accountCard.yieldRate', { rate: String(yieldRate).replace('.', ',') })}
             </Text>
             <Text style={[typography.styles.labelLarge, {
               color: '#BBF7D0',
               fontWeight: '600',
             }]}>
-              ≈ {formatCurrency(monthlyYield)}/mês
+              {t('accountCard.yieldMonth', { amount: formatCurrency(monthlyYield) })}
             </Text>
           </View>
         )}
@@ -144,7 +148,7 @@ export const AccountCard = memo(function AccountCard({
           >
             <Icon name="chart-line" size={14} color="#FFF" />
             <Text style={[typography.styles.labelSmall, { color: '#FFF', marginLeft: 6 }]}>
-              Planejar
+              {t('accountCard.plan')}
             </Text>
           </TouchableOpacity>
         )}
@@ -159,7 +163,7 @@ export const AccountCard = memo(function AccountCard({
             </View>
             <View style={styles.limitRow}>
               <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.7)' }]}>
-                Limite utilizado
+                {t('accountCard.limitUsed')}
               </Text>
               <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.9)' }]}>
                 {formatCurrency(account.limit)}
