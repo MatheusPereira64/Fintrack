@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
+import { useTranslation }  from 'react-i18next';
 import { useTheme }        from '../hooks/useTheme';
 import { Icon }            from './Icon';
 import { Transaction }     from '../models/types';
@@ -22,6 +23,7 @@ interface TransactionItemProps {
 export const TransactionItem = memo(function TransactionItem({
   transaction, onPress, showDate = false, index = 0, animate = false,
 }: TransactionItemProps) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const getCategoryById = useCategoryStore(s => s.getCategoryById);
   const category  = transaction.categoryId ? getCategoryById(transaction.categoryId) : undefined;
@@ -85,7 +87,9 @@ export const TransactionItem = memo(function TransactionItem({
           </Text>
           {transaction.sourceNotification && (
             <View style={[styles.autoBadge, { backgroundColor: `${colors.primary}20` }]}>
-              <Text style={[typography.styles.caption, { color: colors.primary }]}>auto</Text>
+              <Text style={[typography.styles.caption, { color: colors.primary }]}>
+                {t('transactionItem.auto')}
+              </Text>
             </View>
           )}
         </View>

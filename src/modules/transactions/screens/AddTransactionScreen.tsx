@@ -5,6 +5,7 @@ import {
   ScrollView, Platform, Switch, Alert, KeyboardAvoidingView,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { CloseButton } from '../../../components/CloseButton';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { useTheme }             from '../../../hooks/useTheme';
@@ -13,9 +14,9 @@ import { useAccountStore }      from '../../../store/accountStore';
 import { useCategoryStore }     from '../../../store/categoryStore';
 import { Transaction, TransactionType } from '../../../models/types';
 
-const TYPES: Array<{ key: TransactionType; label: string; icon: string }> = [
-  { key: 'expense', label: 'Despesa', icon: '📤' },
-  { key: 'income',  label: 'Receita', icon: '📥' },
+const TYPES: Array<{ key: TransactionType; labelKey: string; icon: string }> = [
+  { key: 'expense', labelKey: 'addTransaction.expense', icon: '📤' },
+  { key: 'income',  labelKey: 'addTransaction.income',  icon: '📥' },
 ];
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function AddTransactionScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(40);
@@ -52,7 +54,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
 
   const handleSave = useCallback(async () => {
     if (!isValid) {
-      Alert.alert('Atenção', 'Preencha o valor, descrição e selecione uma conta.');
+      Alert.alert(t('common.warning'), t('addTransaction.validationError'));
       return;
     }
     setIsSaving(true);
@@ -77,11 +79,11 @@ export function AddTransactionScreen({ navigation, route }: Props) {
       }
       navigation.goBack();
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar a transação.');
+      Alert.alert(t('common.error'), t('addTransaction.saveError'));
     } finally {
       setIsSaving(false);
     }
-  }, [existing, isValid, parsedAmount, type, description, categoryId, date, accountId, isRecurring, addTransaction, updateTransaction, navigation]);
+  }, [existing, isValid, parsedAmount, type, description, categoryId, date, accountId, isRecurring, addTransaction, updateTransaction, navigation, t]);
 
   const filteredCategories = useMemo(() =>
     categories.filter(c => c.id > 0),
@@ -109,7 +111,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
         }]}>
           <CloseButton onPress={() => navigation.goBack()} style={{ marginRight: spacing.sm }} />
           <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1 }]}>
-            {existing ? 'Editar transação' : 'Nova transação'}
+            {existing ? t('addTransaction.editTitle') : t('addTransaction.newTitle')}
           </Text>
           <TouchableOpacity
             onPress={handleSave}
@@ -122,7 +124,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             }]}
           >
             <Text style={[typography.styles.labelLarge, { color: isValid ? '#FFF' : colors.textTertiary }]}>
-              {isSaving ? '...' : 'Salvar'}
+              {isSaving ? '...' : t('common.save')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -131,31 +133,31 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           {/* Tipo */}
           <Animated.View entering={FadeInDown.delay(50)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Tipo
+              {t('addTransaction.type')}
             </Text>
             <View style={[styles.typeRow, { marginBottom: spacing.xl }]}>
-              {TYPES.map(t => (
+              {TYPES.map(typeOpt => (
                 <TouchableOpacity
-                  key={t.key}
-                  onPress={() => setType(t.key)}
+                  key={typeOpt.key}
+                  onPress={() => setType(typeOpt.key)}
                   style={[styles.typeBtn, {
-                    backgroundColor: type === t.key
-                      ? (t.key === 'income' ? `${colors.income}20` : `${colors.expense}20`)
+                    backgroundColor: type === typeOpt.key
+                      ? (typeOpt.key === 'income' ? `${colors.income}20` : `${colors.expense}20`)
                       : colors.card,
                     borderRadius: borderRadius.lg,
                     borderWidth: 2,
-                    borderColor: type === t.key
-                      ? (t.key === 'income' ? colors.income : colors.expense)
+                    borderColor: type === typeOpt.key
+                      ? (typeOpt.key === 'income' ? colors.income : colors.expense)
                       : colors.borderLight,
                   }]}
                 >
-                  <Text style={{ fontSize: 22 }}>{t.icon}</Text>
+                  <Text style={{ fontSize: 22 }}>{typeOpt.icon}</Text>
                   <Text style={[typography.styles.titleSmall, {
-                    color: type === t.key
-                      ? (t.key === 'income' ? colors.income : colors.expense)
+                    color: type === typeOpt.key
+                      ? (typeOpt.key === 'income' ? colors.income : colors.expense)
                       : colors.textSecondary,
                   }]}>
-                    {t.label}
+                    {t(typeOpt.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -165,7 +167,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           {/* Valor */}
           <Animated.View entering={FadeInDown.delay(100)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Valor (R$)
+              {t('addTransaction.amountLabel')}
             </Text>
             <View style={[styles.inputWrap, {
               backgroundColor: colors.inputBackground,
@@ -179,7 +181,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
-                placeholder="0,00"
+                placeholder={t('common.amountPlaceholder')}
                 placeholderTextColor={colors.placeholder}
                 style={[typography.styles.headlineSmall, {
                   color: colors.inputText, flex: 1, padding: spacing.md,
@@ -191,12 +193,12 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           {/* Descrição */}
           <Animated.View entering={FadeInDown.delay(150)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Descrição
+              {t('addTransaction.description')}
             </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
-              placeholder="Ex: Supermercado, Uber, Salário..."
+              placeholder={t('addTransaction.descriptionPlaceholder')}
               placeholderTextColor={colors.placeholder}
               style={[{
                 backgroundColor: colors.inputBackground,
@@ -213,7 +215,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           {/* Conta */}
           <Animated.View entering={FadeInDown.delay(200)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Conta
+              {t('addTransaction.account')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
               {accounts.map(acc => (
@@ -246,7 +248,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           {/* Categoria */}
           <Animated.View entering={FadeInDown.delay(250)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Categoria
+              {t('addTransaction.category')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
               <TouchableOpacity
@@ -258,7 +260,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 }]}
               >
                 <Text style={[typography.styles.labelMedium, { color: !categoryId ? '#FFF' : colors.textSecondary }]}>
-                  Nenhuma
+                  {t('addTransaction.none')}
                 </Text>
               </TouchableOpacity>
               {filteredCategories.map(cat => (
@@ -294,10 +296,10 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             }]}>
               <View style={{ flex: 1, marginRight: spacing.md }}>
                 <Text style={[typography.styles.bodyLarge, { color: colors.text }]}>
-                  Repetir mensalmente
+                  {t('addTransaction.repeatMonthly')}
                 </Text>
                 <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                  Lançado automaticamente todo mês
+                  {t('addTransaction.repeatHint')}
                 </Text>
               </View>
               <Switch

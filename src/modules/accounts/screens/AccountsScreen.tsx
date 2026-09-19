@@ -5,6 +5,7 @@ import {
   Modal, Alert, ScrollView, Platform, ActivityIndicator, Image,
 } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
+import { useTranslation }  from 'react-i18next';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useAccountStore } from '../../../store/accountStore';
 import { AccountCard }     from '../../../components/AccountCard';
@@ -27,12 +28,12 @@ import {
 
 import type { AppIconName } from '../../../components/Icon';
 
-const ACCOUNT_TYPES: Array<{ key: AccountType; label: string; icon: AppIconName }> = [
-  { key: 'checking',    label: 'Conta Corrente', icon: 'card' },
-  { key: 'savings',     label: 'Poupança',       icon: 'savings' },
-  { key: 'credit_card', label: 'Cartão',         icon: 'credit-card' },
-  { key: 'investment',  label: 'Investimentos',  icon: 'investment' },
-  { key: 'wallet',      label: 'Carteira',       icon: 'wallet' },
+const ACCOUNT_TYPES: Array<{ key: AccountType; typeKey: string; icon: AppIconName }> = [
+  { key: 'checking',    typeKey: 'checking',    icon: 'card' },
+  { key: 'savings',     typeKey: 'savings',     icon: 'savings' },
+  { key: 'credit_card', typeKey: 'creditCard',  icon: 'credit-card' },
+  { key: 'investment',  typeKey: 'investment',  icon: 'investment' },
+  { key: 'wallet',      typeKey: 'wallet',      icon: 'wallet' },
 ];
 
 const COLORS = ['#7C3AED', '#DC2626', '#2563EB', '#16A34A', '#D97706', '#0891B2', '#EC4899', '#78716C'];
@@ -49,6 +50,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function AccountsScreen({ navigation }: { navigation?: any }) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const accounts         = useAccountStore(s => s.accounts);
@@ -109,19 +111,19 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       const withIcons = await hydrateBankIcons(list);
       setDetected(withIcons);
     } catch {
-      Alert.alert('Erro', 'Não foi possível detectar bancos instalados.');
+      Alert.alert(t('common.error'), t('accounts.detectError'));
       setDetected([]);
       setDetecting(false);
     }
-  }, [accounts]);
+  }, [accounts, t]);
 
   const handleSave = useCallback(async () => {
     if (!form.name.trim()) {
-      Alert.alert('Atenção', 'Digite o nome da conta.');
+      Alert.alert(t('common.warning'), t('accounts.nameRequired'));
       return;
     }
     if (!form.informedBalance.trim() && !form.balance.trim()) {
-      Alert.alert('Atenção', 'Informe o saldo que aparece no app do banco.');
+      Alert.alert(t('common.warning'), t('accounts.balanceRequired'));
       return;
     }
     const balanceNum   = parseAmount(form.balance || form.informedBalance);
@@ -159,30 +161,33 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       setShowFormModal(false);
       resetForm();
     } catch {
-      Alert.alert('Erro', editingId ? 'Não foi possível salvar.' : 'Não foi possível criar a conta.');
+      Alert.alert(t('common.error'), editingId ? t('accounts.saveError') : t('accounts.createError'));
     } finally {
       setSaving(false);
     }
-  }, [form, editingId, addAccount, updateAccount]);
+  }, [form, editingId, addAccount, updateAccount, t]);
 
   const handleReconcile = useCallback(async () => {
     if (!editingId) return;
     const target = parseAmount(form.informedBalance || form.balance);
     Alert.alert(
-      'Ajustar saldo calculado',
-      `Isso criará um ajuste para igualar o saldo calculado (${formatCurrency(parseAmount(form.balance))}) ao informado (${formatCurrency(target)}).`,
+      t('accounts.reconcileTitle'),
+      t('accounts.reconcileMessage', {
+        calculated: formatCurrency(parseAmount(form.balance)),
+        informed: formatCurrency(target),
+      }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Ajustar',
+          text: t('accounts.reconcileAction'),
           onPress: async () => {
             setSaving(true);
             try {
               await reconcileBalance(editingId, target);
               setForm(f => ({ ...f, balance: String(target).replace('.', ',') }));
-              Alert.alert('Pronto', 'Saldo reconciliado com sucesso.');
+              Alert.alert(t('accounts.reconcileSuccessTitle'), t('accounts.reconcileSuccess'));
             } catch {
-              Alert.alert('Erro', 'Não foi possível reconciliar.');
+              Alert.alert(t('common.error'), t('accounts.reconcileError'));
             } finally {
               setSaving(false);
             }
@@ -190,14 +195,14 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
         },
       ],
     );
-  }, [editingId, form, reconcileBalance]);
+  }, [editingId, form, reconcileBalance, t]);
 
   const handleDelete = useCallback((id: number) => {
-    Alert.alert('Excluir conta', 'Isso irá excluir a conta e todas as suas transações.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => deleteAccount(id) },
+    Alert.alert(t('accounts.deleteTitle'), t('accounts.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => deleteAccount(id) },
     ]);
-  }, [deleteAccount]);
+  }, [deleteAccount, t]);
 
   const editingAccount = editingId ? accounts.find(a => a.id === editingId) : undefined;
   const showReconcile  = editingAccount && hasBalanceDivergence({
@@ -210,8 +215,8 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
   const renderFormFields = () => (
     <>
       {[
-        { label: 'Nome *', key: 'name' as const,     ph: 'Ex: Nubank, BB, Carteira', num: false },
-        { label: 'Banco',  key: 'bankName' as const, ph: 'Ex: Nubank, Itaú, Inter',  num: false },
+        { label: t('accounts.nameLabel'), key: 'name' as const,     ph: t('accounts.namePlaceholder'), num: false },
+        { label: t('accounts.bankLabel'),  key: 'bankName' as const, ph: t('accounts.bankPlaceholder'),  num: false },
       ].map(f => (
         <View key={f.key} style={{ marginBottom: spacing.md }}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -235,7 +240,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
 
       <View style={{ marginBottom: spacing.sm }}>
         <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-          Saldo no app do banco *
+          {t('accounts.informedBalanceLabel')}
         </Text>
         <TextInput
           value={form.informedBalance}
@@ -244,7 +249,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
             informedBalance: v,
             ...(!editingId ? { balance: v } : {}),
           }))}
-          placeholder="Valor que aparece no app do banco"
+          placeholder={t('accounts.informedBalancePlaceholder')}
           placeholderTextColor={colors.placeholder}
           keyboardType="decimal-pad"
           style={[{
@@ -259,7 +264,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           marginTop: spacing.xs,
           marginBottom: spacing.md,
         }]}>
-          Bancos não liberam saldo via API sem Open Finance. Atualize este valor sempre que quiser manter o FinTrack alinhado.
+          {t('accounts.informedBalanceHint')}
         </Text>
       </View>
 
@@ -271,14 +276,14 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           marginBottom: spacing.md,
         }]}>
           <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
-            Saldo calculado (transações)
+            {t('accounts.calculatedBalance')}
           </Text>
           <Text style={[typography.styles.titleSmall, { color: colors.text, marginTop: 4 }]}>
             {formatCurrency(editingAccount?.balance ?? 0)}
           </Text>
           {showReconcile && (
             <AppButton
-              label="Ajustar saldo calculado"
+              label={t('accounts.reconcileButton')}
               variant="secondary"
               size="sm"
               icon="refresh"
@@ -292,12 +297,12 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       {form.type === 'credit_card' && (
         <View style={{ marginBottom: spacing.md }}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            Limite do cartão
+            {t('accounts.creditLimit')}
           </Text>
           <TextInput
             value={form.limit}
             onChangeText={v => setForm(prev => ({ ...prev, limit: v }))}
-            placeholder="0,00"
+            placeholder={t('common.amountPlaceholder')}
             placeholderTextColor={colors.placeholder}
             keyboardType="decimal-pad"
             style={[{
@@ -311,20 +316,20 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       )}
 
       <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-        Tipo
+        {t('accounts.type')}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md }}>
-        {ACCOUNT_TYPES.map(t => {
-          const sel = form.type === t.key;
+        {ACCOUNT_TYPES.map(typeOpt => {
+          const sel = form.type === typeOpt.key;
           return (
             <TouchableOpacity
-              key={t.key}
+              key={typeOpt.key}
               onPress={() => setForm(prev => {
-                const next: FormState = { ...prev, type: t.key };
-                if (accountSupportsYield(t.key) && !prev.yieldRate.trim()) {
-                  next.yieldRate = t.key === 'savings' ? DEFAULT_SAVINGS_YIELD : prev.yieldRate;
+                const next: FormState = { ...prev, type: typeOpt.key };
+                if (accountSupportsYield(typeOpt.key) && !prev.yieldRate.trim()) {
+                  next.yieldRate = typeOpt.key === 'savings' ? DEFAULT_SAVINGS_YIELD : prev.yieldRate;
                 }
-                if (!accountSupportsYield(t.key)) {
+                if (!accountSupportsYield(typeOpt.key)) {
                   next.yieldRate = '';
                 }
                 return next;
@@ -336,9 +341,9 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                 flexDirection: 'row', alignItems: 'center', gap: 5,
               }}
             >
-              <Icon name={t.icon} size={14} color={sel ? '#FFF' : colors.textSecondary} />
+              <Icon name={typeOpt.icon} size={14} color={sel ? '#FFF' : colors.textSecondary} />
               <Text style={[typography.styles.labelSmall, { color: sel ? '#FFF' : colors.textSecondary }]}>
-                {t.label}
+                {t(`accounts.types.${typeOpt.typeKey}`)}
               </Text>
             </TouchableOpacity>
           );
@@ -348,12 +353,12 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       {accountSupportsYield(form.type) && (
         <View style={{ marginBottom: spacing.md }}>
           <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            Rendimento (% a.m.)
+            {t('accounts.yieldRate')}
           </Text>
           <TextInput
             value={form.yieldRate}
             onChangeText={v => setForm(prev => ({ ...prev, yieldRate: v }))}
-            placeholder={form.type === 'savings' ? 'Ex: 0,5' : 'Ex: 0,8'}
+            placeholder={form.type === 'savings' ? t('accounts.yieldPlaceholderSavings') : t('accounts.yieldPlaceholderInvestment')}
             placeholderTextColor={colors.placeholder}
             keyboardType="decimal-pad"
             style={[{
@@ -367,7 +372,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
             color: colors.textTertiary,
             marginTop: spacing.xs,
           }]}>
-            Informe a taxa mensal da poupança ou do investimento. O app calcula o rendimento estimado automaticamente.
+            {t('accounts.yieldHint')}
           </Text>
           {(() => {
             const bal = parseAmount(form.informedBalance || form.balance);
@@ -383,13 +388,13 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                 marginTop: spacing.sm,
               }]}>
                 <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
-                  Estimativa automática
+                  {t('accounts.autoEstimate')}
                 </Text>
                 <Text style={[typography.styles.titleSmall, { color: colors.success, marginTop: 4 }]}>
-                  ≈ {formatCurrency(monthly)} / mês
+                  {t('accounts.estimatePerMonth', { amount: formatCurrency(monthly) })}
                 </Text>
                 <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: 4 }]}>
-                  Em 12 meses (composto): ≈ {formatCurrency(in12)} de rendimento
+                  {t('accounts.estimate12Months', { amount: formatCurrency(in12) })}
                 </Text>
               </View>
             );
@@ -398,7 +403,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       )}
 
       <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-        Cor
+        {t('accounts.color')}
       </Text>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
         {COLORS.map(c => (
@@ -420,8 +425,8 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Contas"
-        subtitle={`Total: ${formatCurrency(totalBalance)}`}
+        title={t('accounts.title')}
+        subtitle={t('accounts.totalSubtitle', { amount: formatCurrency(totalBalance) })}
         actions={[
           ...(Platform.OS === 'android'
             ? [{ icon: 'search' as const, onPress: handleDetect }]
@@ -437,7 +442,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           paddingBottom: spacing.sm,
         }}>
           <AppButton
-            label="Detectar bancos no celular"
+            label={t('accounts.detectBanks')}
             variant="secondary"
             icon="bank"
             onPress={handleDetect}
@@ -461,13 +466,13 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           }]}>
             <Icon name="bank" size={48} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
-              Nenhuma conta
+              {t('accounts.noAccounts')}
             </Text>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
-              Detecte bancos instalados ou adicione manualmente.
+              {t('accounts.noAccountsHint')}
             </Text>
             <AppButton
-              label="Detectar bancos"
+              label={t('accounts.detectBanksShort')}
               variant="primary"
               icon="bank"
               onPress={handleDetect}
@@ -513,7 +518,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
               marginBottom: spacing.md,
             }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                {editingId ? 'Editar conta' : 'Nova conta'}
+                {editingId ? t('accounts.editAccount') : t('accounts.newAccount')}
               </Text>
               <CloseButton onPress={() => { setShowFormModal(false); resetForm(); }} />
             </View>
@@ -535,13 +540,13 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
               borderTopColor: colors.borderLight,
             }}>
               <AppButton
-                label="Cancelar"
+                label={t('common.cancel')}
                 variant="secondary"
                 onPress={() => { setShowFormModal(false); resetForm(); }}
                 style={{ flex: 1 }}
               />
               <AppButton
-                label={editingId ? 'Salvar' : 'Criar conta'}
+                label={editingId ? t('common.save') : t('accounts.createAccount')}
                 variant="primary"
                 onPress={handleSave}
                 loading={saving}
@@ -579,12 +584,12 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
               marginBottom: spacing.xs,
             }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Bancos detectados
+                {t('accounts.detectedBanks')}
               </Text>
               <CloseButton onPress={() => setShowDetectModal(false)} />
             </View>
             <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
-              Apps instalados no celular. Toque para cadastrar e informar o saldo manualmente — os bancos não compartilham saldo sem Open Finance.
+              {t('accounts.detectedBanksHint')}
             </Text>
 
             {detecting ? (
@@ -593,7 +598,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
               <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
                 <Icon name="bank" size={40} color={colors.textTertiary} />
                 <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }]}>
-                  Nenhum app bancário compatível encontrado.
+                  {t('accounts.noBanksFound')}
                 </Text>
               </View>
             ) : (
@@ -643,7 +648,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                     </View>
                     {bank.alreadyRegistered ? (
                       <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
-                        Cadastrado
+                        {t('accounts.registered')}
                       </Text>
                     ) : (
                       <Icon name="add" size={20} color={bank.primaryColor} />
@@ -652,14 +657,14 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                 ))}
                 {newBanks.length > 0 && (
                   <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginTop: spacing.sm }]}>
-                    Toque em um banco para cadastrar e informar o saldo.
+                    {t('accounts.tapToRegister')}
                   </Text>
                 )}
               </ScrollView>
             )}
 
             <AppButton
-              label="Fechar"
+              label={t('common.close')}
               variant="secondary"
               onPress={() => setShowDetectModal(false)}
               style={{ marginTop: spacing.md }}

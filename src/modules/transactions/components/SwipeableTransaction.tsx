@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Swipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { useTranslation }     from 'react-i18next';
 import { useTheme }           from '../../../hooks/useTheme';
 import { TransactionItem }    from '../../../components/TransactionItem';
 import { Icon }               from '../../../components/Icon';
@@ -20,18 +21,19 @@ interface SwipeableTransactionProps {
 export const SwipeableTransaction = memo(function SwipeableTransaction({
   transaction, onPress, onEdit, index = 0,
 }: SwipeableTransactionProps) {
+  const { t } = useTranslation();
   const { colors, borderRadius } = useTheme();
   const deleteTransaction = useTransactionStore(s => s.deleteTransaction);
   const swipeRef = useRef<SwipeableMethods>(null);
 
   const handleDelete = useCallback(() => {
     Alert.alert(
-      'Excluir transação',
-      `Excluir "${transaction.description}"?`,
+      t('swipeableTransaction.deleteTitle'),
+      t('swipeableTransaction.deleteMessage', { description: transaction.description }),
       [
-        { text: 'Cancelar', onPress: () => swipeRef.current?.close() },
+        { text: t('common.cancel'), onPress: () => swipeRef.current?.close() },
         {
-          text: 'Excluir',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             swipeRef.current?.close();
@@ -40,7 +42,7 @@ export const SwipeableTransaction = memo(function SwipeableTransaction({
         },
       ],
     );
-  }, [transaction, deleteTransaction]);
+  }, [transaction, deleteTransaction, t]);
 
   const handleEdit = useCallback(() => {
     swipeRef.current?.close();
@@ -54,10 +56,10 @@ export const SwipeableTransaction = memo(function SwipeableTransaction({
         style={[styles.actionBtn, { backgroundColor: colors.expense }]}
       >
         <Icon name="delete" size={20} color="#FFF" />
-        <Text style={styles.actionLabel}>Excluir</Text>
+        <Text style={styles.actionLabel}>{t('common.delete')}</Text>
       </TouchableOpacity>
     </View>
-  ), [handleDelete, colors.expense]);
+  ), [handleDelete, colors.expense, t]);
 
   const renderLeftActions = useCallback(() => (
     <View style={styles.actionLeft}>
@@ -66,10 +68,10 @@ export const SwipeableTransaction = memo(function SwipeableTransaction({
         style={[styles.actionBtn, { backgroundColor: colors.info }]}
       >
         <Icon name="edit" size={20} color="#FFF" />
-        <Text style={styles.actionLabel}>Editar</Text>
+        <Text style={styles.actionLabel}>{t('common.edit')}</Text>
       </TouchableOpacity>
     </View>
-  ), [handleEdit, colors.info]);
+  ), [handleEdit, colors.info, t]);
 
   return (
     <View style={styles.wrapper}>

@@ -2,6 +2,7 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 import { useTransactionStore } from '../../../store/transactionStore';
 import { useCategoryStore }    from '../../../store/categoryStore';
@@ -13,6 +14,7 @@ import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 
 export function TransactionDetailScreen({ route, navigation }: any) {
   const { transactionId } = route.params;
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
   const bottomPad = useSafeBottomPadding(24);
 
@@ -29,7 +31,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={[typography.styles.titleSmall, { color: colors.textSecondary }]}>
-          Transação não encontrada
+          {t('transactionDetail.notFound')}
         </Text>
       </View>
     );
@@ -40,12 +42,12 @@ export function TransactionDetailScreen({ route, navigation }: any) {
 
   const handleDelete = () => {
     Alert.alert(
-      'Excluir transação',
-      'Tem certeza que deseja excluir esta transação?',
+      t('transactionDetail.deleteTitle'),
+      t('transactionDetail.deleteMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Excluir',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteTransaction(transaction.id);
@@ -68,11 +70,11 @@ export function TransactionDetailScreen({ route, navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Detalhe"
+        title={t('transactionDetail.title')}
         onClose={() => navigation.goBack()}
         right={
           <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={{ color: colors.error, fontSize: 14 }}>Excluir</Text>
+            <Text style={{ color: colors.error, fontSize: 14 }}>{t('common.delete')}</Text>
           </TouchableOpacity>
         }
       />
@@ -105,7 +107,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
               marginTop: spacing.sm,
             }]}>
               <Text style={[typography.styles.labelSmall, { color: '#FFF' }]}>
-                🤖 Registrado automaticamente
+                🤖 {t('transactionDetail.autoRegistered')}
               </Text>
             </View>
           )}
@@ -118,16 +120,28 @@ export function TransactionDetailScreen({ route, navigation }: any) {
           padding: spacing.base,
           ...shadows.sm,
         }]}>
-          <DetailRow label="Tipo"        value={isIncome ? '📥 Receita' : '📤 Despesa'} />
-          <DetailRow label="Categoria"   value={category ? `${category.icon ?? ''} ${category.name}` : 'Sem categoria'} />
-          <DetailRow label="Conta"       value={account?.name ?? 'Conta desconhecida'} />
-          <DetailRow label="Data"        value={formatDate(transaction.date, 'long')} />
-          <DetailRow label="Banco"       value={transaction.bankName ?? '—'} />
-          <DetailRow label="Recorrente"  value={transaction.isRecurring ? 'Sim' : 'Não'} />
+          <DetailRow
+            label={t('transactionDetail.type')}
+            value={isIncome ? `📥 ${t('transactionDetail.income')}` : `📤 ${t('transactionDetail.expense')}`}
+          />
+          <DetailRow
+            label={t('transactionDetail.category')}
+            value={category ? `${category.icon ?? ''} ${category.name}` : t('transactionDetail.noCategory')}
+          />
+          <DetailRow
+            label={t('transactionDetail.account')}
+            value={account?.name ?? t('transactionDetail.unknownAccount')}
+          />
+          <DetailRow label={t('transactionDetail.date')} value={formatDate(transaction.date, 'long')} />
+          <DetailRow label={t('transactionDetail.bank')} value={transaction.bankName ?? '—'} />
+          <DetailRow
+            label={t('transactionDetail.recurring')}
+            value={transaction.isRecurring ? t('common.yes') : t('common.no')}
+          />
           {transaction.sourceNotification && (
             <View style={{ paddingVertical: spacing.md }}>
               <Text style={[typography.styles.bodySmall, { color: colors.textSecondary }]}>
-                Notificação original
+                {t('transactionDetail.originalNotification')}
               </Text>
               <Text style={[typography.styles.bodySmall, { color: colors.textTertiary, marginTop: 4 }]}>
                 {transaction.sourceNotification}

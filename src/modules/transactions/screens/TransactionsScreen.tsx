@@ -8,6 +8,7 @@ import {
   ScrollView, ActivityIndicator,
 } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
+import { useTranslation }       from 'react-i18next';
 
 import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
@@ -36,14 +37,8 @@ interface AdvancedFilters {
   maxAmount?:  number;
 }
 
-const SORT_OPTIONS: Array<{ key: SortOrder; label: string }> = [
-  { key: 'date_desc',   label: 'Mais recentes' },
-  { key: 'date_asc',    label: 'Mais antigas'  },
-  { key: 'amount_desc', label: 'Maior valor'   },
-  { key: 'amount_asc',  label: 'Menor valor'   },
-];
-
 export function TransactionsScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const listPad = useTabListPadding();
@@ -183,9 +178,16 @@ export function TransactionsScreen({ navigation }: any) {
   };
 
   const TYPE_FILTERS: Array<{ key: FilterType; label: string; icon?: AppIconName; color: string }> = [
-    { key: 'all',     label: 'Todas',    color: colors.primary },
-    { key: 'income',  label: 'Receitas', icon: 'income',  color: colors.income },
-    { key: 'expense', label: 'Despesas', icon: 'expense', color: colors.expense },
+    { key: 'all',     label: t('transactions.all'),     color: colors.primary },
+    { key: 'income',  label: t('transactions.income'),  icon: 'income',  color: colors.income },
+    { key: 'expense', label: t('transactions.expense'), icon: 'expense', color: colors.expense },
+  ];
+
+  const SORT_OPTIONS: Array<{ key: SortOrder; label: string }> = [
+    { key: 'date_desc',   label: t('transactions.sortNewest') },
+    { key: 'date_asc',    label: t('transactions.sortOldest') },
+    { key: 'amount_desc', label: t('transactions.sortHighest') },
+    { key: 'amount_asc',  label: t('transactions.sortLowest') },
   ];
 
   const handleEdit = useCallback((tx: Transaction) => {
@@ -199,7 +201,7 @@ export function TransactionsScreen({ navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title="Transações"
+        title={t('transactions.title')}
         actions={[
           { icon: 'sort',   onPress: () => setShowSort(true) },
           { icon: 'filter', onPress: () => { setTempCat(advanced.categoryId); setTempBank(advanced.bankName ?? ''); setShowFilters(true); }, badge: hasActiveFilters },
@@ -257,7 +259,7 @@ export function TransactionsScreen({ navigation }: any) {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Buscar transação ou banco..."
+            placeholder={t('transactions.searchPlaceholder')}
             placeholderTextColor={colors.placeholder}
             style={[styles.searchInput, { color: colors.inputText, ...typography.styles.bodyMedium }]}
           />
@@ -329,7 +331,7 @@ export function TransactionsScreen({ navigation }: any) {
             <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
           ) : truncated ? (
             <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginVertical: spacing.sm }]}>
-              Exibindo as {transactions.length} mais recentes deste mês
+              {t('transactions.showingRecent', { count: transactions.length })}
             </Text>
           ) : null
         }
@@ -342,12 +344,12 @@ export function TransactionsScreen({ navigation }: any) {
           }]}>
             <Icon name="expense" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
-              {search || hasActiveFilters ? 'Nenhuma transação encontrada' : 'Sem transações neste mês'}
+              {search || hasActiveFilters ? t('transactions.noneFound') : t('transactions.noneThisMonth')}
             </Text>
             {(search || hasActiveFilters) && (
               <TouchableOpacity onPress={() => { setSearch(''); clearFilters(); }}>
                 <Text style={[typography.styles.labelLarge, { color: colors.primary, textAlign: 'center', marginTop: spacing.sm }]}>
-                  Limpar filtros
+                  {t('transactions.clearFilters')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -394,7 +396,7 @@ export function TransactionsScreen({ navigation }: any) {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
               <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                Ordenar por
+                {t('transactions.sortBy')}
               </Text>
               <CloseButton onPress={() => setShowSort(false)} />
             </View>
@@ -441,14 +443,14 @@ export function TransactionsScreen({ navigation }: any) {
                 style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}
                 numberOfLines={1}
               >
-                Filtros avançados
+                {t('transactions.advancedFilters')}
               </Text>
               <CloseButton onPress={() => setShowFilters(false)} />
             </View>
 
             {/* Categoria */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Categoria
+              {t('transactions.category')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
               <TouchableOpacity
@@ -460,7 +462,7 @@ export function TransactionsScreen({ navigation }: any) {
                 }]}
               >
                 <Text style={[typography.styles.labelMedium, { color: tempCat === undefined ? '#FFF' : colors.textSecondary }]}>
-                  Todas
+                  {t('common.all')}
                 </Text>
               </TouchableOpacity>
               {categories.slice(0, 12).map(c => (
@@ -487,7 +489,7 @@ export function TransactionsScreen({ navigation }: any) {
             {uniqueBanks.length > 0 && (
               <>
                 <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                  Banco
+                  {t('transactions.bank')}
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
                   <TouchableOpacity
@@ -498,7 +500,7 @@ export function TransactionsScreen({ navigation }: any) {
                     }]}
                   >
                     <Text style={[typography.styles.labelMedium, { color: !tempBank ? '#FFF' : colors.textSecondary }]}>
-                      Todos
+                      {t('transactions.allBanks')}
                     </Text>
                   </TouchableOpacity>
                   {uniqueBanks.map(bank => (
@@ -523,14 +525,14 @@ export function TransactionsScreen({ navigation }: any) {
 
             {/* Faixa de valor */}
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              Faixa de valor
+              {t('transactions.amountRange')}
             </Text>
             <View style={[styles.rangeRow, { marginBottom: spacing.xl }]}>
               <TextInput
                 value={tempMin}
                 onChangeText={setTempMin}
                 keyboardType="decimal-pad"
-                placeholder="Mínimo"
+                placeholder={t('transactions.min')}
                 placeholderTextColor={colors.placeholder}
                 style={[styles.rangeInput, {
                   backgroundColor: colors.inputBackground,
@@ -544,7 +546,7 @@ export function TransactionsScreen({ navigation }: any) {
                 value={tempMax}
                 onChangeText={setTempMax}
                 keyboardType="decimal-pad"
-                placeholder="Máximo"
+                placeholder={t('transactions.max')}
                 placeholderTextColor={colors.placeholder}
                 style={[styles.rangeInput, {
                   backgroundColor: colors.inputBackground,
@@ -565,7 +567,7 @@ export function TransactionsScreen({ navigation }: any) {
                 }]}
               >
                 <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
-                  Limpar
+                  {t('common.clear')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -576,7 +578,7 @@ export function TransactionsScreen({ navigation }: any) {
                 }]}
               >
                 <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  Aplicar
+                  {t('common.apply')}
                 </Text>
               </TouchableOpacity>
             </View>
