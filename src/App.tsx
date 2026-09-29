@@ -11,6 +11,7 @@ import { useCategoryStore }       from './store/categoryStore';
 import { useTransactionStore }    from './store/transactionStore';
 import { useBudgetStore }         from './store/budgetStore';
 import { useGoalStore }           from './store/goalStore';
+import { useReviewStore }         from './store/reviewStore';
 import { AppNavigator }           from './navigation/AppNavigator';
 import { Logger }                 from './services/LoggerService';
 import { Logo }                   from './components/Logo';
@@ -32,6 +33,7 @@ export default function App() {
   const loadMonthlyTotals = useTransactionStore(s => s.loadMonthlyTotals);
   const loadBudgets     = useBudgetStore(s => s.loadBudgets);
   const loadGoals       = useGoalStore(s => s.loadGoals);
+  const refreshReviewCounts = useReviewStore(s => s.refreshCounts);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +65,7 @@ export default function App() {
 
         Logger.info('App', 'Bootstrap concluído');
         NotificationManager.start();
+        void refreshReviewCounts();
         if (cancelled) return;
         setStatus('ready');
 

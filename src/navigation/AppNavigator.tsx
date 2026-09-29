@@ -24,6 +24,10 @@ import { GoalsScreen }           from '../modules/goals/screens/GoalsScreen';
 import { BudgetScreen }          from '../modules/budget/screens/BudgetScreen';
 import { InsightsScreen }        from '../modules/insights/screens/InsightsScreen';
 import { NotificationsScreen }   from '../modules/notifications/screens/NotificationsScreen';
+import { ReviewQueueScreen }     from '../modules/notifications/screens/ReviewQueueScreen';
+import { ReviewDetailScreen }    from '../modules/notifications/screens/ReviewDetailScreen';
+import { UnrecognizedInboxScreen } from '../modules/notifications/screens/UnrecognizedInboxScreen';
+import { TeachPatternScreen }    from '../modules/notifications/screens/TeachPatternScreen';
 import { SettingsScreen }        from '../modules/settings/screens/SettingsScreen';
 import { UpdateDialog }          from '../components/UpdateDialog';
 import { PreferencesScreen }     from '../modules/settings/screens/PreferencesScreen';
@@ -66,6 +70,10 @@ function MoreNavigator() {
       <MoreStack.Screen name="Budget"        component={BudgetScreen} />
       <MoreStack.Screen name="Insights"      component={InsightsScreen} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
+      <MoreStack.Screen name="ReviewQueue"   component={ReviewQueueScreen} />
+      <MoreStack.Screen name="ReviewDetail"  component={ReviewDetailScreen} />
+      <MoreStack.Screen name="UnrecognizedInbox" component={UnrecognizedInboxScreen} />
+      <MoreStack.Screen name="TeachPattern"  component={TeachPatternScreen} />
       <MoreStack.Screen name="Settings"      component={SettingsScreen} />
       <MoreStack.Screen name="Preferences"   component={PreferencesScreen} />
       <MoreStack.Screen name="Export"        component={ExportScreen} />

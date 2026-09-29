@@ -40,6 +40,10 @@ export type MoreStackParamList = {
   Budget:           undefined;
   Insights:         undefined;
   Notifications:    undefined;
+  ReviewQueue:      undefined;
+  ReviewDetail:     { reviewId: number };
+  UnrecognizedInbox: undefined;
+  TeachPattern:     { unrecognizedId: number };
   Settings:         undefined;
   Preferences:      undefined;
   Export:           undefined;

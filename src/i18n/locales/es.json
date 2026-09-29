@@ -463,6 +463,10 @@
     "insightsSubtitle": "Análisis automático de tus finanzas",
     "notifications": "Notificaciones",
     "notificationsSubtitle": "Alertas y avisos del sistema",
+    "reviewQueue": "Revisión de notificaciones",
+    "reviewQueueSubtitle": "Confirma antes de guardar en el extracto",
+    "unrecognizedInbox": "No reconocidas",
+    "unrecognizedInboxSubtitle": "Enseña patrones para que la app las reconozca",
     "categories": "Categorías",
     "categoriesSubtitle": "Gestiona y crea categorías",
     "settings": "Configuración",
@@ -658,7 +662,51 @@
   "notificationManager": {
     "budgetExceededTitle": "Presupuesto excedido",
     "budgetExceededMessage": "Superó el presupuesto de {{category}}: {{amount}}",
-    "categoryFallback": "categoría"
+    "categoryFallback": "categoría",
+    "reviewQueuedTitle": "Notificación para revisar",
+    "reviewQueuedMessage": "{{bank}}: {{description}}"
+  },
+  "reviewQueue": {
+    "title": "Revisión de notificaciones",
+    "detailTitle": "Revisar movimiento",
+    "empty": "Nada para revisar",
+    "emptyHint": "Cuando la app lea una notificación del banco, aparece aquí antes de ir al extracto.",
+    "rawNotification": "Notificación original",
+    "bankName": "Banco",
+    "accept": "Aceptar y guardar",
+    "ignore": "Ignorar",
+    "ignoreTitle": "¿Ignorar notificación?",
+    "ignoreMessage": "Este movimiento no se guardará en el extracto.",
+    "notFound": "Esta revisión ya no está disponible.",
+    "validationError": "Ingresa un monto y una descripción válidos.",
+    "saveError": "No se pudo guardar la revisión."
+  },
+  "unrecognizedInbox": {
+    "title": "No reconocidas",
+    "empty": "Bandeja vacía",
+    "emptyHint": "Las notificaciones que la app no pudo interpretar aparecen aquí.",
+    "noTitle": "(sin título)",
+    "noBody": "(sin texto)",
+    "teach": "Enseñar patrón",
+    "dismiss": "Descartar",
+    "dismissTitle": "¿Descartar notificación?",
+    "dismissMessage": "Se eliminará de la bandeja sin crear un patrón."
+  },
+  "teachPattern": {
+    "title": "Enseñar patrón",
+    "rawNotification": "Notificación original",
+    "snippet": "Texto a reconocer",
+    "snippetHint": "Texto que debe aparecer en la notificación (ej.: \"Pix enviado\").",
+    "regex": "Regex (opcional)",
+    "regexHint": "Si se completa, tiene prioridad sobre el fragmento.",
+    "regexPlaceholder": "ej.: pix\\s+enviado",
+    "save": "Guardar patrón",
+    "matchRequired": "Ingresa un fragmento o una regex.",
+    "invalidRegex": "La regex ingresada no es válida.",
+    "notFound": "Esta notificación ya no está disponible.",
+    "saved": "Patrón guardado. Notificaciones similares serán reconocidas.",
+    "savedWithReview": "Patrón guardado y movimiento enviado a la cola de revisión.",
+    "saveError": "No se pudo guardar el patrón."
   },
   "importService": {
     "unsupportedFormat": "Formato no reconocido. Use .ofx o .csv",
