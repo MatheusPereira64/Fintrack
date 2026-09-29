@@ -5,7 +5,7 @@ import {
   Modal, Alert, Platform, ScrollView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme }     from '../../../hooks/useTheme';
 import { useGoalStore } from '../../../store/goalStore';
@@ -45,6 +45,25 @@ function resolveGoalIcon(goal: Goal): AppIconName {
   return preset?.icon ?? 'goal';
 }
 
+function finiteAmount(value: number | null | undefined): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Largura de barra segura. "NaN%" derruba o layout nativo no Android. */
+function progressWidth(current: number, target: number): `${number}%` {
+  if (!(target > 0)) return '0%';
+  const pct = (current / target) * 100;
+  if (!Number.isFinite(pct)) return '0%';
+  return `${Math.min(100, Math.max(0, pct))}%`;
+}
+
+function safeFormatDate(value: string, style: 'short' | 'medium'): string {
+  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+  if (Number.isNaN(date.getTime())) return '';
+  return formatDate(date, style);
+}
+
 function toISODate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -63,12 +82,16 @@ const GoalCard = memo(function GoalCard({
 }: { goal: Goal; onDelete: (id: number) => void }) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const progress  = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
-  const remaining = goal.targetAmount - goal.currentAmount;
-  const iconName  = resolveGoalIcon(goal);
+  const target = finiteAmount(goal.targetAmount);
+  const current = finiteAmount(goal.currentAmount);
+  const progress = target > 0 ? (current / target) * 100 : 0;
+  const remaining = target - current;
+  const iconName = resolveGoalIcon(goal);
+  const barWidth = progressWidth(current, target);
+  const deadlineLabel = goal.deadline ? safeFormatDate(goal.deadline, 'short') : '';
 
   return (
-    <Animated.View entering={FadeInDown.duration(350)}>
+    <View>
       <TouchableOpacity
         onLongPress={() => {
           Alert.alert(
@@ -101,14 +124,14 @@ const GoalCard = memo(function GoalCard({
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={[typography.styles.titleSmall, { color: colors.text }]}>{goal.title}</Text>
-            {goal.deadline && (
+            {deadlineLabel ? (
               <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-                {t('goals.deadlineText', { date: formatDate(goal.deadline, 'short') })}
+                {t('goals.deadlineText', { date: deadlineLabel })}
               </Text>
-            )}
+            ) : null}
           </View>
           <Text style={[typography.styles.titleSmall, { color: goal.color }]}>
-            {Math.min(progress, 100).toFixed(0)}%
+            {Number.isFinite(progress) ? Math.min(progress, 100).toFixed(0) : '0'}%
           </Text>
         </View>
 
@@ -116,21 +139,21 @@ const GoalCard = memo(function GoalCard({
           backgroundColor: colors.surfaceVariant, marginTop: spacing.sm,
         }]}>
           <View style={[styles.progressFill, {
-            width:           `${Math.min(progress, 100)}%`,
-            backgroundColor: goal.color,
+            width:           barWidth,
+            backgroundColor: goal.color || '#7C3AED',
           }]} />
         </View>
 
         <View style={styles.goalFooter}>
           <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-            {formatCurrency(goal.currentAmount)} {t('goals.of')} {formatCurrency(goal.targetAmount)}
+            {formatCurrency(current)} {t('goals.of')} {formatCurrency(target)}
           </Text>
           <Text style={[typography.styles.caption, { color: colors.textTertiary }]}>
             {t('goals.remaining', { amount: formatCurrency(remaining) })}
           </Text>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 });
 
@@ -156,7 +179,9 @@ export function GoalsScreen({ navigation }: any) {
   const [color,    setColor]    = useState(COLORS[0]);
   const [saving,   setSaving]   = useState(false);
 
-  useEffect(() => { loadGoals(); }, [loadGoals]);
+  useEffect(() => {
+    loadGoals().catch(() => {});
+  }, [loadGoals]);
 
   const getDefaultTitle = (key: GoalCategory) =>
     key === 'custom' ? '' : t(`goals.defaultTitles.${key}`);
@@ -250,13 +275,13 @@ export function GoalsScreen({ navigation }: any) {
             <View style={{ flex: 1 }}>
               <View style={[styles.progressTrack, { backgroundColor: colors.surfaceVariant }]}>
                 <View style={[styles.progressFill, {
-                  width: `${Math.min(totalProgress, 100)}%`,
+                  width: progressWidth(Number.isFinite(totalProgress) ? totalProgress : 0, 100),
                   backgroundColor: colors.primary,
                 }]} />
               </View>
             </View>
             <Text style={[typography.styles.titleSmall, { color: colors.primary }]}>
-              {totalProgress.toFixed(0)}%
+              {(Number.isFinite(totalProgress) ? totalProgress : 0).toFixed(0)}%
             </Text>
           </View>
         </View>
@@ -266,7 +291,6 @@ export function GoalsScreen({ navigation }: any) {
         data={goals}
         keyExtractor={g => String(g.id)}
         contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
-        removeClippedSubviews
         refreshing={isLoading}
         onRefresh={loadGoals}
         ListEmptyComponent={
@@ -288,8 +312,8 @@ export function GoalsScreen({ navigation }: any) {
         )}
       />
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => { setShowModal(false); resetForm(); }}>
+        {showModal ? <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
@@ -393,7 +417,7 @@ export function GoalsScreen({ navigation }: any) {
                   marginLeft: spacing.sm,
                   flex: 1,
                 }]}>
-                  {deadline ? formatDate(deadline, 'medium') : t('goals.deadlinePlaceholder')}
+                  {deadline ? safeFormatDate(deadline, 'medium') : t('goals.deadlinePlaceholder')}
                 </Text>
                 {deadline ? (
                   <TouchableOpacity
@@ -410,7 +434,7 @@ export function GoalsScreen({ navigation }: any) {
                   <DateTimePicker
                     value={pickerDate}
                     mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
                     minimumDate={new Date()}
                     onChange={handleDateChange}
                     locale="pt-BR"
@@ -472,7 +496,7 @@ export function GoalsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
+        </View> : null}
       </Modal>
     </View>
   );

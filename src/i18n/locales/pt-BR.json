@@ -91,7 +91,11 @@
     "planSaved": "Plano salvo com sucesso!",
     "planSaveError": "Não foi possível salvar o plano.",
     "planNameRequired": "Digite um nome para o plano.",
-    "defaultPlanName": "Padrão"
+    "defaultPlanName": "Padrão",
+    "dashboardTitle": "Painel do plano",
+    "editPlan": "Editar planejamento",
+    "projectedBalance": "Saldo projetado",
+    "startingFrom": "Partindo de {{amount}}"
   },
   "goals": {
     "title": "Metas",

@@ -50,6 +50,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [viewing, setViewing] = useState(false);
 
   const loadSavedPlans = useCallback(async () => {
     if (!account) return;
@@ -67,8 +68,24 @@ export function AccountPlanScreen({ route, navigation }: any) {
     (async () => {
       // Migrate legacy plan if exists
       await AccountNamedPlanService.migrateLegacyPlan(account.id, t('accountPlan.defaultPlanName'));
-      await loadSavedPlans();
-      
+      const plans = await AccountNamedPlanService.getPlansByAccount(account.id);
+      if (cancelled) return;
+      setSavedPlans(plans);
+
+      if (plans.length > 0) {
+        const latest = [...plans].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        setIncome(String(latest.income).replace('.', ','));
+        setExpense(String(latest.expense).replace('.', ','));
+        setYieldRate(String(latest.yieldRate).replace('.', ','));
+        const h = clampHorizon(latest.months);
+        setMonths(h);
+        setCustomHorizon((HORIZON_PRESETS as readonly number[]).includes(h) ? '' : String(h));
+        setCurrentPlanId(latest.id);
+        setViewing(true);
+        setHydrated(true);
+        return;
+      }
+
       // Try to load from legacy storage for current session
       const raw = await AsyncStorage.getItem(STORAGE_KEY(account.id));
       if (cancelled) return;
@@ -139,7 +156,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
       await loadSavedPlans();
       setShowSaveModal(false);
       setPlanName('');
-      Alert.alert(t('common.success'), t('accountPlan.planSaved'));
+      setViewing(true);
     } catch {
       Alert.alert(t('common.error'), t('accountPlan.planSaveError'));
     } finally {
@@ -159,6 +176,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
       setCustomHorizon('');
     }
     setShowPlansModal(false);
+    setViewing(true);
   }, []);
 
   const handleDeletePlan = useCallback(async (plan: AccountNamedPlan) => {
@@ -189,6 +207,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
     setYieldRate(account?.monthlyYieldRate != null ? String(account.monthlyYieldRate).replace('.', ',') : '0,5');
     setMonths(6);
     setCustomHorizon('');
+    setViewing(false);
   }, [account]);
 
   useEffect(() => {
@@ -229,10 +248,26 @@ export function AccountPlanScreen({ route, navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
-        title={t('accountPlan.title')}
+        title={viewing ? t('accountPlan.dashboardTitle') : t('accountPlan.title')}
         subtitle={account.name}
         onClose={() => navigation.goBack()}
-        actions={[
+        actions={viewing ? [
+          {
+            icon: 'edit',
+            onPress: () => setViewing(false),
+            color: colors.primary,
+          },
+          {
+            icon: 'goal',
+            onPress: () => setShowPlansModal(true),
+            color: colors.primary,
+          },
+        ] : [
+          ...(currentPlanId ? [{
+            icon: 'chart-line' as const,
+            onPress: () => setViewing(true),
+            color: colors.primary,
+          }] : []),
           {
             icon: 'goal',
             onPress: () => setShowPlansModal(true),
@@ -250,6 +285,8 @@ export function AccountPlanScreen({ route, navigation }: any) {
         contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}
         keyboardShouldPersistTaps="handled"
       >
+        {!viewing && (
+        <>
         <View style={[styles.card, {
           backgroundColor: colors.card,
           borderRadius: borderRadius.xl,
@@ -379,6 +416,36 @@ export function AccountPlanScreen({ route, navigation }: any) {
             marginBottom: spacing.xl,
           }, typography.styles.bodyMedium]}
         />
+        </>
+        )}
+
+        {viewing && (
+        <>
+        <View style={[styles.card, {
+          backgroundColor: colors.card,
+          borderRadius: borderRadius.xl,
+          padding: spacing.base,
+          marginBottom: spacing.base,
+        }]}>
+          <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+            {savedPlans.find(p => p.id === currentPlanId)?.name || t('accountPlan.currentPlan')}
+          </Text>
+          <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.sm }]}>
+            {t('accountPlan.projectedBalance')}
+          </Text>
+          <Text style={[typography.styles.currency, { color: colors.text, marginTop: 2 }]}>
+            {formatCurrency(result.finalBalance)}
+          </Text>
+          <Text style={[typography.styles.labelLarge, {
+            color: result.profitOrLoss >= 0 ? colors.success : colors.error,
+            marginTop: spacing.sm,
+          }]}>
+            {result.profitOrLoss >= 0 ? t('accountPlan.profit') : t('accountPlan.loss')}: {formatCurrency(Math.abs(result.profitOrLoss))}
+          </Text>
+          <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.xs }]}>
+            {t('accountPlan.startingFrom', { amount: formatCurrency(baseBalance) })}
+          </Text>
+        </View>
 
         <View style={[styles.card, {
           backgroundColor: colors.card,
@@ -444,6 +511,22 @@ export function AccountPlanScreen({ route, navigation }: any) {
             </Text>
           </View>
         ))}
+        <TouchableOpacity
+          onPress={() => setViewing(false)}
+          style={{
+            backgroundColor: colors.surfaceVariant,
+            borderRadius: borderRadius.full,
+            padding: spacing.md,
+            marginTop: spacing.base,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={[typography.styles.labelLarge, { color: colors.text }]}>
+            {t('accountPlan.editPlan')}
+          </Text>
+        </TouchableOpacity>
+        </>
+        )}
       </ScrollView>
 
       {/* Modal para salvar/atualizar plano */}

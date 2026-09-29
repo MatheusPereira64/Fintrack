@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { Goal, InsertGoal } from '../models/types';
 import { GoalRepository } from '../database/repositories/GoalRepository';
 
+function finiteAmount(value: number | null | undefined): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 interface GoalState {
   goals:     Goal[];
   isLoading: boolean;
@@ -20,8 +25,13 @@ export const useGoalStore = create<GoalState>((set, get) => ({
 
   loadGoals: async () => {
     set({ isLoading: true });
-    const goals = await GoalRepository.findAll();
-    set({ goals, isLoading: false });
+    try {
+      const goals = await GoalRepository.findAll();
+      set({ goals, isLoading: false });
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
   },
 
   addGoal: async (data) => {
@@ -53,8 +63,10 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   getTotalProgress: () => {
     const { goals } = get();
     if (goals.length === 0) return 0;
-    const total   = goals.reduce((s, g) => s + g.targetAmount, 0);
-    const current = goals.reduce((s, g) => s + g.currentAmount, 0);
-    return total > 0 ? (current / total) * 100 : 0;
+    const total   = goals.reduce((s, g) => s + finiteAmount(g.targetAmount), 0);
+    const current = goals.reduce((s, g) => s + finiteAmount(g.currentAmount), 0);
+    if (!(total > 0)) return 0;
+    const pct = (current / total) * 100;
+    return Number.isFinite(pct) ? pct : 0;
   },
 }));

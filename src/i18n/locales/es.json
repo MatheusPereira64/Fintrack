@@ -91,7 +91,11 @@
     "planSaved": "¡Plan guardado con éxito!",
     "planSaveError": "No se pudo guardar el plan.",
     "planNameRequired": "Ingrese un nombre para el plan.",
-    "defaultPlanName": "Predeterminado"
+    "defaultPlanName": "Predeterminado",
+    "dashboardTitle": "Panel del plan",
+    "editPlan": "Editar planificación",
+    "projectedBalance": "Saldo proyectado",
+    "startingFrom": "Partiendo de {{amount}}"
   },
   "goals": {
     "title": "Metas",

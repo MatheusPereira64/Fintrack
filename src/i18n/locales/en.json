@@ -91,7 +91,11 @@
     "planSaved": "Plan saved successfully!",
     "planSaveError": "Could not save the plan.",
     "planNameRequired": "Enter a name for the plan.",
-    "defaultPlanName": "Default"
+    "defaultPlanName": "Default",
+    "dashboardTitle": "Plan dashboard",
+    "editPlan": "Edit plan",
+    "projectedBalance": "Projected balance",
+    "startingFrom": "Starting from {{amount}}"
   },
   "goals": {
     "title": "Goals",
