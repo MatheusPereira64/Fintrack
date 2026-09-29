@@ -4,6 +4,10 @@ import { InterParser }     from '../parsers/InterParser';
 import { ItauParser }      from '../parsers/ItauParser';
 import { BradescoParser }  from '../parsers/BradescoParser';
 import { BBParser }        from '../parsers/BBParser';
+import { SantanderParser } from '../parsers/SantanderParser';
+import { C6Parser }        from '../parsers/C6Parser';
+import { PicPayParser }    from '../parsers/PicPayParser';
+import { MercadoPagoParser } from '../parsers/MercadoPagoParser';
 import { GenericBankParser } from '../parsers/GenericBankParser';
 
 // Mapeamento de packageName → configuração do banco
@@ -90,25 +94,25 @@ export const BANK_REGISTRY: Record<string, BankConfig> = {
   'com.santander.app': {
     name: 'Santander',
     packageNames: ['com.santander.app', 'com.santander.way'],
-    parser: GenericBankParser,
+    parser: SantanderParser,
     primaryColor: '#EC0000',
   },
   'com.santander.way': {
     name: 'Santander',
     packageNames: ['com.santander.app', 'com.santander.way'],
-    parser: GenericBankParser,
+    parser: SantanderParser,
     primaryColor: '#EC0000',
   },
   'br.com.c6bank.app': {
     name: 'C6 Bank',
     packageNames: ['br.com.c6bank.app', 'com.c6bank.app'],
-    parser: GenericBankParser,
+    parser: C6Parser,
     primaryColor: '#1C1C1C',
   },
   'com.c6bank.app': {
     name: 'C6 Bank',
     packageNames: ['br.com.c6bank.app', 'com.c6bank.app'],
-    parser: GenericBankParser,
+    parser: C6Parser,
     primaryColor: '#1C1C1C',
   },
   'br.gov.caixa.internet.smartphones': {
@@ -132,13 +136,13 @@ export const BANK_REGISTRY: Record<string, BankConfig> = {
   'com.mercadopago.wallet': {
     name: 'Mercado Pago',
     packageNames: ['com.mercadopago.wallet'],
-    parser: GenericBankParser,
+    parser: MercadoPagoParser,
     primaryColor: '#009EE3',
   },
   'com.picpay': {
     name: 'PicPay',
     packageNames: ['com.picpay'],
-    parser: GenericBankParser,
+    parser: PicPayParser,
     primaryColor: '#21C25E',
   },
   'br.com.bradesco.next': {
