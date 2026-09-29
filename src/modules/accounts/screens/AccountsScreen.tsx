@@ -41,11 +41,13 @@ const DEFAULT_SAVINGS_YIELD = '0,5';
 
 type FormState = {
   name: string; type: AccountType; balance: string; limit: string;
+  usedLimit: string; invoiceAmount: string; closingDay: string; dueDay: string;
   bankName: string; color: string; informedBalance: string; yieldRate: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: '', type: 'checking', balance: '', limit: '',
+  usedLimit: '', invoiceAmount: '', closingDay: '', dueDay: '',
   bankName: '', color: COLORS[0], informedBalance: '', yieldRate: '',
 };
 
@@ -92,6 +94,10 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       balance:         String(account.balance).replace('.', ','),
       informedBalance: String(account.informedBalance ?? account.balance).replace('.', ','),
       limit:           account.limit != null ? String(account.limit).replace('.', ',') : '',
+      usedLimit:       account.usedLimit != null ? String(account.usedLimit).replace('.', ',') : '',
+      invoiceAmount:   account.invoiceAmount != null ? String(account.invoiceAmount).replace('.', ',') : '',
+      closingDay:      account.closingDay != null ? String(account.closingDay) : '',
+      dueDay:          account.dueDay != null ? String(account.dueDay) : '',
       bankName:        account.bankName ?? '',
       color:           account.color,
       yieldRate:       account.monthlyYieldRate != null
@@ -129,6 +135,19 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
     const balanceNum   = parseAmount(form.balance || form.informedBalance);
     const informedNum  = parseAmount(form.informedBalance || form.balance);
     const limitNum     = form.limit ? parseAmount(form.limit) : undefined;
+    const isCredit     = form.type === 'credit_card';
+    const usedLimitNum = isCredit && form.usedLimit.trim()
+      ? parseAmount(form.usedLimit)
+      : (isCredit ? null : undefined);
+    const invoiceNum   = isCredit && form.invoiceAmount.trim()
+      ? parseAmount(form.invoiceAmount)
+      : (isCredit ? null : undefined);
+    const closingDayNum = isCredit && form.closingDay.trim()
+      ? Math.min(31, Math.max(1, parseInt(form.closingDay, 10) || 0)) || null
+      : (isCredit ? null : undefined);
+    const dueDayNum = isCredit && form.dueDay.trim()
+      ? Math.min(31, Math.max(1, parseInt(form.dueDay, 10) || 0)) || null
+      : (isCredit ? null : undefined);
     const supportsYield = accountSupportsYield(form.type);
     const yieldNum = supportsYield && form.yieldRate.trim()
       ? parseAmount(form.yieldRate)
@@ -143,6 +162,10 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           bankName:         form.bankName.trim() || undefined,
           color:            form.color,
           limit:            limitNum,
+          usedLimit:        isCredit ? usedLimitNum : null,
+          invoiceAmount:    isCredit ? invoiceNum : null,
+          closingDay:       isCredit ? closingDayNum : null,
+          dueDay:           isCredit ? dueDayNum : null,
           informedBalance:  informedNum,
           monthlyYieldRate: supportsYield ? (yieldNum ?? null) : null,
         });
@@ -153,6 +176,10 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
           balance:          balanceNum,
           informedBalance:  informedNum,
           limit:            limitNum,
+          usedLimit:        isCredit ? usedLimitNum : undefined,
+          invoiceAmount:    isCredit ? invoiceNum : undefined,
+          closingDay:       isCredit ? closingDayNum : undefined,
+          dueDay:           isCredit ? dueDayNum : undefined,
           color:            form.color,
           bankName:         form.bankName.trim() || undefined,
           monthlyYieldRate: supportsYield ? yieldNum : undefined,
@@ -295,24 +322,116 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       )}
 
       {form.type === 'credit_card' && (
-        <View style={{ marginBottom: spacing.md }}>
-          <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-            {t('accounts.creditLimit')}
+        <>
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+              {t('accounts.creditLimit')}
+            </Text>
+            <TextInput
+              value={form.limit}
+              onChangeText={v => setForm(prev => ({ ...prev, limit: v }))}
+              placeholder={t('common.amountPlaceholder')}
+              placeholderTextColor={colors.placeholder}
+              keyboardType="decimal-pad"
+              style={[{
+                backgroundColor: colors.inputBackground,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                color: colors.inputText,
+              }, typography.styles.bodyMedium]}
+            />
+          </View>
+
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+              {t('accounts.usedLimit')}
+            </Text>
+            <TextInput
+              value={form.usedLimit}
+              onChangeText={v => setForm(prev => ({ ...prev, usedLimit: v }))}
+              placeholder={t('accounts.usedLimitPlaceholder')}
+              placeholderTextColor={colors.placeholder}
+              keyboardType="decimal-pad"
+              style={[{
+                backgroundColor: colors.inputBackground,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                color: colors.inputText,
+              }, typography.styles.bodyMedium]}
+            />
+            <Text style={[typography.styles.caption, {
+              color: colors.textTertiary,
+              marginTop: spacing.xs,
+            }]}>
+              {t('accounts.usedLimitHint')}
+            </Text>
+          </View>
+
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+              {t('accounts.invoiceAmount')}
+            </Text>
+            <TextInput
+              value={form.invoiceAmount}
+              onChangeText={v => setForm(prev => ({ ...prev, invoiceAmount: v }))}
+              placeholder={t('accounts.invoiceAmountPlaceholder')}
+              placeholderTextColor={colors.placeholder}
+              keyboardType="decimal-pad"
+              style={[{
+                backgroundColor: colors.inputBackground,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                color: colors.inputText,
+              }, typography.styles.bodyMedium]}
+            />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                {t('accounts.closingDay')}
+              </Text>
+              <TextInput
+                value={form.closingDay}
+                onChangeText={v => setForm(prev => ({ ...prev, closingDay: v.replace(/[^\d]/g, '').slice(0, 2) }))}
+                placeholder={t('accounts.dayPlaceholder')}
+                placeholderTextColor={colors.placeholder}
+                keyboardType="number-pad"
+                style={[{
+                  backgroundColor: colors.inputBackground,
+                  borderRadius: borderRadius.lg,
+                  padding: spacing.md,
+                  color: colors.inputText,
+                }, typography.styles.bodyMedium]}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                {t('accounts.dueDay')}
+              </Text>
+              <TextInput
+                value={form.dueDay}
+                onChangeText={v => setForm(prev => ({ ...prev, dueDay: v.replace(/[^\d]/g, '').slice(0, 2) }))}
+                placeholder={t('accounts.dayPlaceholder')}
+                placeholderTextColor={colors.placeholder}
+                keyboardType="number-pad"
+                style={[{
+                  backgroundColor: colors.inputBackground,
+                  borderRadius: borderRadius.lg,
+                  padding: spacing.md,
+                  color: colors.inputText,
+                }, typography.styles.bodyMedium]}
+              />
+            </View>
+          </View>
+          <Text style={[typography.styles.caption, {
+            color: colors.textTertiary,
+            marginTop: -spacing.sm,
+            marginBottom: spacing.md,
+          }]}>
+            {t('accounts.cycleHint')}
           </Text>
-          <TextInput
-            value={form.limit}
-            onChangeText={v => setForm(prev => ({ ...prev, limit: v }))}
-            placeholder={t('common.amountPlaceholder')}
-            placeholderTextColor={colors.placeholder}
-            keyboardType="decimal-pad"
-            style={[{
-              backgroundColor: colors.inputBackground,
-              borderRadius: borderRadius.lg,
-              padding: spacing.md,
-              color: colors.inputText,
-            }, typography.styles.bodyMedium]}
-          />
-        </View>
+        </>
       )}
 
       <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -487,6 +606,7 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
             onPress={openEdit}
             onLongPress={a => handleDelete(a.id)}
             onPlan={a => navigation?.navigate('AccountPlan', { accountId: a.id })}
+            onCredit={a => navigation?.navigate('AccountCredit', { accountId: a.id })}
           />
         )}
       />

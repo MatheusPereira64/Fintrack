@@ -10,6 +10,11 @@ import {
   accountSupportsYield,
   estimateMonthlyYield,
 } from '../services/AccountPlanService';
+import {
+  getAccountInvoiceCycle,
+  resolveLimitUsageRatio,
+  resolveUsedLimit,
+} from '../services/CreditCardCycleService';
 import { Icon } from './Icon';
 
 interface AccountCardProps {
@@ -17,6 +22,7 @@ interface AccountCardProps {
   onPress?:     (a: Account) => void;
   onLongPress?: (a: Account) => void;
   onPlan?:      (a: Account) => void;
+  onCredit?:    (a: Account) => void;
   index?:       number;
 }
 
@@ -29,7 +35,7 @@ const TYPE_I18N_KEYS: Record<string, string> = {
 };
 
 export const AccountCard = memo(function AccountCard({
-  account, onPress, onLongPress, onPlan, index = 0,
+  account, onPress, onLongPress, onPlan, onCredit, index = 0,
 }: AccountCardProps) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
@@ -38,11 +44,14 @@ export const AccountCard = memo(function AccountCard({
   const informed        = account.informedBalance ?? account.balance;
   const calculated      = account.balance;
   const diverges        = hasBalanceDivergence(account);
-  const limitUsed       = isCredit && account.limit ? Math.abs(account.balance) / account.limit : 0;
+  const usedLimit       = isCredit ? resolveUsedLimit(account) : 0;
+  const limitUsed       = isCredit ? resolveLimitUsageRatio(account) : 0;
   const limitColor      = limitUsed > 0.85 ? colors.error : limitUsed > 0.65 ? colors.warning : colors.success;
   const yieldRate       = account.monthlyYieldRate ?? 0;
   const showYield       = accountSupportsYield(account.type) && yieldRate > 0;
   const monthlyYield    = showYield ? estimateMonthlyYield(informed, yieldRate) : 0;
+  const cycle           = isCredit ? getAccountInvoiceCycle(account) : null;
+  const invoiceAmount   = account.invoiceAmount;
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(350)}>
@@ -122,6 +131,33 @@ export const AccountCard = memo(function AccountCard({
           </Text>
         </View>
 
+        {isCredit && invoiceAmount != null && (
+          <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
+            <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
+              {t('accountCard.currentInvoice')}
+            </Text>
+            <Text style={[typography.styles.labelLarge, { color: '#FFF', fontWeight: '600' }]}>
+              {formatCurrency(invoiceAmount)}
+            </Text>
+          </View>
+        )}
+
+        {isCredit && cycle && cycle.status !== 'unknown' && (
+          <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
+            <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
+              {t('accountCard.cycleLabel')}
+            </Text>
+            <Text style={[typography.styles.labelLarge, {
+              color: cycle.status === 'overdue' ? '#FECACA'
+                : cycle.status === 'closed' ? '#FDE68A'
+                : '#BBF7D0',
+              fontWeight: '600',
+            }]}>
+              {t(`accountCard.cycle.${cycle.status}`)}
+            </Text>
+          </View>
+        )}
+
         {showYield && (
           <View style={[styles.informedRow, { marginTop: spacing.xs }]}>
             <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.75)' }]}>
@@ -136,7 +172,7 @@ export const AccountCard = memo(function AccountCard({
           </View>
         )}
 
-        {onPlan && (
+        {onPlan && accountSupportsYield(account.type) && (
           <TouchableOpacity
             onPress={() => onPlan(account)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -153,7 +189,24 @@ export const AccountCard = memo(function AccountCard({
           </TouchableOpacity>
         )}
 
-        {isCredit && account.limit && (
+        {isCredit && onCredit && (
+          <TouchableOpacity
+            onPress={() => onCredit(account)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={[styles.planBtn, {
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              borderRadius: borderRadius.full,
+              marginTop: spacing.md,
+            }]}
+          >
+            <Icon name="credit-card" size={14} color="#FFF" />
+            <Text style={[typography.styles.labelSmall, { color: '#FFF', marginLeft: 6 }]}>
+              {t('accountCard.invoiceAndInstallments')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {isCredit && account.limit != null && account.limit > 0 && (
           <View style={{ marginTop: spacing.sm }}>
             <View style={[styles.limitBar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <View style={[
@@ -163,10 +216,13 @@ export const AccountCard = memo(function AccountCard({
             </View>
             <View style={styles.limitRow}>
               <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.7)' }]}>
-                {t('accountCard.limitUsed')}
+                {t('accountCard.limitUsedOf', {
+                  used: formatCurrency(usedLimit),
+                  total: formatCurrency(account.limit),
+                })}
               </Text>
               <Text style={[typography.styles.caption, { color: 'rgba(255,255,255,0.9)' }]}>
-                {formatCurrency(account.limit)}
+                {`${Math.round(limitUsed * 100)}%`}
               </Text>
             </View>
           </View>

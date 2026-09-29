@@ -42,6 +42,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
   if (current < 3) { await migration003(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (3)'); }
   if (current < 4) { await migration004(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (4)'); }
   if (current < 5) { await migration005(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (5)'); }
+  if (current < 6) { await migration006(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (6)'); }
 }
 
 // ─── Migration 001 — Schema inicial ───────────────────────────────────────────
@@ -251,4 +252,39 @@ async function migration005(db: SQLiteDatabase): Promise<void> {
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_date_id ON transactions(date DESC, id DESC)`);
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_recurring ON transactions(is_recurring, account_id)`);
   await db.executeSql(`CREATE INDEX IF NOT EXISTS idx_tx_source ON transactions(source_notification)`);
+}
+
+// ─── Migration 006 — Cartão: fatura, ciclo e parcelas ─────────────────────────
+
+async function migration006(db: SQLiteDatabase): Promise<void> {
+  const accountCols = [
+    'used_limit REAL',
+    'invoice_amount REAL',
+    'closing_day INTEGER',
+    'due_day INTEGER',
+  ];
+  for (const col of accountCols) {
+    try {
+      await db.executeSql(`ALTER TABLE accounts ADD COLUMN ${col}`);
+    } catch {
+      // coluna já existe
+    }
+  }
+
+  const txCols = [
+    'installment_current INTEGER',
+    'installment_total INTEGER',
+  ];
+  for (const col of txCols) {
+    try {
+      await db.executeSql(`ALTER TABLE transactions ADD COLUMN ${col}`);
+    } catch {
+      // coluna já existe
+    }
+  }
+
+  await db.executeSql(
+    `CREATE INDEX IF NOT EXISTS idx_tx_installments
+     ON transactions(account_id, installment_total, installment_current)`,
+  );
 }

@@ -11,7 +11,16 @@ export interface Account {
   informedBalance?: number;
   /** Taxa de rendimento mensal em % a.m. (ex.: 0.5 = 0,5%). Usado em poupança/investimentos. */
   monthlyYieldRate?: number | null;
+  /** Limite total do cartão (manual). */
   limit?: number;
+  /** Limite utilizado informado (manual; tem prioridade sobre abs(balance)). */
+  usedLimit?: number | null;
+  /** Valor da fatura atual (manual). */
+  invoiceAmount?: number | null;
+  /** Dia do mês de fechamento da fatura (1–31). */
+  closingDay?: number | null;
+  /** Dia do mês de vencimento da fatura (1–31). */
+  dueDay?: number | null;
   color: string;
   bankName?: string;
   createdAt: string;
@@ -25,6 +34,10 @@ export interface InsertAccount {
   informedBalance?: number;
   monthlyYieldRate?: number | null;
   limit?: number;
+  usedLimit?: number | null;
+  invoiceAmount?: number | null;
+  closingDay?: number | null;
+  dueDay?: number | null;
   color: string;
   bankName?: string;
 }
@@ -84,6 +97,10 @@ export interface Transaction {
   description: string;
   type: TransactionType;
   isRecurring: boolean;
+  /** Parcela atual (ex.: 3 de 12 → 3). */
+  installmentCurrent?: number | null;
+  /** Total de parcelas (ex.: 3 de 12 → 12). */
+  installmentTotal?: number | null;
   tags?: string[];
   bankName?: string;
   sourceNotification?: string;
@@ -99,6 +116,8 @@ export interface InsertTransaction {
   description: string;
   type: TransactionType;
   isRecurring?: boolean;
+  installmentCurrent?: number | null;
+  installmentTotal?: number | null;
   tags?: string[];
   bankName?: string;
   sourceNotification?: string;
@@ -254,6 +273,8 @@ export interface ParsedTransaction {
   bankName: string;
   rawTitle: string;
   rawBody: string;
+  installmentCurrent?: number;
+  installmentTotal?: number;
 }
 
 export interface BankParser {

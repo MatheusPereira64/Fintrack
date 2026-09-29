@@ -43,7 +43,19 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   const [categoryId,  setCategoryId]  = useState<number | undefined>(existing?.categoryId);
   const [date] = useState(existing?.date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [isRecurring, setIsRecurring] = useState(existing?.isRecurring ?? false);
+  const [installmentCurrent, setInstallmentCurrent] = useState(
+    existing?.installmentCurrent != null ? String(existing.installmentCurrent) : '',
+  );
+  const [installmentTotal, setInstallmentTotal] = useState(
+    existing?.installmentTotal != null ? String(existing.installmentTotal) : '',
+  );
   const [isSaving,    setIsSaving]    = useState(false);
+
+  const selectedAccount = useMemo(
+    () => accounts.find(a => a.id === accountId),
+    [accounts, accountId],
+  );
+  const showInstallments = selectedAccount?.type === 'credit_card';
 
   const parsedAmount = useMemo(() => {
     const cleaned = amount.replace(/[^\d,]/g, '').replace(',', '.');
@@ -60,11 +72,27 @@ export function AddTransactionScreen({ navigation, route }: Props) {
     setIsSaving(true);
     try {
       const finalAmount = type === 'expense' ? -parsedAmount : parsedAmount;
+      let instCurrent: number | null = null;
+      let instTotal: number | null = null;
+      if (showInstallments) {
+        const c = parseInt(installmentCurrent, 10);
+        const tot = parseInt(installmentTotal, 10);
+        if (Number.isInteger(c) && Number.isInteger(tot) && c >= 1 && tot >= 2 && c <= tot) {
+          instCurrent = c;
+          instTotal = tot;
+        } else if (installmentCurrent.trim() || installmentTotal.trim()) {
+          Alert.alert(t('common.warning'), t('addTransaction.installmentInvalid'));
+          setIsSaving(false);
+          return;
+        }
+      }
 
       if (existing) {
         await updateTransaction(existing.id, {
           amount: finalAmount, description: description.trim(),
           categoryId, date, type, isRecurring,
+          installmentCurrent: showInstallments ? instCurrent : null,
+          installmentTotal: showInstallments ? instTotal : null,
         });
       } else {
         await addTransaction({
@@ -75,6 +103,8 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           type,
           date,
           isRecurring,
+          installmentCurrent: showInstallments ? instCurrent : undefined,
+          installmentTotal: showInstallments ? instTotal : undefined,
         });
       }
       navigation.goBack();
@@ -83,7 +113,11 @@ export function AddTransactionScreen({ navigation, route }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [existing, isValid, parsedAmount, type, description, categoryId, date, accountId, isRecurring, addTransaction, updateTransaction, navigation, t]);
+  }, [
+    existing, isValid, parsedAmount, type, description, categoryId, date, accountId,
+    isRecurring, showInstallments, installmentCurrent, installmentTotal,
+    addTransaction, updateTransaction, navigation, t,
+  ]);
 
   const filteredCategories = useMemo(() =>
     categories.filter(c => c.id > 0),
@@ -293,6 +327,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
               padding: spacing.base,
               borderWidth: 1,
               borderColor: isRecurring ? colors.primary : colors.borderLight,
+              marginBottom: showInstallments ? spacing.xl : 0,
             }]}>
               <View style={{ flex: 1, marginRight: spacing.md }}>
                 <Text style={[typography.styles.bodyLarge, { color: colors.text }]}>
@@ -310,6 +345,57 @@ export function AddTransactionScreen({ navigation, route }: Props) {
               />
             </View>
           </Animated.View>
+
+          {showInstallments && (
+            <Animated.View entering={FadeInDown.delay(350)}>
+              <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+                {t('addTransaction.installments')}
+              </Text>
+              <Text style={[typography.styles.caption, {
+                color: colors.textTertiary,
+                marginBottom: spacing.sm,
+              }]}>
+                {t('addTransaction.installmentsHint')}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                <TextInput
+                  value={installmentCurrent}
+                  onChangeText={v => setInstallmentCurrent(v.replace(/[^\d]/g, '').slice(0, 2))}
+                  placeholder={t('addTransaction.installmentCurrent')}
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="number-pad"
+                  style={[{
+                    flex: 1,
+                    backgroundColor: colors.inputBackground,
+                    borderRadius: borderRadius.lg,
+                    padding: spacing.md,
+                    color: colors.inputText,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }, typography.styles.bodyLarge]}
+                />
+                <Text style={[typography.styles.bodyLarge, { color: colors.textSecondary }]}>
+                  {t('addTransaction.installmentOf')}
+                </Text>
+                <TextInput
+                  value={installmentTotal}
+                  onChangeText={v => setInstallmentTotal(v.replace(/[^\d]/g, '').slice(0, 2))}
+                  placeholder={t('addTransaction.installmentTotal')}
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="number-pad"
+                  style={[{
+                    flex: 1,
+                    backgroundColor: colors.inputBackground,
+                    borderRadius: borderRadius.lg,
+                    padding: spacing.md,
+                    color: colors.inputText,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }, typography.styles.bodyLarge]}
+                />
+              </View>
+            </Animated.View>
+          )}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
