@@ -6,11 +6,13 @@ import { NativeModules, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { Logger } from './LoggerService';
 import {
+  classifyUpdateKind,
   isNewerVersion,
   parseVersionCodeFromBody,
   parseVersionTag,
+  type UpdateKind,
 } from '../utils/version';
-import { useUpdateUiStore } from '../store/updateUiStore';
+import { useUpdateUiStore, type UpdateDialogPayload } from '../store/updateUiStore';
 import i18n from '../i18n/config';
 
 const { UpdateModule } = NativeModules;
@@ -94,6 +96,35 @@ function mapRelease(data: GhRelease): RemoteRelease {
     apkUrl: apk?.browser_download_url ?? null,
     apkName: apk?.name ?? null,
     publishedAt: data.published_at,
+  };
+}
+
+/** Monta campos de versão do diálogo conforme marketing vs patch. */
+function versionUiFields(
+  local: AppVersionInfo,
+  remote: RemoteRelease,
+  kind: UpdateKind,
+): Pick<UpdateDialogPayload, 'updateKind' | 'localVersion' | 'remoteVersion' | 'versionSummary'> {
+  if (kind === 'patch') {
+    return {
+      updateKind: 'patch',
+      localVersion: null,
+      remoteVersion: null,
+      versionSummary:
+        remote.versionCode != null
+          ? i18n.t('updateService.patchBuildLine', {
+              version: local.versionName,
+              from: local.versionCode,
+              to: remote.versionCode,
+            })
+          : local.versionName,
+    };
+  }
+  return {
+    updateKind: 'marketing',
+    localVersion: local.versionName,
+    remoteVersion: remote.versionName,
+    versionSummary: null,
   };
 }
 
@@ -250,17 +281,20 @@ export const UpdateService = {
       if (result.status !== 'update_available') return;
 
       const { remote, local } = result;
+      const kind = classifyUpdateKind(local, remote) ?? 'marketing';
+      const isPatch = kind === 'patch';
       const ui = useUpdateUiStore.getState();
       const action = await ui.present({
         variant: 'update',
-        title: i18n.t('updateService.newVersionTitle'),
+        title: isPatch
+          ? i18n.t('updateService.patchUpdateTitle')
+          : i18n.t('updateService.newVersionTitle'),
         message: i18n.t('updateService.newVersionMessage'),
         primaryLabel: i18n.t('updateService.updateNow'),
         secondaryLabel: i18n.t('updateService.later'),
         showGithub: true,
         githubUrl: remote.htmlUrl || RELEASES_PAGE,
-        localVersion: local.versionName,
-        remoteVersion: remote.versionName,
+        ...versionUiFields(local, remote, kind),
       });
 
       if (action !== 'primary') return;
@@ -356,30 +390,36 @@ export const UpdateService = {
       }
 
       const { remote, local } = result;
+      const kind = classifyUpdateKind(local, remote) ?? 'marketing';
+      const isPatch = kind === 'patch';
+      const versionFields = versionUiFields(local, remote, kind);
+
       if (!remote.apkUrl) {
         await ui.present({
           variant: 'info',
-          title: i18n.t('updateService.updateFoundTitle'),
+          title: isPatch
+            ? i18n.t('updateService.patchUpdateTitle')
+            : i18n.t('updateService.updateFoundTitle'),
           message: i18n.t('updateService.updateFoundNoApk', { version: remote.versionName }),
           primaryLabel: i18n.t('common.ok'),
           showGithub: true,
           githubUrl: remote.htmlUrl || RELEASES_PAGE,
-          localVersion: local.versionName,
-          remoteVersion: remote.versionName,
+          ...versionFields,
         });
         return result;
       }
 
       const action = await ui.present({
         variant: 'update',
-        title: i18n.t('updateService.updateFoundTitle'),
+        title: isPatch
+          ? i18n.t('updateService.patchUpdateTitle')
+          : i18n.t('updateService.updateFoundTitle'),
         message: i18n.t('updateService.updateFoundMessage'),
         primaryLabel: i18n.t('updateService.update'),
         secondaryLabel: i18n.t('common.cancel'),
         showGithub: true,
         githubUrl: remote.htmlUrl || RELEASES_PAGE,
-        localVersion: local.versionName,
-        remoteVersion: remote.versionName,
+        ...versionFields,
       });
 
       if (action !== 'primary') return result;

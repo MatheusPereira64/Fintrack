@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import type { UpdateKind } from '../utils/version';
+
 export type UpdateDialogVariant =
   | 'update'
   | 'success'
@@ -9,6 +11,8 @@ export type UpdateDialogVariant =
   | 'progress';
 
 export type UpdateDialogAction = 'primary' | 'secondary' | 'github' | 'dismiss';
+
+export type { UpdateKind };
 
 export interface UpdateDialogPayload {
   variant: UpdateDialogVariant;
@@ -20,6 +24,9 @@ export interface UpdateDialogPayload {
   githubUrl?: string | null;
   localVersion?: string | null;
   remoteVersion?: string | null;
+  /** Linha única para patch (ex.: "1.0.3 (build 6 → 7)"), evita seta X → X. */
+  versionSummary?: string | null;
+  updateKind?: UpdateKind | null;
   dismissible?: boolean;
 }
 
@@ -44,6 +51,8 @@ const empty: UpdateDialogPayload = {
   githubUrl: null,
   localVersion: null,
   remoteVersion: null,
+  versionSummary: null,
+  updateKind: null,
   dismissible: true,
 };
 
