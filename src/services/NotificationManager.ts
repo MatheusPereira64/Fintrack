@@ -8,6 +8,7 @@ import { BudgetRepository }                     from '../database/repositories/B
 import { Logger }                               from './LoggerService';
 import { useTransactionStore }                  from '../store/transactionStore';
 import { useAccountStore }                      from '../store/accountStore';
+import { useReviewStore }                       from '../store/reviewStore';
 import { invalidateAccountCache }               from './accountCache';
 import i18n from '../i18n/config';
 import { formatCurrency } from '../utils/currency';
@@ -93,15 +94,30 @@ class _NotificationManager {
           Logger.warn('NotificationManager', 'Parser não reconheceu a notificação', {
             pkg: raw.packageName, title: raw.title, text: raw.text,
           });
-        } else if (result.success && result.transaction) {
+          await useReviewStore.getState().refreshCounts();
+        } else if (result.needsReview && result.review) {
+          Logger.info('NotificationManager', 'Enfileirada para revisão', {
+            id: result.review.id,
+            desc: result.transaction?.description,
+            amount: result.transaction?.amount,
+          });
+          await useReviewStore.getState().refreshCounts();
+          await NotificationRepository.insert({
+            type:    'info',
+            title:   i18n.t('notificationManager.reviewQueuedTitle'),
+            message: i18n.t('notificationManager.reviewQueuedMessage', {
+              bank: result.transaction?.bankName ?? raw.packageName,
+              description: result.transaction?.description ?? raw.title,
+            }),
+            metadata: { reviewId: result.review.id },
+          });
+        } else if (result.success && result.transaction && result.inserted) {
           const tx = result.transaction;
           Logger.info('NotificationManager', 'Transação automática', { desc: tx.description, amount: tx.amount });
 
-          if (result.inserted) {
-            invalidateAccountCache();
-            await useTransactionStore.getState().ingestAutoTransaction(result.inserted);
-            await useAccountStore.getState().refreshTotalBalance();
-          }
+          invalidateAccountCache();
+          await useTransactionStore.getState().ingestAutoTransaction(result.inserted);
+          await useAccountStore.getState().refreshTotalBalance();
 
           await this.checkBudgetAlert(result.categoryId, tx.amount);
 
@@ -139,7 +155,7 @@ class _NotificationManager {
               category: categoryLabel,
               amount: formatCurrency(budget.amount),
             }),
-            metadata: JSON.stringify({ categoryName: categoryLabel, budgetId: budget.id }),
+            metadata: { categoryName: categoryLabel, budgetId: budget.id },
           });
           Logger.warn('NotificationManager', `Orçamento excedido: ${categoryLabel}`);
         }

@@ -463,6 +463,10 @@
     "insightsSubtitle": "Automatic analysis of your finances",
     "notifications": "Notifications",
     "notificationsSubtitle": "System alerts and notices",
+    "reviewQueue": "Notification review",
+    "reviewQueueSubtitle": "Confirm before saving to your ledger",
+    "unrecognizedInbox": "Unrecognized",
+    "unrecognizedInboxSubtitle": "Teach patterns so the app can parse them",
     "categories": "Categories",
     "categoriesSubtitle": "Manage and create categories",
     "settings": "Settings",
@@ -658,7 +662,51 @@
   "notificationManager": {
     "budgetExceededTitle": "Budget exceeded",
     "budgetExceededMessage": "You exceeded the {{category}} budget: {{amount}}",
-    "categoryFallback": "category"
+    "categoryFallback": "category",
+    "reviewQueuedTitle": "Notification to review",
+    "reviewQueuedMessage": "{{bank}}: {{description}}"
+  },
+  "reviewQueue": {
+    "title": "Notification review",
+    "detailTitle": "Review entry",
+    "empty": "Nothing to review",
+    "emptyHint": "When the app reads a bank notification, it appears here before going to your ledger.",
+    "rawNotification": "Original notification",
+    "bankName": "Bank",
+    "accept": "Accept and save",
+    "ignore": "Ignore",
+    "ignoreTitle": "Ignore notification?",
+    "ignoreMessage": "This entry will not be saved to your ledger.",
+    "notFound": "This review is no longer available.",
+    "validationError": "Enter a valid amount and description.",
+    "saveError": "Could not save the review."
+  },
+  "unrecognizedInbox": {
+    "title": "Unrecognized",
+    "empty": "Inbox empty",
+    "emptyHint": "Notifications the app could not parse appear here.",
+    "noTitle": "(no title)",
+    "noBody": "(no body)",
+    "teach": "Teach pattern",
+    "dismiss": "Dismiss",
+    "dismissTitle": "Dismiss notification?",
+    "dismissMessage": "It will be removed from the inbox without creating a pattern."
+  },
+  "teachPattern": {
+    "title": "Teach pattern",
+    "rawNotification": "Original notification",
+    "snippet": "Text to match",
+    "snippetHint": "Text that must appear in the notification (e.g. \"Pix sent\").",
+    "regex": "Regex (optional)",
+    "regexHint": "If filled, takes priority over the snippet.",
+    "regexPlaceholder": "e.g. pix\\s+sent",
+    "save": "Save pattern",
+    "matchRequired": "Enter a snippet or a regex.",
+    "invalidRegex": "The regex is invalid.",
+    "notFound": "This notification is no longer available.",
+    "saved": "Pattern saved. Similar notifications will be recognized.",
+    "savedWithReview": "Pattern saved and entry sent to the review queue.",
+    "saveError": "Could not save the pattern."
   },
   "importService": {
     "unsupportedFormat": "Unrecognized format. Use .ofx or .csv",

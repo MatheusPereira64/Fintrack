@@ -288,6 +288,93 @@ export interface BankConfig {
   primaryColor: string;
 }
 
+// ─── Fila de revisão de notificações ──────────────────────────────────────────
+
+export type PendingReviewStatus = 'pending' | 'accepted' | 'ignored';
+
+export interface PendingReview {
+  id: number;
+  packageName: string;
+  title: string;
+  body: string;
+  subText?: string;
+  notificationTs: number;
+  proposedType: TransactionType;
+  proposedCategory: string;
+  proposedAmount: number;
+  proposedDescription: string;
+  proposedBankName: string;
+  installmentCurrent?: number | null;
+  installmentTotal?: number | null;
+  status: PendingReviewStatus;
+  createdAt: string;
+}
+
+export interface InsertPendingReview {
+  packageName: string;
+  title: string;
+  body: string;
+  subText?: string;
+  notificationTs: number;
+  proposedType: TransactionType;
+  proposedCategory: string;
+  proposedAmount: number;
+  proposedDescription: string;
+  proposedBankName: string;
+  installmentCurrent?: number | null;
+  installmentTotal?: number | null;
+}
+
+// ─── Inbox de notificações não reconhecidas ───────────────────────────────────
+
+export type UnrecognizedStatus = 'open' | 'taught' | 'dismissed';
+
+export interface UnrecognizedNotification {
+  id: number;
+  packageName: string;
+  title: string;
+  body: string;
+  subText?: string;
+  notificationTs: number;
+  status: UnrecognizedStatus;
+  createdAt: string;
+}
+
+export interface InsertUnrecognizedNotification {
+  packageName: string;
+  title: string;
+  body: string;
+  subText?: string;
+  notificationTs: number;
+}
+
+// ─── Padrões ensinados pelo usuário ───────────────────────────────────────────
+
+export interface TaughtPattern {
+  id: number;
+  packageName: string;
+  name?: string;
+  matchSnippet?: string;
+  matchRegex?: string;
+  transactionType: TransactionType;
+  category: string;
+  descriptionTemplate?: string;
+  bankName?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface InsertTaughtPattern {
+  packageName: string;
+  name?: string;
+  matchSnippet?: string;
+  matchRegex?: string;
+  transactionType: TransactionType;
+  category: string;
+  descriptionTemplate?: string;
+  bankName?: string;
+}
+
 // ─── Tipagem para navegação ────────────────────────────────────────────────────
 
 export type RootStackParamList = {
@@ -326,6 +413,10 @@ export type MoreStackParamList = {
   Budget: undefined;
   Insights: undefined;
   Notifications: undefined;
+  ReviewQueue: undefined;
+  ReviewDetail: { reviewId: number };
+  UnrecognizedInbox: undefined;
+  TeachPattern: { unrecognizedId: number };
   Settings: undefined;
   Preferences: undefined;
   Export: undefined;

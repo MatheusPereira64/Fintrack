@@ -43,6 +43,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
   if (current < 4) { await migration004(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (4)'); }
   if (current < 5) { await migration005(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (5)'); }
   if (current < 6) { await migration006(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (6)'); }
+  if (current < 7) { await migration007(db); await db.executeSql('INSERT INTO _migrations (version) VALUES (7)'); }
 }
 
 // ─── Migration 001 — Schema inicial ───────────────────────────────────────────
@@ -287,4 +288,58 @@ async function migration006(db: SQLiteDatabase): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_tx_installments
      ON transactions(account_id, installment_total, installment_current)`,
   );
+}
+
+// ─── Migration 007 — Fila de revisão, inbox não reconhecidas e padrões ensinados ─
+
+async function migration007(db: SQLiteDatabase): Promise<void> {
+  const stmts = [
+    `CREATE TABLE IF NOT EXISTS pending_reviews (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_name          TEXT NOT NULL,
+      title                 TEXT NOT NULL,
+      body                  TEXT NOT NULL,
+      sub_text              TEXT,
+      notification_ts       INTEGER NOT NULL,
+      proposed_type         TEXT NOT NULL,
+      proposed_category     TEXT NOT NULL,
+      proposed_amount       REAL NOT NULL,
+      proposed_description  TEXT NOT NULL,
+      proposed_bank_name    TEXT NOT NULL,
+      installment_current   INTEGER,
+      installment_total     INTEGER,
+      status                TEXT NOT NULL DEFAULT 'pending',
+      created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_pending_reviews_status
+     ON pending_reviews(status, created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS unrecognized_notifications (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_name    TEXT NOT NULL,
+      title           TEXT NOT NULL,
+      body            TEXT NOT NULL,
+      sub_text        TEXT,
+      notification_ts INTEGER NOT NULL,
+      status          TEXT NOT NULL DEFAULT 'open',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_unrecognized_status
+     ON unrecognized_notifications(status, created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS taught_patterns (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_name          TEXT NOT NULL,
+      name                  TEXT,
+      match_snippet         TEXT,
+      match_regex           TEXT,
+      transaction_type      TEXT NOT NULL,
+      category              TEXT NOT NULL,
+      description_template  TEXT,
+      bank_name             TEXT,
+      is_active             INTEGER NOT NULL DEFAULT 1,
+      created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_taught_patterns_pkg
+     ON taught_patterns(package_name, is_active)`,
+  ];
+  for (const sql of stmts) await db.executeSql(sql);
 }

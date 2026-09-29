@@ -463,6 +463,10 @@
     "insightsSubtitle": "Análise automática das suas finanças",
     "notifications": "Notificações",
     "notificationsSubtitle": "Alertas e avisos do sistema",
+    "reviewQueue": "Revisão de notificações",
+    "reviewQueueSubtitle": "Confirme antes de salvar no extrato",
+    "unrecognizedInbox": "Não reconhecidas",
+    "unrecognizedInboxSubtitle": "Ensine padrões para o app reconhecer",
     "categories": "Categorias",
     "categoriesSubtitle": "Gerencie e crie categorias",
     "settings": "Configurações",
@@ -658,7 +662,51 @@
   "notificationManager": {
     "budgetExceededTitle": "Orçamento excedido",
     "budgetExceededMessage": "Você ultrapassou o orçamento de {{category}}: {{amount}}",
-    "categoryFallback": "categoria"
+    "categoryFallback": "categoria",
+    "reviewQueuedTitle": "Notificação para revisar",
+    "reviewQueuedMessage": "{{bank}}: {{description}}"
+  },
+  "reviewQueue": {
+    "title": "Revisão de notificações",
+    "detailTitle": "Revisar lançamento",
+    "empty": "Nada para revisar",
+    "emptyHint": "Quando o app ler uma notificação do banco, ela aparece aqui antes de ir para o extrato.",
+    "rawNotification": "Notificação original",
+    "bankName": "Banco",
+    "accept": "Aceitar e salvar",
+    "ignore": "Ignorar",
+    "ignoreTitle": "Ignorar notificação?",
+    "ignoreMessage": "Este lançamento não será salvo no extrato.",
+    "notFound": "Esta revisão não está mais disponível.",
+    "validationError": "Informe um valor e uma descrição válidos.",
+    "saveError": "Não foi possível salvar a revisão."
+  },
+  "unrecognizedInbox": {
+    "title": "Não reconhecidas",
+    "empty": "Caixa vazia",
+    "emptyHint": "Notificações que o app não conseguiu interpretar aparecem aqui.",
+    "noTitle": "(sem título)",
+    "noBody": "(sem texto)",
+    "teach": "Ensinar padrão",
+    "dismiss": "Descartar",
+    "dismissTitle": "Descartar notificação?",
+    "dismissMessage": "Ela será removida da caixa sem criar um padrão."
+  },
+  "teachPattern": {
+    "title": "Ensinar padrão",
+    "rawNotification": "Notificação original",
+    "snippet": "Trecho para reconhecer",
+    "snippetHint": "Texto que deve aparecer na notificação (ex.: \"Pix enviado\").",
+    "regex": "Regex (opcional)",
+    "regexHint": "Se preenchido, tem prioridade sobre o trecho.",
+    "regexPlaceholder": "ex.: pix\\s+enviado",
+    "save": "Salvar padrão",
+    "matchRequired": "Informe um trecho ou uma regex.",
+    "invalidRegex": "A regex informada é inválida.",
+    "notFound": "Esta notificação não está mais disponível.",
+    "saved": "Padrão salvo. Novas notificações semelhantes serão reconhecidas.",
+    "savedWithReview": "Padrão salvo e lançamento enviado para a fila de revisão.",
+    "saveError": "Não foi possível salvar o padrão."
   },
   "importService": {
     "unsupportedFormat": "Formato não reconhecido. Use .ofx ou .csv",

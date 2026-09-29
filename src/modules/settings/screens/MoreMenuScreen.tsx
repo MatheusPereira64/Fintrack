@@ -1,12 +1,14 @@
-﻿import React, { memo, useMemo } from 'react';
+﻿import React, { memo, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useTheme }          from '../../../hooks/useTheme';
 import { useGoalStore }      from '../../../store/goalStore';
 import { useBudgetStore }    from '../../../store/budgetStore';
+import { useReviewStore }    from '../../../store/reviewStore';
 import { AppHeader }         from '../../../components/AppHeader';
 import { Icon }              from '../../../components/Icon';
 import type { AppIconName }  from '../../../components/Icon';
@@ -83,6 +85,15 @@ export function MoreMenuScreen({ navigation }: any) {
   const listPad = useTabListPadding();
   const goals   = useGoalStore(s => s.goals);
   const budgets = useBudgetStore(s => s.budgets);
+  const pendingCount = useReviewStore(s => s.pendingCount);
+  const unrecognizedCount = useReviewStore(s => s.unrecognizedCount);
+  const refreshCounts = useReviewStore(s => s.refreshCounts);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshCounts();
+    }, [refreshCounts]),
+  );
 
   const completedGoals = goals.filter(g => g.currentAmount >= g.targetAmount).length;
   const overBudgets    = budgets.filter(b => b.spent > b.amount).length;
@@ -90,6 +101,8 @@ export function MoreMenuScreen({ navigation }: any) {
   const badgeMap: Record<string, number | string | undefined> = {
     Goals:   completedGoals > 0 ? `${completedGoals} ✓` : undefined,
     Budget:  overBudgets   > 0 ? overBudgets.toString() : undefined,
+    ReviewQueue: pendingCount > 0 ? pendingCount : undefined,
+    UnrecognizedInbox: unrecognizedCount > 0 ? unrecognizedCount : undefined,
   };
 
   const menuItems: MenuItem[] = useMemo(() => [
@@ -97,6 +110,8 @@ export function MoreMenuScreen({ navigation }: any) {
     { icon: 'budget',   label: t('moreMenu.budgets'),       subtitle: t('moreMenu.budgetsSubtitle'),       route: 'Budget',        color: '#D97706' },
     { icon: 'insights', label: t('moreMenu.insights'),      subtitle: t('moreMenu.insightsSubtitle'),      route: 'Insights',      color: '#7C3AED' },
     { icon: 'bell',     label: t('moreMenu.notifications'), subtitle: t('moreMenu.notificationsSubtitle'), route: 'Notifications', color: '#2563EB' },
+    { icon: 'check-circle', label: t('moreMenu.reviewQueue'), subtitle: t('moreMenu.reviewQueueSubtitle'), route: 'ReviewQueue', color: '#0D9488' },
+    { icon: 'notification-dot', label: t('moreMenu.unrecognizedInbox'), subtitle: t('moreMenu.unrecognizedInboxSubtitle'), route: 'UnrecognizedInbox', color: '#EA580C' },
     { icon: 'category', label: t('moreMenu.categories'),    subtitle: t('moreMenu.categoriesSubtitle'),    route: 'Categories',    color: '#0891B2' },
     { icon: 'settings', label: t('moreMenu.settings'),      subtitle: t('moreMenu.settingsSubtitle'),      route: 'Settings',      color: '#6B7280' },
     { icon: 'import',   label: t('moreMenu.import'),        subtitle: t('moreMenu.importSubtitle'),        route: 'Import',        color: '#059669' },
