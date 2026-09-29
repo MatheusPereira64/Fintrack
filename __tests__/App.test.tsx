@@ -104,7 +104,9 @@ test('App monta após bootstrap', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(React.createElement(App));
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise<void>(resolve => {
+      setTimeout(() => resolve(), 50);
+    });
   });
   expect(tree).toBeTruthy();
 });
