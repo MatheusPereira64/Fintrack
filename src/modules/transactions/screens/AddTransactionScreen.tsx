@@ -2,21 +2,25 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Platform, Switch, Alert, KeyboardAvoidingView,
+  ScrollView, Platform, Switch, Alert, KeyboardAvoidingView, StatusBar,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { CloseButton } from '../../../components/CloseButton';
+import { AppButton } from '../../../components/AppButton';
+import { Icon, AppIconName } from '../../../components/Icon';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { useTheme }             from '../../../hooks/useTheme';
 import { useTransactionStore }  from '../../../store/transactionStore';
 import { useAccountStore }      from '../../../store/accountStore';
 import { useCategoryStore }     from '../../../store/categoryStore';
 import { Transaction, TransactionType } from '../../../models/types';
+import { formatDate, parseLocalISODate, toLocalISODate } from '../../../utils/date';
 
-const TYPES: Array<{ key: TransactionType; labelKey: string; icon: string }> = [
-  { key: 'expense', labelKey: 'addTransaction.expense', icon: '📤' },
-  { key: 'income',  labelKey: 'addTransaction.income',  icon: '📥' },
+const TYPES: Array<{ key: TransactionType; labelKey: string; icon: AppIconName }> = [
+  { key: 'expense', labelKey: 'addTransaction.expense', icon: 'expense' },
+  { key: 'income',  labelKey: 'addTransaction.income',  icon: 'income' },
 ];
 
 interface Props {
@@ -25,7 +29,7 @@ interface Props {
 }
 
 export function AddTransactionScreen({ navigation, route }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(40);
@@ -41,7 +45,8 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   const [description, setDescription] = useState(existing?.description ?? '');
   const [accountId,   setAccountId]   = useState<number | undefined>(existing?.accountId ?? accounts[0]?.id);
   const [categoryId,  setCategoryId]  = useState<number | undefined>(existing?.categoryId);
-  const [date] = useState(existing?.date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(existing?.date.slice(0, 10) ?? toLocalISODate());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [isRecurring, setIsRecurring] = useState(existing?.isRecurring ?? false);
   const [installmentCurrent, setInstallmentCurrent] = useState(
     existing?.installmentCurrent != null ? String(existing.installmentCurrent) : '',
@@ -63,6 +68,11 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   }, [amount]);
 
   const isValid = parsedAmount > 0 && description.trim().length > 0 && accountId !== undefined;
+
+  const handleDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selected) setDate(toLocalISODate(selected));
+  };
 
   const handleSave = useCallback(async () => {
     if (!isValid) {
@@ -127,11 +137,11 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* AppHeader não usado aqui pois temos StatusBar personalizada */}
-        {(() => { const StatusBarComp = require('react-native').StatusBar; return <StatusBarComp barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />; })()}
+        <StatusBar barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
 
         {/* Header */}
         <View style={[styles.header, {
@@ -144,17 +154,20 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           flexDirection: 'row', alignItems: 'center',
         }]}>
           <CloseButton onPress={() => navigation.goBack()} style={{ marginRight: spacing.sm }} />
-          <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1 }]}>
+          <Text accessibilityRole="header" numberOfLines={1} style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
             {existing ? t('addTransaction.editTitle') : t('addTransaction.newTitle')}
           </Text>
           <TouchableOpacity
             onPress={handleSave}
-            disabled={!isValid || isSaving}
+            disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isSaving, busy: isSaving }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             style={[{
               backgroundColor: isValid ? colors.primary : colors.surfaceVariant,
               borderRadius: borderRadius.full,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.xs,
+              paddingHorizontal: spacing.base,
+              paddingVertical: spacing.sm,
             }]}
           >
             <Text style={[typography.styles.labelLarge, { color: isValid ? '#FFF' : colors.textTertiary }]}>
@@ -163,7 +176,10 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad }}
+        >
           {/* Tipo */}
           <Animated.View entering={FadeInDown.delay(50)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
@@ -174,6 +190,8 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   key={typeOpt.key}
                   onPress={() => setType(typeOpt.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: type === typeOpt.key }}
                   style={[styles.typeBtn, {
                     backgroundColor: type === typeOpt.key
                       ? (typeOpt.key === 'income' ? `${colors.income}20` : `${colors.expense}20`)
@@ -185,7 +203,13 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                       : colors.borderLight,
                   }]}
                 >
-                  <Text style={{ fontSize: 22 }}>{typeOpt.icon}</Text>
+                  <Icon
+                    name={typeOpt.icon}
+                    size={24}
+                    color={type === typeOpt.key
+                      ? (typeOpt.key === 'income' ? colors.income : colors.expense)
+                      : colors.textSecondary}
+                  />
                   <Text style={[typography.styles.titleSmall, {
                     color: type === typeOpt.key
                       ? (typeOpt.key === 'income' ? colors.income : colors.expense)
@@ -217,6 +241,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 keyboardType="decimal-pad"
                 placeholder={t('common.amountPlaceholder')}
                 placeholderTextColor={colors.placeholder}
+                accessibilityLabel={t('addTransaction.amountLabel')}
                 style={[typography.styles.headlineSmall, {
                   color: colors.inputText, flex: 1, padding: spacing.md,
                 }]}
@@ -234,6 +259,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
               onChangeText={setDescription}
               placeholder={t('addTransaction.descriptionPlaceholder')}
               placeholderTextColor={colors.placeholder}
+              accessibilityLabel={t('addTransaction.description')}
               style={[{
                 backgroundColor: colors.inputBackground,
                 borderRadius: borderRadius.lg,
@@ -246,17 +272,99 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             />
           </Animated.View>
 
+          {/* Data */}
+          <Animated.View entering={FadeInDown.delay(175)}>
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+              {t('addTransaction.date')}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('addTransaction.date')}: ${formatDate(parseLocalISODate(date), 'medium')}`}
+              style={[styles.dateBtn, {
+                backgroundColor: colors.inputBackground,
+                borderRadius: borderRadius.lg,
+                padding: spacing.md,
+                marginBottom: showDatePicker ? spacing.sm : spacing.xl,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }]}
+            >
+              <Icon name="calendar" size={20} color={colors.primary} />
+              <Text style={[typography.styles.bodyLarge, { color: colors.inputText, marginLeft: spacing.sm, flex: 1 }]}>
+                {formatDate(parseLocalISODate(date), 'medium')}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <View style={{ marginBottom: spacing.xl }}>
+                <DateTimePicker
+                  value={parseLocalISODate(date)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={handleDateChange}
+                  locale={i18n.language}
+                />
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(false)}
+                    style={{ alignSelf: 'flex-end', paddingVertical: spacing.sm }}
+                  >
+                    <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
+                      {t('goals.confirmDate')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </Animated.View>
+
           {/* Conta */}
           <Animated.View entering={FadeInDown.delay(200)}>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
               {t('addTransaction.account')}
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
+            {accounts.length === 0 && (
+              <View style={{
+                backgroundColor: colors.surfaceVariant,
+                borderRadius: borderRadius.lg,
+                padding: spacing.base,
+                marginBottom: spacing.xl,
+              }}>
+                <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
+                  {t('addTransaction.noAccountsTitle')}
+                </Text>
+                <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
+                  {t('addTransaction.noAccountsHint')}
+                </Text>
+                <AppButton
+                  label={t('addTransaction.goToAccounts')}
+                  icon="bank"
+                  size="sm"
+                  onPress={() => navigation.getParent()?.navigate('Accounts')}
+                  style={{ marginTop: spacing.sm }}
+                />
+              </View>
+            )}
+            {existing && (
+              <Text style={[typography.styles.caption, { color: colors.textTertiary, marginBottom: spacing.xs }]}>
+                {t('addTransaction.accountLockedHint')}
+              </Text>
+            )}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              style={{ marginBottom: accounts.length > 0 ? spacing.xl : 0 }}
+            >
               {accounts.map(acc => (
                 <TouchableOpacity
                   key={acc.id}
                   onPress={() => setAccountId(acc.id)}
+                  disabled={!!existing}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: accountId === acc.id, disabled: !!existing }}
                   style={[{
+                    opacity: existing && accountId !== acc.id ? 0.4 : 1,
                     backgroundColor: accountId === acc.id ? acc.color : colors.card,
                     borderRadius: borderRadius.lg,
                     padding: spacing.md,
@@ -267,7 +375,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                     borderColor: accountId === acc.id ? acc.color : colors.borderLight,
                   }]}
                 >
-                  <Text style={{ fontSize: 18 }}>🏦</Text>
+                  <Icon name="bank" size={18} color={accountId === acc.id ? '#FFF' : colors.textSecondary} />
                   <Text style={[typography.styles.labelSmall, {
                     color: accountId === acc.id ? '#FFF' : colors.text,
                     marginTop: 4, textAlign: 'center',
@@ -284,7 +392,12 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
               {t('addTransaction.category')}
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              style={{ marginBottom: spacing.xl }}
+            >
               <TouchableOpacity
                 onPress={() => setCategoryId(undefined)}
                 style={[styles.catChip, {
@@ -408,7 +521,8 @@ const styles = StyleSheet.create({
   typeRow:      { flexDirection: 'row', gap: 12 },
   typeBtn:      { flex: 1, alignItems: 'center', paddingVertical: 16, gap: 8 },
   inputWrap:    { flexDirection: 'row', alignItems: 'center' },
-  catChip:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6 },
+  catChip:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+  dateBtn:      { flexDirection: 'row', alignItems: 'center' },
   recurringRow: { flexDirection: 'row', alignItems: 'center' },
   recurringCheck: { width: 20, height: 20, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
 });

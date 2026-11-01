@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
@@ -29,10 +29,13 @@ export function TransactionDetailScreen({ route, navigation }: any) {
 
   if (!transaction) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[typography.styles.titleSmall, { color: colors.textSecondary }]}>
-          {t('transactionDetail.notFound')}
-        </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <AppHeader title={t('transactionDetail.title')} onBack={() => navigation.goBack()} />
+        <View style={styles.notFound}>
+          <Text style={[typography.styles.titleSmall, { color: colors.textSecondary }]}>
+            {t('transactionDetail.notFound')}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -71,12 +74,16 @@ export function TransactionDetailScreen({ route, navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('transactionDetail.title')}
-        onClose={() => navigation.goBack()}
-        right={
-          <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={{ color: colors.error, fontSize: 14 }}>{t('common.delete')}</Text>
-          </TouchableOpacity>
-        }
+        onBack={() => navigation.goBack()}
+        actions={[
+          {
+            icon: 'edit',
+            label: t('common.edit'),
+            color: colors.primary,
+            onPress: () => navigation.navigate('AddTransaction', { editTransaction: transaction }),
+          },
+          { icon: 'delete', label: t('common.delete'), color: colors.error, onPress: handleDelete },
+        ]}
       />
 
       <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
@@ -165,6 +172,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  notFound:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

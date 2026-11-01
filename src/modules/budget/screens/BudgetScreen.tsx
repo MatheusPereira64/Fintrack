@@ -1,17 +1,17 @@
 ﻿import React, { useEffect, useCallback, useState, memo } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, ScrollView,
+  Alert, ScrollView,
 } from 'react-native';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme }       from '../../../hooks/useTheme';
 import { useBudgetStore } from '../../../store/budgetStore';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { useTransactionStore } from '../../../store/transactionStore';
 import { AppHeader } from '../../../components/AppHeader';
-import { CloseButton } from '../../../components/CloseButton';
+import { IconButton } from '../../../components/AppButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { formatCurrency, formatPercent } from '../../../utils/currency';
 
@@ -26,17 +26,19 @@ const BudgetCard = memo(function BudgetCard({
 
   const barColor = overBudget ? colors.error : nearLimit ? colors.warning : colors.success;
 
+  const confirmDelete = () => Alert.alert(
+    t('budget.deleteTitle'),
+    t('budget.deleteMessage'),
+    [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(budget.id) },
+    ],
+  );
+
   return (
     <Animated.View entering={FadeInDown.duration(300)}>
       <TouchableOpacity
-        onLongPress={() => Alert.alert(
-          t('budget.deleteTitle'),
-          t('budget.deleteMessage'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(budget.id) },
-          ],
-        )}
+        onLongPress={confirmDelete}
         activeOpacity={0.8}
         style={[{
           backgroundColor: colors.card,
@@ -77,6 +79,13 @@ const BudgetCard = memo(function BudgetCard({
               </Text>
             )}
           </View>
+          <IconButton
+            name="delete"
+            size={18}
+            color={colors.textTertiary}
+            onPress={confirmDelete}
+            accessibilityLabel={t('a11y.deleteItem')}
+          />
         </View>
 
         <View style={[styles.progressTrack, {
@@ -101,7 +110,6 @@ const BudgetCard = memo(function BudgetCard({
 export function BudgetScreen({ navigation }: any) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   const budgets      = useBudgetStore(s => s.budgets);
   const isLoading    = useBudgetStore(s => s.isLoading);
   const loadBudgets  = useBudgetStore(s => s.loadBudgets);
@@ -161,7 +169,7 @@ export function BudgetScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('budget.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
         actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
       />
 
@@ -193,104 +201,83 @@ export function BudgetScreen({ navigation }: any) {
       />
 
       {/* Modal de criar orçamento */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showModal}
+        title={t('budget.newBudget')}
+        onClose={() => setShowModal(false)}
+      >
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('budget.limitAmount')}
+        </Text>
+        <TextInput
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="decimal-pad"
+          placeholder={t('common.amountPlaceholder')}
+          placeholderTextColor={colors.placeholder}
+          style={[{
+            backgroundColor: colors.inputBackground,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            color: colors.inputText,
+            marginBottom: spacing.lg,
+          }, typography.styles.bodyLarge]}
+        />
+
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('budget.categoryOptional')}
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowModal(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 20),
+            onPress={() => setCatId(undefined)}
+            style={[styles.catChip, {
+              backgroundColor: !catId ? colors.primary : colors.surfaceVariant,
+              borderRadius: borderRadius.full, marginRight: spacing.sm,
             }]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('budget.newBudget')}
+            <Text style={[typography.styles.labelMedium, { color: !catId ? '#FFF' : colors.textSecondary }]}>
+              {t('budget.general')}
+            </Text>
+          </TouchableOpacity>
+          {categories.map(c => (
+            <TouchableOpacity
+              key={c.id}
+              onPress={() => setCatId(c.id)}
+              style={[styles.catChip, {
+                backgroundColor: catId === c.id ? colors.primary : colors.surfaceVariant,
+                borderRadius: borderRadius.full, marginRight: spacing.sm,
+              }]}
+            >
+              <Text style={{ fontSize: 14 }}>{c.icon ?? '📦'}</Text>
+              <Text style={[typography.styles.labelSmall, {
+                color: catId === c.id ? '#FFF' : colors.textSecondary, marginLeft: 4,
+              }]}>
+                {c.name}
               </Text>
-              <CloseButton onPress={() => setShowModal(false)} />
-            </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('budget.limitAmount')}
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => setShowModal(false)}
+            style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+              {t('common.cancel')}
             </Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder={t('common.amountPlaceholder')}
-              placeholderTextColor={colors.placeholder}
-              style={[{
-                backgroundColor: colors.inputBackground,
-                borderRadius: borderRadius.lg,
-                padding: spacing.md,
-                color: colors.inputText,
-                marginBottom: spacing.lg,
-              }, typography.styles.bodyLarge]}
-            />
-
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('budget.categoryOptional')}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleAdd}
+            disabled={saving}
+            style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+              {saving ? '...' : t('common.create')}
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.xl }}>
-              <TouchableOpacity
-                onPress={() => setCatId(undefined)}
-                style={[styles.catChip, {
-                  backgroundColor: !catId ? colors.primary : colors.surfaceVariant,
-                  borderRadius: borderRadius.full, marginRight: spacing.sm,
-                }]}
-              >
-                <Text style={[typography.styles.labelMedium, { color: !catId ? '#FFF' : colors.textSecondary }]}>
-                  {t('budget.general')}
-                </Text>
-              </TouchableOpacity>
-              {categories.map(c => (
-                <TouchableOpacity
-                  key={c.id}
-                  onPress={() => setCatId(c.id)}
-                  style={[styles.catChip, {
-                    backgroundColor: catId === c.id ? colors.primary : colors.surfaceVariant,
-                    borderRadius: borderRadius.full, marginRight: spacing.sm,
-                  }]}
-                >
-                  <Text style={{ fontSize: 14 }}>{c.icon ?? '📦'}</Text>
-                  <Text style={[typography.styles.labelSmall, {
-                    color: catId === c.id ? '#FFF' : colors.textSecondary, marginLeft: 4,
-                  }]}>
-                    {c.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => setShowModal(false)}
-                style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
-                  {t('common.cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={saving}
-                style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : t('common.create')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

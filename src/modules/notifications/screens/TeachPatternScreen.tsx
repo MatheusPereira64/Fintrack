@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
+  ScrollView, Alert, KeyboardAvoidingView, ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
@@ -145,11 +145,11 @@ export function TeachPatternScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <AppHeader
         title={t('teachPattern.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView

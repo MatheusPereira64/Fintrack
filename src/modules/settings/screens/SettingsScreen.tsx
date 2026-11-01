@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Modal,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import { getDatabase }       from '../../../database/db';
 import { TransactionRepository } from '../../../database/repositories/TransactionRepository';
 import { Icon, AppIconName } from '../../../components/Icon';
 import { AppHeader } from '../../../components/AppHeader';
-import { CloseButton } from '../../../components/CloseButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { UpdateService, RELEASES_PAGE } from '../../../services/UpdateService';
 import { AppLanguage } from '../../../models/types';
@@ -272,7 +272,7 @@ export function SettingsScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('settings.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView
@@ -451,97 +451,65 @@ export function SettingsScreen({ navigation }: any) {
       </ScrollView>
 
       {/* ── Modal de Tema ────────────────────────────────────────────────────── */}
-      <Modal visible={showThemeModal} transparent animationType="slide">
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showThemeModal}
+        title={t('settings.theme')}
+        onClose={() => setShowThemeModal(false)}
+      >
+        {THEME_OPTIONS.map((opt) => (
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowThemeModal(false)}
-          />
-          <View style={[styles.bottomSheet, {
-            backgroundColor: colors.card,
-            borderTopLeftRadius:  borderRadius['2xl'],
-            borderTopRightRadius: borderRadius['2xl'],
-            padding: spacing.xl,
-          }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('settings.theme')}
-              </Text>
-              <CloseButton onPress={() => setShowThemeModal(false)} />
-            </View>
-            {THEME_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                onPress={() => { setTheme(opt.key); setShowThemeModal(false); }}
-                style={[{
-                  flexDirection: 'row', alignItems: 'center', gap: 12,
-                  backgroundColor: settings.theme === opt.key ? `${colors.primary}15` : 'transparent',
-                  borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
-                }]}
-              >
-                <Icon name={opt.icon} size={22} color={settings.theme === opt.key ? colors.primary : colors.textSecondary} />
-                <Text style={[typography.styles.bodyLarge, {
-                  color: settings.theme === opt.key ? colors.primary : colors.text, flex: 1,
-                }]}>
-                  {opt.label}
-                </Text>
-                {settings.theme === opt.key && (
-                  <Icon name="check" size={18} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
+            key={opt.key}
+            onPress={() => { setTheme(opt.key); setShowThemeModal(false); }}
+            style={[{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: settings.theme === opt.key ? `${colors.primary}15` : 'transparent',
+              borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
+            }]}
+          >
+            <Icon name={opt.icon} size={22} color={settings.theme === opt.key ? colors.primary : colors.textSecondary} />
+            <Text style={[typography.styles.bodyLarge, {
+              color: settings.theme === opt.key ? colors.primary : colors.text, flex: 1,
+            }]}>
+              {opt.label}
+            </Text>
+            {settings.theme === opt.key && (
+              <Icon name="check" size={18} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
 
       {/* ── Modal de Idioma ──────────────────────────────────────────────────── */}
-      <Modal visible={showLangModal} transparent animationType="slide">
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showLangModal}
+        title={t('settings.language')}
+        onClose={() => setShowLangModal(false)}
+      >
+        {LANG_OPTIONS.map(opt => (
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowLangModal(false)}
-          />
-          <View style={[styles.bottomSheet, {
-            backgroundColor: colors.card,
-            borderTopLeftRadius:  borderRadius['2xl'],
-            borderTopRightRadius: borderRadius['2xl'],
-            padding: spacing.xl,
-          }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('settings.language')}
-              </Text>
-              <CloseButton onPress={() => setShowLangModal(false)} />
-            </View>
-            {LANG_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.key}
-                onPress={() => { void handleLanguageSelect(opt.key); }}
-                style={[{
-                  flexDirection: 'row', alignItems: 'center', gap: 12,
-                  backgroundColor: (settings.language ?? 'pt-BR') === opt.key ? `${colors.primary}15` : 'transparent',
-                  borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
-                }]}
-              >
-                <Icon name="language" size={22} color={(settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.textSecondary} />
-                <Text style={[typography.styles.bodyLarge, {
-                  color: (settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.text, flex: 1,
-                }]}>
-                  {opt.label}
-                </Text>
-                {(settings.language ?? 'pt-BR') === opt.key && (
-                  <Icon name="check" size={18} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-            <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-              {t('settings.langHint')}
+            key={opt.key}
+            onPress={() => { void handleLanguageSelect(opt.key); }}
+            style={[{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: (settings.language ?? 'pt-BR') === opt.key ? `${colors.primary}15` : 'transparent',
+              borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.xs,
+            }]}
+          >
+            <Icon name="language" size={22} color={(settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.textSecondary} />
+            <Text style={[typography.styles.bodyLarge, {
+              color: (settings.language ?? 'pt-BR') === opt.key ? colors.primary : colors.text, flex: 1,
+            }]}>
+              {opt.label}
             </Text>
-          </View>
-        </View>
-      </Modal>
+            {(settings.language ?? 'pt-BR') === opt.key && (
+              <Icon name="check" size={18} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ))}
+        <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+          {t('settings.langHint')}
+        </Text>
+      </BottomSheet>
     </View>
   );
 }

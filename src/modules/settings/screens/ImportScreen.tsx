@@ -121,7 +121,7 @@ export function ImportScreen({ navigation }: any) {
       <AppHeader
         title={t('import.title')}
         subtitle={t('import.subtitle')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       {candidates.length === 0 ? (

@@ -1,7 +1,7 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Dimensions, Platform, NativeModules, StatusBar,
+  NativeModules, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,6 @@ import { useSettingsStore } from '../../../store/settingsStore';
 import { useAccountStore } from '../../../store/accountStore';
 import { Logo } from '../../../components/Logo';
 
-const { width } = Dimensions.get('window');
 const { NotificationModule } = NativeModules;
 
 export function OnboardingScreen() {
@@ -19,7 +18,6 @@ export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
 
   const completeOnboarding        = useSettingsStore(s => s.completeOnboarding);
   const setNotificationPermission = useSettingsStore(s => s.setNotificationPermission);
@@ -59,7 +57,6 @@ export function OnboardingScreen() {
   const goNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
-      scrollRef.current?.scrollTo({ x: (currentStep + 1) * width, animated: true });
     }
   };
 
@@ -84,11 +81,11 @@ export function OnboardingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: Math.max(insets.top, 20) }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={colors.text === '#111827' ? 'dark-content' : 'light-content'} />
 
-      {/* Conteúdo do step */}
-      <View style={styles.content}>
+      {/* Conteúdo do step: rola em telas baixas ou com fonte ampliada */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Emoji grande */}
         {currentStep === 0 ? (
           <Logo size={120} style={{ marginBottom: spacing.sm }} />
@@ -141,7 +138,7 @@ export function OnboardingScreen() {
             </Text>
           </TouchableOpacity>
         )}
-      </View>
+      </ScrollView>
 
       {/* Indicadores de passo */}
       <View style={styles.dots}>
@@ -159,26 +156,44 @@ export function OnboardingScreen() {
         ))}
       </View>
 
-      {/* Botão de ação */}
-      <TouchableOpacity
-        onPress={isLast ? handleFinish : goNext}
-        style={[
-          styles.actionBtn,
-          {
+      {/* Botões de ação */}
+      <View style={[styles.actions, {
+        gap: spacing.sm,
+        marginHorizontal: spacing.xl,
+        marginBottom: spacing.base + Math.max(insets.bottom, 12),
+      }]}>
+        {currentStep > 0 && (
+          <TouchableOpacity
+            onPress={() => setCurrentStep(prev => prev - 1)}
+            accessibilityRole="button"
+            style={[styles.actionBtn, {
+              backgroundColor: colors.surfaceVariant,
+              borderRadius: borderRadius.full,
+              padding: spacing.base,
+            }]}
+            activeOpacity={0.85}
+          >
+            <Text style={[typography.styles.titleMedium, { color: colors.text, textAlign: 'center' }]}>
+              {t('common.back')}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          onPress={isLast ? handleFinish : goNext}
+          accessibilityRole="button"
+          style={[styles.actionBtn, {
             backgroundColor: colors.primary,
             borderRadius: borderRadius.full,
-            marginHorizontal: spacing.xl,
-            marginBottom: spacing.xl + Math.max(insets.bottom, 12),
             padding: spacing.base,
             ...shadows.lg,
-          },
-        ]}
-        activeOpacity={0.85}
-      >
-        <Text style={[typography.styles.titleMedium, { color: '#FFFFFF', textAlign: 'center' }]}>
-          {isLast ? `🚀 ${t('onboarding.start')}` : t('onboarding.next')}
-        </Text>
-      </TouchableOpacity>
+          }]}
+          activeOpacity={0.85}
+        >
+          <Text style={[typography.styles.titleMedium, { color: '#FFFFFF', textAlign: 'center' }]}>
+            {isLast ? `🚀 ${t('onboarding.start')}` : t('onboarding.next')}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -186,13 +201,19 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 16,
   },
   emojiContainer: {
     width: 96,
@@ -221,13 +242,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 24,
+    marginVertical: 16,
   },
   dot: {
     height: 8,
     borderRadius: 4,
   },
+  actions: {
+    flexDirection: 'row',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
   actionBtn: {
-    alignSelf: 'stretch',
+    flex: 1,
   },
 });

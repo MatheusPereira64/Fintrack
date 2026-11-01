@@ -119,7 +119,12 @@ function Metric({
       <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: 4 }]}>
         {label}
       </Text>
-      <Text style={[typography.styles.labelLarge, { color, marginTop: 2 }]} numberOfLines={1}>
+      <Text
+        style={[typography.styles.labelLarge, { color, marginTop: 2 }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         {value}
       </Text>
     </View>

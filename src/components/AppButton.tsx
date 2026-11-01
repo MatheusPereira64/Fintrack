@@ -62,6 +62,9 @@ export const AppButton = memo(function AppButton({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       style={[
         styles.base,
         {
@@ -102,10 +105,12 @@ interface IconButtonProps {
   bg?:      string;
   badge?:   boolean;
   style?:   object;
+  disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 export const IconButton = memo(function IconButton({
-  name, onPress, size = 22, color, bg, badge, style,
+  name, onPress, size = 22, color, bg, badge, style, disabled, accessibilityLabel,
 }: IconButtonProps) {
   const { colors, borderRadius } = useTheme();
   const iconColor = color ?? colors.text;
@@ -114,10 +119,14 @@ export const IconButton = memo(function IconButton({
   return (
     <TouchableOpacity
       onPress={onPress}
+      disabled={disabled}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: !!disabled }}
       style={[
         styles.iconBtn,
-        { backgroundColor: bgColor, borderRadius: borderRadius.lg },
+        { backgroundColor: bgColor, borderRadius: borderRadius.lg, opacity: disabled ? 0.35 : 1 },
         style,
       ]}
     >
@@ -132,9 +141,12 @@ export const IconButton = memo(function IconButton({
 const styles = StyleSheet.create({
   base:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   inner:   { flexDirection: 'row', alignItems: 'center' },
-  iconBtn: { padding: 8, position: 'relative' },
+  iconBtn: {
+    minWidth: 44, minHeight: 44, padding: 8,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+  },
   badge:   {
-    position: 'absolute', top: 6, right: 6,
+    position: 'absolute', top: 9, right: 9,
     width: 8, height: 8, borderRadius: 4,
   },
 });

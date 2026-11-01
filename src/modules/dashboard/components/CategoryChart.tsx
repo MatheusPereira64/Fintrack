@@ -134,8 +134,8 @@ export const CategoryChart = memo(function CategoryChart({ data }: CategoryChart
 
 const styles = StyleSheet.create({
   container: {},
-  row:       { flexDirection: 'row', alignItems: 'center' },
-  list:      { flex: 1, paddingLeft: 8 },
+  row:       { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
+  list:      { flex: 1, minWidth: 150, paddingLeft: 8 },
   listItem:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   colorDot:  { width: 8, height: 8, borderRadius: 4 },
 });

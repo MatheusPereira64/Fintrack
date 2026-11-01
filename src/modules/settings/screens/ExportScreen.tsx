@@ -51,7 +51,7 @@ export function ExportScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title={t('export.title')} onClose={() => navigation.goBack()} />
+      <AppHeader title={t('export.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}>
         <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginBottom: spacing.xl }]}>

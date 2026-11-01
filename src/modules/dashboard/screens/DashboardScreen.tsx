@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Platform, StatusBar,
+  RefreshControl, Platform, StatusBar, Pressable,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -21,14 +21,17 @@ import { CategoryChart }  from '../components/CategoryChart';
 import { FinanceSnapshotCard } from '../components/FinanceSnapshotCard';
 import { TransactionItem } from '../../../components/TransactionItem';
 import { Icon } from '../../../components/Icon';
+import { AppButton } from '../../../components/AppButton';
 
 import { subtractMonths, addMonths } from '../../../utils/date';
 import { formatCurrency }           from '../../../utils/currency';
 
+const FAB_SIZE = 56;
+
 export function DashboardScreen({ navigation }: any) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, shadows, typography } = useTheme();
-  const { bottom: tabBarBottom, top: safeTop } = useTabBarInsets();
+  const { top: safeTop } = useTabBarInsets();
 
   const transactions     = useTransactionStore(s => s.transactions);
   const summary          = useTransactionStore(s => s.summary);
@@ -112,6 +115,12 @@ export function DashboardScreen({ navigation }: any) {
     }
   }, [currentDate, loadByMonth]);
 
+  const canGoNext = useMemo(() => addMonths(currentDate, 1) <= new Date(), [currentDate]);
+
+  const openAddTransaction = useCallback(() => {
+    navigation.navigate('Transactions', { screen: 'AddTransaction', initial: false });
+  }, [navigation]);
+
   const recentTransactions = useMemo(() => transactions.slice(0, 6), [transactions]);
 
   const SEVERITY_COLORS: Record<string, string> = {
@@ -136,7 +145,7 @@ export function DashboardScreen({ navigation }: any) {
             styles.toast,
             {
               backgroundColor: colors.primary,
-              top: Platform.OS === 'android' ? 56 : 60,
+              top: safeTop + spacing.sm,
               borderRadius: borderRadius.lg,
               marginHorizontal: spacing.base,
             },
@@ -158,7 +167,7 @@ export function DashboardScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: safeTop + (Platform.OS === 'android' ? 12 : 8),
-          paddingBottom: 88 + tabBarBottom,
+          paddingBottom: FAB_SIZE + spacing.xl + spacing.base,
         }}
         refreshControl={
           <RefreshControl
@@ -171,8 +180,8 @@ export function DashboardScreen({ navigation }: any) {
       >
         {/* Saudação */}
         <View style={[styles.greeting, { paddingHorizontal: spacing.base, marginBottom: spacing.md }]}>
-          <View>
-            <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary }]}>
+          <View style={styles.greetingText}>
+            <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary }]} numberOfLines={1}>
               {userName ? t('dashboard.helloName', { name: userName }) : t('dashboard.hello')}
             </Text>
             <Text style={[typography.styles.headlineSmall, { color: colors.text }]}>
@@ -180,6 +189,12 @@ export function DashboardScreen({ navigation }: any) {
             </Text>
           </View>
           <TouchableOpacity
+            onPress={() => navigation.navigate('More', { screen: 'Settings', initial: false })}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.monitorStatus', {
+              status: notifOn ? t('dashboard.active') : t('dashboard.inactive'),
+            })}
             style={[
               styles.monitorBadge,
               {
@@ -213,6 +228,7 @@ export function DashboardScreen({ navigation }: any) {
           currentDate={currentDate}
           onPrevMonth={goToPrevMonth}
           onNextMonth={goToNextMonth}
+          canGoNext={canGoNext}
         />
 
         <FinanceSnapshotCard refreshKey={snapKey} />
@@ -233,11 +249,22 @@ export function DashboardScreen({ navigation }: any) {
         {/* Insights */}
         {insights.length > 0 && (
           <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, gap: 8 }}>
-              <Icon name="insights" size={20} color={colors.primary} />
-              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                {t('dashboard.insights')}
-              </Text>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitle}>
+                <Icon name="insights" size={20} color={colors.primary} />
+                <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
+                  {t('dashboard.insights')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('More', { screen: 'Insights', initial: false })}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
+                  {t('dashboard.seeAllInsights')}
+                </Text>
+              </TouchableOpacity>
             </View>
             {insights.map((insight, i) => (
               <Animated.View
@@ -276,6 +303,7 @@ export function DashboardScreen({ navigation }: any) {
             <TouchableOpacity
               onPress={() => navigation.navigate('Transactions')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
             >
               <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
                 {t('dashboard.seeAll')}
@@ -295,6 +323,12 @@ export function DashboardScreen({ navigation }: any) {
               <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }]}>
                 {t('dashboard.noTransactionsHint')}
               </Text>
+              <AppButton
+                label={t('dashboard.addFirstTransaction')}
+                icon="add"
+                onPress={openAddTransaction}
+                style={{ alignSelf: 'center', marginTop: spacing.base }}
+              />
             </View>
           ) : (
             recentTransactions.map((tx, idx) => (
@@ -305,7 +339,7 @@ export function DashboardScreen({ navigation }: any) {
                 index={idx}
                 animate={idx < 6}
                 onPress={() => navigation.navigate('Transactions', {
-                  screen: 'TransactionDetail', params: { transactionId: tx.id },
+                  screen: 'TransactionDetail', params: { transactionId: tx.id }, initial: false,
                 })}
               />
             ))
@@ -319,7 +353,11 @@ export function DashboardScreen({ navigation }: any) {
               <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
                 {t('dashboard.yourAccounts')}
               </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Accounts')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+              >
                 <Text style={[typography.styles.labelLarge, { color: colors.primary }]}>
                   {t('dashboard.manage')}
                 </Text>
@@ -328,8 +366,11 @@ export function DashboardScreen({ navigation }: any) {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -spacing.base }}>
               <View style={{ flexDirection: 'row', paddingHorizontal: spacing.base, gap: spacing.sm }}>
                 {accounts.map(acc => (
-                  <View
+                  <TouchableOpacity
                     key={acc.id}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('Accounts')}
+                    accessibilityRole="button"
                     style={[{
                       backgroundColor: acc.color,
                       borderRadius: borderRadius.xl,
@@ -346,20 +387,42 @@ export function DashboardScreen({ navigation }: any) {
                     <Text style={[typography.styles.titleMedium, { color: '#FFF', marginTop: 2 }]}>
                       {formatCurrency(acc.balance)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             </ScrollView>
           </View>
         )}
       </ScrollView>
+
+      {/* Atalho para o lançamento manual */}
+      <Pressable
+        onPress={openAddTransaction}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.addTransaction')}
+        style={({ pressed }) => [styles.fab, {
+          backgroundColor: colors.primary,
+          right:  spacing.base,
+          bottom: spacing.base,
+          opacity: pressed ? 0.85 : 1,
+          ...shadows.lg,
+        }]}
+      >
+        <Icon name="add" size={28} color="#FFF" />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container:    { flex: 1 },
-  greeting:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  greeting:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
+  greetingText: { flex: 1, minWidth: 0 },
+  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  fab: {
+    position: 'absolute', width: FAB_SIZE, height: FAB_SIZE, borderRadius: FAB_SIZE / 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
   monitorBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 },
   toast: {
     position:       'absolute',

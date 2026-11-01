@@ -1,13 +1,11 @@
 ﻿import React, {
   useEffect, useState, useCallback, useMemo,
 } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, RefreshControl, Modal,
+  TextInput, RefreshControl,
   ScrollView, ActivityIndicator,
 } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useTranslation }       from 'react-i18next';
 
 import { useTheme }             from '../../../hooks/useTheme';
@@ -17,8 +15,10 @@ import { SwipeableTransaction } from '../components/SwipeableTransaction';
 import { AppHeader }            from '../../../components/AppHeader';
 import { IconButton }           from '../../../components/AppButton';
 import { Icon }                 from '../../../components/Icon';
-import { CloseButton }          from '../../../components/CloseButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { useTabListPadding }    from '../../../hooks/useScreenPadding';
+import { useResponsive }        from '../../../hooks/useResponsive';
+import { AppButton }            from '../../../components/AppButton';
 import type { AppIconName }     from '../../../components/Icon';
 import { Transaction }           from '../../../models/types';
 import {
@@ -40,8 +40,8 @@ interface AdvancedFilters {
 export function TransactionsScreen({ navigation }: any) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   const listPad = useTabListPadding();
+  const { isShortHeight } = useResponsive();
 
   const transactions  = useTransactionStore(s => s.transactions);
   const isLoading     = useTransactionStore(s => s.isLoading);
@@ -155,6 +155,9 @@ export function TransactionsScreen({ navigation }: any) {
     [advanced],
   );
 
+  const isFiltering = !!search.trim() || hasActiveFilters || typeFilter !== 'all';
+  const canGoNext = addMonths(currentDate, 1) <= new Date();
+
   useEffect(() => {
     if ((search.trim() || hasActiveFilters) && hasMore) {
       loadMore();
@@ -169,6 +172,14 @@ export function TransactionsScreen({ navigation }: any) {
       maxAmount:  tempMax ? parseFloat(tempMax.replace(',', '.')) : undefined,
     });
     setShowFilters(false);
+  };
+
+  const openFilters = () => {
+    setTempCat(advanced.categoryId);
+    setTempBank(advanced.bankName ?? '');
+    setTempMin(advanced.minAmount !== undefined ? String(advanced.minAmount).replace('.', ',') : '');
+    setTempMax(advanced.maxAmount !== undefined ? String(advanced.maxAmount).replace('.', ',') : '');
+    setShowFilters(true);
   };
 
   const clearFilters = () => {
@@ -203,9 +214,9 @@ export function TransactionsScreen({ navigation }: any) {
       <AppHeader
         title={t('transactions.title')}
         actions={[
-          { icon: 'sort',   onPress: () => setShowSort(true) },
-          { icon: 'filter', onPress: () => { setTempCat(advanced.categoryId); setTempBank(advanced.bankName ?? ''); setShowFilters(true); }, badge: hasActiveFilters },
-          { icon: 'add',    onPress: () => navigation.navigate('AddTransaction'), color: colors.primary },
+          { icon: 'sort',   onPress: () => setShowSort(true), badge: sort !== 'date_desc', label: t('a11y.sort') },
+          { icon: 'filter', onPress: openFilters, badge: hasActiveFilters, label: t('a11y.filter') },
+          { icon: 'add',    onPress: () => navigation.navigate('AddTransaction'), color: colors.primary, label: t('a11y.addTransaction') },
         ]}
       />
 
@@ -218,10 +229,15 @@ export function TransactionsScreen({ navigation }: any) {
         borderBottomColor: colors.borderLight,
       }]}>
         <View style={styles.monthRow}>
-          <IconButton name="back" onPress={() => {
-            const prev = subtractMonths(currentDate, 1);
-            loadByMonth(prev.getFullYear(), prev.getMonth() + 1);
-          }} color={colors.primary} />
+          <IconButton
+            name="back"
+            accessibilityLabel={t('a11y.previousMonth')}
+            onPress={() => {
+              const prev = subtractMonths(currentDate, 1);
+              loadByMonth(prev.getFullYear(), prev.getMonth() + 1);
+            }}
+            color={colors.primary}
+          />
           <Text
             style={[typography.styles.titleSmall, styles.monthLabel, { color: colors.text }]}
             numberOfLines={1}
@@ -230,25 +246,38 @@ export function TransactionsScreen({ navigation }: any) {
           >
             {formatMonthYear(currentDate)}
           </Text>
-          <IconButton name="forward" onPress={() => {
-            const next = addMonths(currentDate, 1);
-            if (next <= new Date()) loadByMonth(next.getFullYear(), next.getMonth() + 1);
-          }} color={colors.primary} />
+          <IconButton
+            name="forward"
+            accessibilityLabel={t('a11y.nextMonth')}
+            disabled={!canGoNext}
+            onPress={() => {
+              const next = addMonths(currentDate, 1);
+              loadByMonth(next.getFullYear(), next.getMonth() + 1);
+            }}
+            color={colors.primary}
+          />
         </View>
 
-        <View style={[styles.summaryRow, { gap: spacing.sm, marginTop: spacing.sm }]}>
+        {!isShortHeight && (
+        <View style={[styles.summaryRow, { gap: spacing.sm, marginTop: spacing.xs }]}>
           {[
             { label: `↑ ${formatCurrency(summary.income)}`,  color: colors.income,   bg: colors.incomeBackground  },
             { label: `↓ ${formatCurrency(summary.expense)}`, color: colors.expense,  bg: colors.expenseBackground },
             { label: `= ${formatCurrency(summary.balance)}`, color: summary.balance >= 0 ? colors.income : colors.expense, bg: summary.balance >= 0 ? colors.incomeBackground : colors.expenseBackground },
           ].map((pill, i) => (
             <View key={i} style={[styles.pill, { backgroundColor: pill.bg, borderRadius: borderRadius.md }]}>
-              <Text style={[typography.styles.labelSmall, { color: pill.color }]} numberOfLines={1}>
+              <Text
+                style={[typography.styles.labelSmall, { color: pill.color, textAlign: 'center' }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
                 {pill.label}
               </Text>
             </View>
           ))}
         </View>
+        )}
 
         <View style={[styles.searchRow, {
           backgroundColor: colors.inputBackground,
@@ -261,27 +290,31 @@ export function TransactionsScreen({ navigation }: any) {
             onChangeText={setSearch}
             placeholder={t('transactions.searchPlaceholder')}
             placeholderTextColor={colors.placeholder}
+            returnKeyType="search"
+            accessibilityLabel={t('transactions.searchPlaceholder')}
             style={[styles.searchInput, { color: colors.inputText, ...typography.styles.bodyMedium }]}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} style={{ padding: spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => setSearch('')}
+              style={{ padding: spacing.md }}
+              accessibilityRole="button"
+              accessibilityLabel={t('a11y.clearSearch')}
+            >
               <Icon name="close" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={[styles.filterRow, { gap: spacing.sm }]}
-        >
+        <View style={[styles.filterRow, { gap: spacing.sm }]}>
           {TYPE_FILTERS.map(f => {
             const selected = typeFilter === f.key;
             return (
               <TouchableOpacity
                 key={f.key}
                 onPress={() => setTypeFilter(f.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
                 style={[styles.typeChip, {
                   backgroundColor: selected ? f.color : colors.surfaceVariant,
                   borderRadius: borderRadius.full,
@@ -295,7 +328,7 @@ export function TransactionsScreen({ navigation }: any) {
                     style={{ marginRight: 4 }}
                   />
                 ) : null}
-                <Text style={[typography.styles.labelMedium, {
+                <Text numberOfLines={1} style={[typography.styles.labelMedium, {
                   color: selected ? '#FFF' : colors.textSecondary,
                 }]}>
                   {f.label}
@@ -303,7 +336,7 @@ export function TransactionsScreen({ navigation }: any) {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── Lista de transações ──────────────────────────────────────────────── */}
@@ -311,6 +344,8 @@ export function TransactionsScreen({ navigation }: any) {
         style={styles.list}
         data={listRows}
         keyExtractor={item => item.key}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -344,14 +379,25 @@ export function TransactionsScreen({ navigation }: any) {
           }]}>
             <Icon name="expense" size={40} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={[typography.styles.titleSmall, { color: colors.text, textAlign: 'center', marginTop: spacing.md }]}>
-              {search || hasActiveFilters ? t('transactions.noneFound') : t('transactions.noneThisMonth')}
+              {isFiltering ? t('transactions.noneFound') : t('transactions.noneThisMonth')}
             </Text>
-            {(search || hasActiveFilters) && (
-              <TouchableOpacity onPress={() => { setSearch(''); clearFilters(); }}>
+            {isFiltering ? (
+              <TouchableOpacity
+                onPress={() => { setSearch(''); setTypeFilter('all'); clearFilters(); }}
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={[typography.styles.labelLarge, { color: colors.primary, textAlign: 'center', marginTop: spacing.sm }]}>
                   {t('transactions.clearFilters')}
                 </Text>
               </TouchableOpacity>
+            ) : (
+              <AppButton
+                label={t('dashboard.addFirstTransaction')}
+                icon="add"
+                onPress={() => navigation.navigate('AddTransaction')}
+                style={{ alignSelf: 'center', marginTop: spacing.base }}
+              />
             )}
           </View>
         }
@@ -377,214 +423,170 @@ export function TransactionsScreen({ navigation }: any) {
       />
 
       {/* ── Modal de Ordenação ────────────────────────────────────────────────── */}
-      <Modal visible={showSort} transparent animationType="slide">
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showSort}
+        title={t('transactions.sortBy')}
+        onClose={() => setShowSort(false)}
+      >
+        {SORT_OPTIONS.map(opt => (
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowSort(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.bottomSheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius:  borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 20),
+            key={opt.key}
+            onPress={() => { setSort(opt.key); setShowSort(false); }}
+            style={[styles.sortOption, {
+              backgroundColor: sort === opt.key ? `${colors.primary}15` : 'transparent',
+              borderRadius:    borderRadius.lg,
+              padding:         spacing.md,
+              marginBottom:    spacing.xs,
             }]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('transactions.sortBy')}
-              </Text>
-              <CloseButton onPress={() => setShowSort(false)} />
-            </View>
-            {SORT_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.key}
-                onPress={() => { setSort(opt.key); setShowSort(false); }}
-                style={[styles.sortOption, {
-                  backgroundColor: sort === opt.key ? `${colors.primary}15` : 'transparent',
-                  borderRadius:    borderRadius.lg,
-                  padding:         spacing.md,
-                  marginBottom:    spacing.xs,
-                }]}
-              >
-                <Text style={[typography.styles.bodyLarge, { color: sort === opt.key ? colors.primary : colors.text }]}>
-                  {sort === opt.key ? '✓ ' : ''}{opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </Animated.View>
-        </View>
-      </Modal>
+            <Text style={[typography.styles.bodyLarge, { color: sort === opt.key ? colors.primary : colors.text }]}>
+              {sort === opt.key ? '✓ ' : ''}{opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
 
       {/* ── Modal de Filtros Avançados ───────────────────────────────────────── */}
-      <Modal visible={showFilters} transparent animationType="slide">
-        <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showFilters}
+        title={t('transactions.advancedFilters')}
+        onClose={() => setShowFilters(false)}
+      >
+        {/* Categoria */}
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('transactions.category')}
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowFilters(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.bottomSheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius:  borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 20),
+            onPress={() => setTempCat(undefined)}
+            style={[styles.filterChip, {
+              backgroundColor: tempCat === undefined ? colors.primary : colors.surfaceVariant,
+              borderRadius: borderRadius.full,
+              marginRight: spacing.sm,
             }]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text
-                style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}
-                numberOfLines={1}
-              >
-                {t('transactions.advancedFilters')}
+            <Text style={[typography.styles.labelMedium, { color: tempCat === undefined ? '#FFF' : colors.textSecondary }]}>
+              {t('common.all')}
+            </Text>
+          </TouchableOpacity>
+          {categories.map(c => (
+            <TouchableOpacity
+              key={c.id}
+              onPress={() => setTempCat(c.id)}
+              style={[styles.filterChip, {
+                backgroundColor: tempCat === c.id ? colors.primary : colors.surfaceVariant,
+                borderRadius: borderRadius.full,
+                marginRight: spacing.sm,
+              }]}
+            >
+              <Text style={{ fontSize: 13 }}>{c.icon ?? '📦'}</Text>
+              <Text style={[typography.styles.labelSmall, {
+                color: tempCat === c.id ? '#FFF' : colors.textSecondary,
+              }]}>
+                {' '}{c.name}
               </Text>
-              <CloseButton onPress={() => setShowFilters(false)} />
-            </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-            {/* Categoria */}
+        {/* Banco */}
+        {uniqueBanks.length > 0 && (
+          <>
             <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('transactions.category')}
+              {t('transactions.bank')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
               <TouchableOpacity
-                onPress={() => setTempCat(undefined)}
+                onPress={() => setTempBank('')}
                 style={[styles.filterChip, {
-                  backgroundColor: tempCat === undefined ? colors.primary : colors.surfaceVariant,
-                  borderRadius: borderRadius.full,
-                  marginRight: spacing.sm,
+                  backgroundColor: !tempBank ? colors.primary : colors.surfaceVariant,
+                  borderRadius: borderRadius.full, marginRight: spacing.sm,
                 }]}
               >
-                <Text style={[typography.styles.labelMedium, { color: tempCat === undefined ? '#FFF' : colors.textSecondary }]}>
-                  {t('common.all')}
+                <Text style={[typography.styles.labelMedium, { color: !tempBank ? '#FFF' : colors.textSecondary }]}>
+                  {t('transactions.allBanks')}
                 </Text>
               </TouchableOpacity>
-              {categories.slice(0, 12).map(c => (
+              {uniqueBanks.map(bank => (
                 <TouchableOpacity
-                  key={c.id}
-                  onPress={() => setTempCat(c.id)}
+                  key={bank}
+                  onPress={() => setTempBank(bank)}
                   style={[styles.filterChip, {
-                    backgroundColor: tempCat === c.id ? colors.primary : colors.surfaceVariant,
-                    borderRadius: borderRadius.full,
-                    marginRight: spacing.sm,
+                    backgroundColor: tempBank === bank ? colors.primary : colors.surfaceVariant,
+                    borderRadius: borderRadius.full, marginRight: spacing.sm,
                   }]}
                 >
-                  <Text style={{ fontSize: 13 }}>{c.icon ?? '📦'}</Text>
-                  <Text style={[typography.styles.labelSmall, {
-                    color: tempCat === c.id ? '#FFF' : colors.textSecondary,
+                  <Text style={[typography.styles.labelMedium, {
+                    color: tempBank === bank ? '#FFF' : colors.textSecondary,
                   }]}>
-                    {' '}{c.name}
+                    {bank}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </>
+        )}
 
-            {/* Banco */}
-            {uniqueBanks.length > 0 && (
-              <>
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-                  {t('transactions.bank')}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
-                  <TouchableOpacity
-                    onPress={() => setTempBank('')}
-                    style={[styles.filterChip, {
-                      backgroundColor: !tempBank ? colors.primary : colors.surfaceVariant,
-                      borderRadius: borderRadius.full, marginRight: spacing.sm,
-                    }]}
-                  >
-                    <Text style={[typography.styles.labelMedium, { color: !tempBank ? '#FFF' : colors.textSecondary }]}>
-                      {t('transactions.allBanks')}
-                    </Text>
-                  </TouchableOpacity>
-                  {uniqueBanks.map(bank => (
-                    <TouchableOpacity
-                      key={bank}
-                      onPress={() => setTempBank(bank)}
-                      style={[styles.filterChip, {
-                        backgroundColor: tempBank === bank ? colors.primary : colors.surfaceVariant,
-                        borderRadius: borderRadius.full, marginRight: spacing.sm,
-                      }]}
-                    >
-                      <Text style={[typography.styles.labelMedium, {
-                        color: tempBank === bank ? '#FFF' : colors.textSecondary,
-                      }]}>
-                        {bank}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            )}
-
-            {/* Faixa de valor */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('transactions.amountRange')}
-            </Text>
-            <View style={[styles.rangeRow, { marginBottom: spacing.xl }]}>
-              <TextInput
-                value={tempMin}
-                onChangeText={setTempMin}
-                keyboardType="decimal-pad"
-                placeholder={t('transactions.min')}
-                placeholderTextColor={colors.placeholder}
-                style={[styles.rangeInput, {
-                  backgroundColor: colors.inputBackground,
-                  borderRadius:    borderRadius.lg,
-                  color:           colors.inputText,
-                  flex: 1,
-                }]}
-              />
-              <Text style={{ color: colors.textSecondary, paddingHorizontal: spacing.sm }}>–</Text>
-              <TextInput
-                value={tempMax}
-                onChangeText={setTempMax}
-                keyboardType="decimal-pad"
-                placeholder={t('transactions.max')}
-                placeholderTextColor={colors.placeholder}
-                style={[styles.rangeInput, {
-                  backgroundColor: colors.inputBackground,
-                  borderRadius:    borderRadius.lg,
-                  color:           colors.inputText,
-                  flex: 1,
-                }]}
-              />
-            </View>
-
-            {/* Ações */}
-            <View style={styles.filterActions}>
-              <TouchableOpacity
-                onPress={clearFilters}
-                style={[styles.filterBtn, {
-                  backgroundColor: colors.surfaceVariant,
-                  borderRadius:    borderRadius.full, flex: 1,
-                }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
-                  {t('common.clear')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={applyAdvancedFilters}
-                style={[styles.filterBtn, {
-                  backgroundColor: colors.primary,
-                  borderRadius:    borderRadius.full, flex: 1,
-                }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {t('common.apply')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+        {/* Faixa de valor */}
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('transactions.amountRange')}
+        </Text>
+        <View style={[styles.rangeRow, { marginBottom: spacing.xl }]}>
+          <TextInput
+            value={tempMin}
+            onChangeText={setTempMin}
+            keyboardType="decimal-pad"
+            placeholder={t('transactions.min')}
+            placeholderTextColor={colors.placeholder}
+            style={[styles.rangeInput, {
+              backgroundColor: colors.inputBackground,
+              borderRadius:    borderRadius.lg,
+              color:           colors.inputText,
+              flex: 1,
+            }]}
+          />
+          <Text style={{ color: colors.textSecondary, paddingHorizontal: spacing.sm }}>–</Text>
+          <TextInput
+            value={tempMax}
+            onChangeText={setTempMax}
+            keyboardType="decimal-pad"
+            placeholder={t('transactions.max')}
+            placeholderTextColor={colors.placeholder}
+            style={[styles.rangeInput, {
+              backgroundColor: colors.inputBackground,
+              borderRadius:    borderRadius.lg,
+              color:           colors.inputText,
+              flex: 1,
+            }]}
+          />
         </View>
-      </Modal>
+
+        {/* Ações */}
+        <View style={styles.filterActions}>
+          <TouchableOpacity
+            onPress={clearFilters}
+            style={[styles.filterBtn, {
+              backgroundColor: colors.surfaceVariant,
+              borderRadius:    borderRadius.full, flex: 1,
+            }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+              {t('common.clear')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={applyAdvancedFilters}
+            style={[styles.filterBtn, {
+              backgroundColor: colors.primary,
+              borderRadius:    borderRadius.full, flex: 1,
+            }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+              {t('common.apply')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -595,18 +597,18 @@ const styles = StyleSheet.create({
   list:          { flex: 1 },
   monthRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   monthLabel:    { flex: 1, textAlign: 'center', marginHorizontal: 8 },
-  summaryRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
-  pill:          { paddingHorizontal: 10, paddingVertical: 4, maxWidth: '33%' },
+  summaryRow:    { flexDirection: 'row' },
+  pill:          { flex: 1, paddingHorizontal: 6, paddingVertical: 4 },
   searchRow:     { flexDirection: 'row', alignItems: 'center' },
   searchInput:   { flex: 1, paddingHorizontal: 8, paddingVertical: 10 },
-  filterScroll:  { marginTop: 8, flexGrow: 0 },
-  filterRow:     { alignItems: 'center', paddingVertical: 2 },
+  filterRow:     { flexDirection: 'row', marginTop: 8 },
   typeChip:      {
+    flex:              1,
     flexDirection:     'row',
     alignItems:        'center',
-    paddingHorizontal: 14,
-    paddingVertical:   8,
-    alignSelf:         'flex-start',
+    justifyContent:    'center',
+    paddingHorizontal: 8,
+    minHeight:         36,
   },
   empty:         { alignItems: 'center' },
   modalOverlay:  { flex: 1, justifyContent: 'flex-end' },

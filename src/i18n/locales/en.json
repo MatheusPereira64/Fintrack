@@ -182,7 +182,9 @@
     "noTransactionsYet": "No transactions yet",
     "noTransactionsHint": "When you receive a bank notification, it will appear here automatically.",
     "yourAccounts": "Your accounts",
-    "manage": "Manage →"
+    "manage": "Manage →",
+    "addFirstTransaction": "Add transaction",
+    "seeAllInsights": "See all →"
   },
   "balanceCard": {
     "totalWealth": "Total net worth",
@@ -363,7 +365,12 @@
     "installmentCurrent": "Current",
     "installmentTotal": "Total",
     "installmentOf": "of",
-    "installmentInvalid": "Enter valid installments (e.g.: 3 of 12)."
+    "installmentInvalid": "Enter valid installments (e.g.: 3 of 12).",
+    "date": "Date",
+    "noAccountsTitle": "No accounts yet",
+    "noAccountsHint": "Create an account to record this transaction.",
+    "goToAccounts": "Create account",
+    "accountLockedHint": "The account cannot be changed while editing."
   },
   "swipeableTransaction": {
     "deleteTitle": "Delete transaction",
@@ -473,7 +480,10 @@
     "settingsSubtitle": "Theme, notifications, and export",
     "import": "Import statement",
     "importSubtitle": "Import OFX or CSV from your bank",
-    "version": "FinTrack v{{version}} · Smart Financial Monitor"
+    "version": "FinTrack v{{version}} · Smart Financial Monitor",
+    "sectionPlanning": "Planning",
+    "sectionNotifications": "Bank notifications",
+    "sectionApp": "App"
   },
   "settings": {
     "title": "Settings",
@@ -729,5 +739,17 @@
   "accountBalance": {
     "notFound": "Account not found",
     "adjustmentDescription": "Balance adjustment"
+  },
+  "a11y": {
+    "sort": "Sort",
+    "filter": "Filter",
+    "addTransaction": "Add transaction",
+    "addItem": "Add",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "clearSearch": "Clear search",
+    "deleteItem": "Delete",
+    "markAllRead": "Mark all as read",
+    "monitorStatus": "Notification monitoring: {{status}}"
   }
 }

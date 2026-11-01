@@ -49,7 +49,7 @@ export function AccountCreditScreen({ route, navigation }: any) {
   if (!account || account.type !== 'credit_card') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <AppHeader title={t('accountCredit.title')} onClose={() => navigation.goBack()} />
+        <AppHeader title={t('accountCredit.title')} onBack={() => navigation.goBack()} />
         <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, padding: spacing.base }]}>
           {t('accountCredit.notFound')}
         </Text>
@@ -65,7 +65,7 @@ export function AccountCreditScreen({ route, navigation }: any) {
       <AppHeader
         title={t('accountCredit.title')}
         subtitle={account.name}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       <ScrollView contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 24 }}>

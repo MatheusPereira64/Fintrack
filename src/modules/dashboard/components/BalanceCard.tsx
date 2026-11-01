@@ -18,10 +18,11 @@ interface BalanceCardProps {
   currentDate:  Date;
   onPrevMonth:  () => void;
   onNextMonth:  () => void;
+  canGoNext?:   boolean;
 }
 
 export const BalanceCard = memo(function BalanceCard({
-  totalBalance, income, expense, count, currentDate, onPrevMonth, onNextMonth,
+  totalBalance, income, expense, count, currentDate, onPrevMonth, onNextMonth, canGoNext = true,
 }: BalanceCardProps) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
@@ -58,13 +59,26 @@ export const BalanceCard = memo(function BalanceCard({
         <View style={[styles.circle2, { borderColor: 'rgba(255,255,255,0.07)' }]} />
 
         <View style={styles.monthRow}>
-          <TouchableOpacity onPress={onPrevMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={onPrevMonth}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.previousMonth')}
+          >
             <Icon name="back" size={22} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
           <Text style={[typography.styles.labelLarge, styles.monthText]}>
             {formatMonthYear(currentDate)}
           </Text>
-          <TouchableOpacity onPress={onNextMonth} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={onNextMonth}
+            disabled={!canGoNext}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('a11y.nextMonth')}
+            accessibilityState={{ disabled: !canGoNext }}
+            style={{ opacity: canGoNext ? 1 : 0.35 }}
+          >
             <Icon name="forward" size={22} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
         </View>
@@ -76,6 +90,7 @@ export const BalanceCard = memo(function BalanceCard({
           value={totalBalance}
           style={[typography.styles.displaySmall, styles.totalBalance]}
           duration={600}
+          fit
         />
 
         <View style={[styles.divider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
@@ -83,13 +98,13 @@ export const BalanceCard = memo(function BalanceCard({
         <View style={styles.metricsRow}>
           <View style={styles.metric}>
             <Icon name="income" size={18} color="#86EFAC" />
-            <AnimatedNumber value={income} style={[typography.styles.titleSmall, styles.incomeText]} duration={700} />
+            <AnimatedNumber value={income} style={[typography.styles.titleSmall, styles.incomeText]} duration={700} fit />
             <Text style={styles.metricLabel}>{t('balanceCard.income')}</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
           <View style={styles.metric}>
             <Icon name="expense" size={18} color="#FCA5A5" />
-            <AnimatedNumber value={expense} style={[typography.styles.titleSmall, styles.expenseText]} duration={700} />
+            <AnimatedNumber value={expense} style={[typography.styles.titleSmall, styles.expenseText]} duration={700} fit />
             <Text style={styles.metricLabel}>{t('balanceCard.expense')}</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
@@ -103,6 +118,7 @@ export const BalanceCard = memo(function BalanceCard({
               value={Math.abs(balance)}
               style={[typography.styles.titleSmall, isPositive ? styles.incomeText : styles.expenseText]}
               duration={700}
+              fit
             />
             <Text style={styles.metricLabel}>{t('balanceCard.balance')}</Text>
           </View>
@@ -148,7 +164,7 @@ const styles = StyleSheet.create({
   totalBalance: { color: '#FFFFFF', marginBottom: 16 },
   divider:     { height: 1, marginBottom: 16 },
   metricsRow:  { flexDirection: 'row', alignItems: 'center' },
-  metric:      { flex: 1, alignItems: 'center', gap: 4 },
+  metric:      { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: 4 },
   metricDivider: { width: 1, height: 40 },
   metricLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 },
   incomeText:  { color: '#86EFAC' },

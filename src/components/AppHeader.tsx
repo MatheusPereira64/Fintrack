@@ -7,6 +7,7 @@ import {
   View, Text, StyleSheet, StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { AppIconName } from './Icon';
 import { IconButton } from './AppButton';
@@ -17,6 +18,8 @@ interface HeaderAction {
   onPress: () => void;
   badge?: boolean;
   color?: string;
+  /** Rótulo lido por leitores de tela. */
+  label?: string;
 }
 
 interface AppHeaderProps {
@@ -33,6 +36,7 @@ interface AppHeaderProps {
 export const AppHeader = memo(function AppHeader({
   title, subtitle, onBack, onClose, actions, transparent, right,
 }: AppHeaderProps) {
+  const { t } = useTranslation();
   const { colors, spacing, typography, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const paddingTop = Math.max(insets.top, 20);
@@ -66,16 +70,17 @@ export const AppHeader = memo(function AppHeader({
               onPress={onBack}
               size={22}
               color={colors.text}
+              accessibilityLabel={t('common.back')}
               style={{ marginRight: spacing.xs }}
             />
           )}
 
           <View style={styles.titleGroup}>
-            <Text style={[typography.styles.titleLarge, { color: colors.text }]} numberOfLines={1}>
+            <Text accessibilityRole="header" style={[typography.styles.titleLarge, { color: colors.text }]} numberOfLines={1}>
               {title}
             </Text>
             {subtitle ? (
-              <Text style={[typography.styles.labelSmall, { color: colors.primary }]}>
+              <Text style={[typography.styles.labelSmall, { color: colors.primary }]} numberOfLines={1}>
                 {subtitle}
               </Text>
             ) : null}
@@ -91,6 +96,7 @@ export const AppHeader = memo(function AppHeader({
                 badge={a.badge}
                 color={a.color ?? colors.textSecondary}
                 size={22}
+                accessibilityLabel={a.label ?? (a.icon === 'add' ? t('a11y.addItem') : undefined)}
               />
             ))}
             {onClose && <CloseButton onPress={onClose} />}

@@ -54,8 +54,8 @@ export function NotificationsScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('notifications.title')}
-        onClose={() => navigation.goBack()}
-        actions={[{ icon: 'check-circle', onPress: markAllRead }]}
+        onBack={() => navigation.goBack()}
+        actions={[{ icon: 'check-circle', onPress: markAllRead, label: t('a11y.markAllRead') }]}
       />
 
       <FlatList

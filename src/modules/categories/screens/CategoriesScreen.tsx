@@ -1,14 +1,14 @@
 ﻿import React, { useEffect, useCallback, useState, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert,
+  Alert,
 } from 'react-native';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useCategoryStore } from '../../../store/categoryStore';
 import { AppHeader } from '../../../components/AppHeader';
-import { CloseButton } from '../../../components/CloseButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { Category }        from '../../../models/types';
 
@@ -110,7 +110,7 @@ export function CategoriesScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('categories.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
         actions={[{ icon: 'add', onPress: () => setShowModal(true), color: colors.primary }]}
       />
 
@@ -132,131 +132,111 @@ export function CategoriesScreen({ navigation }: any) {
       />
 
       {/* Modal de criar categoria */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowModal(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-            }]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('categories.newCategory')}
-              </Text>
-              <CloseButton onPress={() => setShowModal(false)} />
-            </View>
-
-            {/* Preview */}
-            <View style={[styles.preview, {
-              backgroundColor: `${color}15`,
-              borderRadius: borderRadius.xl,
-              padding: spacing.md,
-              marginBottom: spacing.lg,
-              alignItems: 'center',
-              borderWidth: 1, borderColor: `${color}40`,
-            }]}>
-              <Text style={{ fontSize: 32, marginBottom: 4 }}>{icon}</Text>
-              <Text style={[typography.styles.titleSmall, { color }]}>
-                {name || t('categories.namePreview')}
-              </Text>
-            </View>
-
-            {/* Nome */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('categories.nameLabel')}
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder={t('categories.namePlaceholder')}
-              placeholderTextColor={colors.placeholder}
-              style={[{
-                backgroundColor: colors.inputBackground,
-                borderRadius: borderRadius.lg,
-                padding: spacing.md,
-                color: colors.inputText,
-                marginBottom: spacing.lg,
-              }, typography.styles.bodyMedium]}
-            />
-
-            {/* Ícones */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('categories.icon')}
-            </Text>
-            <View style={[styles.iconGrid, { marginBottom: spacing.lg }]}>
-              {PRESET_ICONS.map(ic => (
-                <TouchableOpacity
-                  key={ic}
-                  onPress={() => setIcon(ic)}
-                  style={[{
-                    width: 44, height: 44, borderRadius: 22,
-                    backgroundColor: icon === ic ? `${color}30` : colors.surfaceVariant,
-                    justifyContent: 'center', alignItems: 'center',
-                    borderWidth: icon === ic ? 2 : 0,
-                    borderColor: color,
-                  }]}
-                >
-                  <Text style={{ fontSize: 20 }}>{ic}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Cores */}
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('categories.color')}
-            </Text>
-            <View style={[styles.colorRow, { marginBottom: spacing.xl }]}>
-              {PRESET_COLORS.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => setColor(c)}
-                  style={[{
-                    width: 30, height: 30, borderRadius: 15,
-                    backgroundColor: c,
-                    borderWidth: color === c ? 3 : 0,
-                    borderColor: '#FFF',
-                    shadowColor: color === c ? c : 'transparent',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.5,
-                    shadowRadius: 3,
-                    elevation: color === c ? 3 : 0,
-                  }]}
-                />
-              ))}
-            </View>
-
-            {/* Ações */}
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => setShowModal(false)}
-                style={[{ flex: 1, backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.full, padding: 12 }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
-                  {t('common.cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={saving}
-                style={[{ flex: 1, backgroundColor: colors.primary, borderRadius: borderRadius.full, padding: 12 }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : t('common.create')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+      <BottomSheet
+        visible={showModal}
+        title={t('categories.newCategory')}
+        onClose={() => setShowModal(false)}
+      >
+        {/* Preview */}
+        <View style={[styles.preview, {
+          backgroundColor: `${color}15`,
+          borderRadius: borderRadius.xl,
+          padding: spacing.md,
+          marginBottom: spacing.lg,
+          alignItems: 'center',
+          borderWidth: 1, borderColor: `${color}40`,
+        }]}>
+          <Text style={{ fontSize: 32, marginBottom: 4 }}>{icon}</Text>
+          <Text style={[typography.styles.titleSmall, { color }]}>
+            {name || t('categories.namePreview')}
+          </Text>
         </View>
-      </Modal>
+
+        {/* Nome */}
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('categories.nameLabel')}
+        </Text>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder={t('categories.namePlaceholder')}
+          placeholderTextColor={colors.placeholder}
+          style={[{
+            backgroundColor: colors.inputBackground,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            color: colors.inputText,
+            marginBottom: spacing.lg,
+          }, typography.styles.bodyMedium]}
+        />
+
+        {/* Ícones */}
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('categories.icon')}
+        </Text>
+        <View style={[styles.iconGrid, { marginBottom: spacing.lg }]}>
+          {PRESET_ICONS.map(ic => (
+            <TouchableOpacity
+              key={ic}
+              onPress={() => setIcon(ic)}
+              style={[{
+                width: 44, height: 44, borderRadius: 22,
+                backgroundColor: icon === ic ? `${color}30` : colors.surfaceVariant,
+                justifyContent: 'center', alignItems: 'center',
+                borderWidth: icon === ic ? 2 : 0,
+                borderColor: color,
+              }]}
+            >
+              <Text style={{ fontSize: 20 }}>{ic}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Cores */}
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('categories.color')}
+        </Text>
+        <View style={[styles.colorRow, { marginBottom: spacing.xl }]}>
+          {PRESET_COLORS.map(c => (
+            <TouchableOpacity
+              key={c}
+              onPress={() => setColor(c)}
+              style={[{
+                width: 30, height: 30, borderRadius: 15,
+                backgroundColor: c,
+                borderWidth: color === c ? 3 : 0,
+                borderColor: '#FFF',
+                shadowColor: color === c ? c : 'transparent',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.5,
+                shadowRadius: 3,
+                elevation: color === c ? 3 : 0,
+              }]}
+            />
+          ))}
+        </View>
+
+        {/* Ações */}
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => setShowModal(false)}
+            style={[{ flex: 1, backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.full, padding: 12 }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleAdd}
+            disabled={saving}
+            style={[{ flex: 1, backgroundColor: colors.primary, borderRadius: borderRadius.full, padding: 12 }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+              {saving ? '...' : t('common.create')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </View>
   );
 }

@@ -50,7 +50,7 @@ export function PreferencesScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('preferences.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
         right={
           <TouchableOpacity onPress={handleSave} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('common.save')}</Text>

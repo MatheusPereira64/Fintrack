@@ -71,7 +71,7 @@ export function ReviewQueueScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('reviewQueue.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       <FlatList

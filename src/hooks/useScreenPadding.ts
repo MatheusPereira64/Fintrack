@@ -1,12 +1,12 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTabBarInsets, TAB_BAR_CONTENT_HEIGHT } from './useTabBarInsets';
+import { TAB_BAR_CONTENT_HEIGHT } from './useTabBarInsets';
 
 /**
- * Padding inferior seguro para listas em tabs (acima da tab bar + gesture bar).
+ * Padding inferior para listas em tabs. A tab bar não é absoluta: o conteúdo
+ * já termina acima dela, então basta um respiro no fim da lista.
  */
 export function useTabListPadding(extra = 16): number {
-  const { tabBarHeight } = useTabBarInsets();
-  return tabBarHeight + extra;
+  return extra;
 }
 
 /**

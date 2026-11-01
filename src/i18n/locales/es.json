@@ -182,7 +182,9 @@
     "noTransactionsYet": "Aún no hay transacciones",
     "noTransactionsHint": "Cuando recibas una notificación del banco, aparecerá aquí automáticamente.",
     "yourAccounts": "Tus cuentas",
-    "manage": "Gestionar →"
+    "manage": "Gestionar →",
+    "addFirstTransaction": "Agregar transacción",
+    "seeAllInsights": "Ver todos →"
   },
   "balanceCard": {
     "totalWealth": "Patrimonio total",
@@ -363,7 +365,12 @@
     "installmentCurrent": "Actual",
     "installmentTotal": "Total",
     "installmentOf": "de",
-    "installmentInvalid": "Indica cuotas válidas (ej.: 3 de 12)."
+    "installmentInvalid": "Indica cuotas válidas (ej.: 3 de 12).",
+    "date": "Fecha",
+    "noAccountsTitle": "Ninguna cuenta registrada",
+    "noAccountsHint": "Crea una cuenta para registrar esta transacción.",
+    "goToAccounts": "Crear cuenta",
+    "accountLockedHint": "La cuenta no se puede cambiar al editar."
   },
   "swipeableTransaction": {
     "deleteTitle": "Eliminar transacción",
@@ -473,7 +480,10 @@
     "settingsSubtitle": "Tema, notificaciones y exportación",
     "import": "Importar extracto",
     "importSubtitle": "Importa OFX o CSV de tu banco",
-    "version": "FinTrack v{{version}} · Monitor Financiero Inteligente"
+    "version": "FinTrack v{{version}} · Monitor Financiero Inteligente",
+    "sectionPlanning": "Planificación",
+    "sectionNotifications": "Notificaciones del banco",
+    "sectionApp": "Aplicación"
   },
   "settings": {
     "title": "Configuración",
@@ -729,5 +739,17 @@
   "accountBalance": {
     "notFound": "Cuenta no encontrada",
     "adjustmentDescription": "Ajuste de saldo"
+  },
+  "a11y": {
+    "sort": "Ordenar",
+    "filter": "Filtrar",
+    "addTransaction": "Agregar transacción",
+    "addItem": "Agregar",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "clearSearch": "Borrar búsqueda",
+    "deleteItem": "Eliminar",
+    "markAllRead": "Marcar todas como leídas",
+    "monitorStatus": "Monitoreo de notificaciones: {{status}}"
   }
 }

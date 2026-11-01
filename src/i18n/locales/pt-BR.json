@@ -182,7 +182,9 @@
     "noTransactionsYet": "Nenhuma transação ainda",
     "noTransactionsHint": "Quando você receber uma notificação do banco, ela aparecerá aqui automaticamente.",
     "yourAccounts": "Suas contas",
-    "manage": "Gerenciar →"
+    "manage": "Gerenciar →",
+    "addFirstTransaction": "Adicionar transação",
+    "seeAllInsights": "Ver todos →"
   },
   "balanceCard": {
     "totalWealth": "Patrimônio total",
@@ -363,7 +365,12 @@
     "installmentCurrent": "Atual",
     "installmentTotal": "Total",
     "installmentOf": "de",
-    "installmentInvalid": "Informe parcelas válidas (ex.: 3 de 12)."
+    "installmentInvalid": "Informe parcelas válidas (ex.: 3 de 12).",
+    "date": "Data",
+    "noAccountsTitle": "Nenhuma conta cadastrada",
+    "noAccountsHint": "Crie uma conta para registrar esta transação.",
+    "goToAccounts": "Criar conta",
+    "accountLockedHint": "A conta não pode ser alterada ao editar."
   },
   "swipeableTransaction": {
     "deleteTitle": "Excluir transação",
@@ -473,7 +480,10 @@
     "settingsSubtitle": "Tema, notificações e exportação",
     "import": "Importar extrato",
     "importSubtitle": "Importe OFX ou CSV do seu banco",
-    "version": "FinTrack v{{version}} · Monitor Financeiro Inteligente"
+    "version": "FinTrack v{{version}} · Monitor Financeiro Inteligente",
+    "sectionPlanning": "Planejamento",
+    "sectionNotifications": "Notificações do banco",
+    "sectionApp": "Aplicativo"
   },
   "settings": {
     "title": "Configurações",
@@ -729,5 +739,17 @@
   "accountBalance": {
     "notFound": "Conta não encontrada",
     "adjustmentDescription": "Ajuste de saldo"
+  },
+  "a11y": {
+    "sort": "Ordenar",
+    "filter": "Filtrar",
+    "addTransaction": "Adicionar transação",
+    "addItem": "Adicionar",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "clearSearch": "Limpar busca",
+    "deleteItem": "Excluir",
+    "markAllRead": "Marcar todas como lidas",
+    "monitorStatus": "Monitoramento de notificações: {{status}}"
   }
 }

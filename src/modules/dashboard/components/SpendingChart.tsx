@@ -1,14 +1,21 @@
-import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { memo, useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
 
-const { width } = Dimensions.get('window');
-const CHART_WIDTH = width - 48;
 const CHART_HEIGHT = 180;
 const PADDING = { top: 10, right: 10, bottom: 30, left: 50 };
+
+/** Eixo Y curto; valores abaixo de mil não podem virar "R$0k". */
+function formatAxisValue(value: number): string {
+  if (value >= 1000) {
+    const k = value / 1000;
+    return `R$${Number.isInteger(k) ? k : k.toFixed(1)}k`;
+  }
+  return `R$${Math.round(value)}`;
+}
 
 interface MonthlyTotal {
   year:    number;
@@ -29,18 +36,19 @@ const MONTH_KEYS = [
 export const SpendingChart = memo(function SpendingChart({ data }: SpendingChartProps) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
+  const [chartWidth, setChartWidth] = useState(0);
 
   const chart = useMemo(() => {
-    if (data.length === 0) return null;
+    if (data.length === 0 || chartWidth === 0) return null;
 
-    const plotW = CHART_WIDTH - 16 - PADDING.left - PADDING.right;
+    const plotW = chartWidth - PADDING.left - PADDING.right;
     const plotH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
     const maxVal = Math.max(
       ...data.flatMap(d => [d.income, d.expense]),
       1,
     );
     const groupW = plotW / data.length;
-    const barW = Math.min(8, groupW * 0.22);
+    const barW = Math.min(12, groupW * 0.22);
     const gap = 4;
 
     const bars = data.flatMap((d, i) => {
@@ -68,13 +76,13 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
 
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map(tick => ({
       y: PADDING.top + plotH * (1 - tick),
-      label: `R$${Math.round((maxVal * tick) / 1000)}k`,
+      label: formatAxisValue(maxVal * tick),
     }));
 
-    return { bars, yTicks, plotW, plotH };
-  }, [colors.expense, colors.income, data]);
+    return { bars, yTicks, plotW, plotH, barW };
+  }, [chartWidth, colors.expense, colors.income, data]);
 
-  if (!chart) return null;
+  if (data.length === 0) return null;
 
   return (
     <Animated.View entering={FadeInUp.delay(200).duration(500)} style={[
@@ -95,7 +103,12 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
         {t('spendingChart.title')}
       </Text>
 
-      <Svg width={CHART_WIDTH - 16} height={CHART_HEIGHT}>
+      <View
+        style={{ height: CHART_HEIGHT }}
+        onLayout={e => setChartWidth(e.nativeEvent.layout.width)}
+      >
+        {chart && (
+      <Svg width={chartWidth} height={CHART_HEIGHT}>
         {chart.yTicks.map((tick, i) => (
           <React.Fragment key={`grid-${i}`}>
             <Line
@@ -139,13 +152,15 @@ export const SpendingChart = memo(function SpendingChart({ data }: SpendingChart
             key={bar.key}
             x={bar.x}
             y={bar.y}
-            width={8}
+            width={chart.barW}
             height={Math.max(bar.h, 0)}
-            rx={4}
+            rx={Math.min(4, chart.barW / 2)}
             fill={bar.color}
           />
         ))}
       </Svg>
+        )}
+      </View>
 
       <View style={styles.legend}>
         <View style={styles.legendItem}>

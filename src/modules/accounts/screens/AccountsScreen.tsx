@@ -1,10 +1,8 @@
 ﻿import React, { useEffect, useCallback, useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
-  Modal, Alert, ScrollView, Platform, ActivityIndicator, Image,
+  Alert, Platform, ActivityIndicator, Image,
 } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useTranslation }  from 'react-i18next';
 import { useTheme }        from '../../../hooks/useTheme';
 import { useAccountStore } from '../../../store/accountStore';
@@ -12,7 +10,7 @@ import { AccountCard }     from '../../../components/AccountCard';
 import { AppHeader }       from '../../../components/AppHeader';
 import { AppButton }       from '../../../components/AppButton';
 import { Icon }            from '../../../components/Icon';
-import { CloseButton }     from '../../../components/CloseButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { useTabListPadding } from '../../../hooks/useScreenPadding';
 import { Account, AccountType } from '../../../models/types';
 import { formatCurrency, parseAmount } from '../../../utils/currency';
@@ -54,7 +52,6 @@ const EMPTY_FORM: FormState = {
 export function AccountsScreen({ navigation }: { navigation?: any }) {
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   const accounts         = useAccountStore(s => s.accounts);
   const totalBalance     = useAccountStore(s => s.totalBalance);
   const isLoading        = useAccountStore(s => s.isLoading);
@@ -524,16 +521,16 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
         {t('accounts.color')}
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.sm }}>
         {COLORS.map(c => (
           <TouchableOpacity
             key={c}
             onPress={() => setForm(prev => ({ ...prev, color: c }))}
             style={{
-              width: 30, height: 30, borderRadius: 15,
+              width: 36, height: 36, borderRadius: 18,
               backgroundColor: c,
               borderWidth: form.color === c ? 3 : 0,
-              borderColor: '#FFF',
+              borderColor: colors.text,
             }}
           />
         ))}
@@ -546,29 +543,8 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       <AppHeader
         title={t('accounts.title')}
         subtitle={t('accounts.totalSubtitle', { amount: formatCurrency(totalBalance) })}
-        actions={[
-          ...(Platform.OS === 'android'
-            ? [{ icon: 'search' as const, onPress: handleDetect }]
-            : []),
-          { icon: 'add', onPress: () => openCreate(), color: colors.primary },
-        ]}
+        actions={[{ icon: 'add', onPress: () => openCreate(), color: colors.primary }]}
       />
-
-      {Platform.OS === 'android' && (
-        <View style={{
-          paddingHorizontal: spacing.base,
-          paddingTop: spacing.md,
-          paddingBottom: spacing.sm,
-        }}>
-          <AppButton
-            label={t('accounts.detectBanks')}
-            variant="secondary"
-            icon="bank"
-            onPress={handleDetect}
-            fullWidth
-          />
-        </View>
-      )}
 
       <FlatList
         data={accounts}
@@ -576,6 +552,18 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
         contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         refreshing={isLoading}
         onRefresh={loadAccounts}
+        ListHeaderComponent={
+          Platform.OS === 'android' && accounts.length > 0 ? (
+            <AppButton
+              label={t('accounts.detectBanks')}
+              variant="secondary"
+              icon="bank"
+              onPress={handleDetect}
+              fullWidth
+              style={{ marginBottom: spacing.md }}
+            />
+          ) : null
+        }
         ListEmptyComponent={
           <View style={[styles.empty, {
             backgroundColor: colors.surfaceVariant,
@@ -612,53 +600,12 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
       />
 
       {/* Modal criar / editar */}
-      <Modal visible={showFormModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => { setShowFormModal(false); resetForm(); }}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              paddingTop: spacing.xl,
-              paddingHorizontal: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 16),
-              maxHeight: '92%',
-            }]}
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: spacing.md,
-            }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                {editingId ? t('accounts.editAccount') : t('accounts.newAccount')}
-              </Text>
-              <CloseButton onPress={() => { setShowFormModal(false); resetForm(); }} />
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: spacing.md }}
-              style={{ flexGrow: 0 }}
-            >
-              {renderFormFields()}
-            </ScrollView>
-
-            <View style={{
-              flexDirection: 'row',
-              gap: spacing.sm,
-              paddingTop: spacing.md,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: colors.borderLight,
-            }}>
+      <BottomSheet
+        visible={showFormModal}
+        title={editingId ? t('accounts.editAccount') : t('accounts.newAccount')}
+        onClose={() => { setShowFormModal(false); resetForm(); }}
+        footer={
+          <>
               <AppButton
                 label={t('common.cancel')}
                 variant="secondary"
@@ -673,126 +620,115 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                 icon="check"
                 style={{ flex: 1 }}
               />
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+          </>
+        }
+      >
+        {renderFormFields()}
+        {editingId && (
+          <AppButton
+            label={t('accounts.deleteTitle')}
+            variant="ghost"
+            icon="delete"
+            onPress={() => {
+              setShowFormModal(false);
+              handleDelete(editingId);
+              resetForm();
+            }}
+            style={{ marginTop: spacing.sm }}
+            fullWidth
+          />
+        )}
+      </BottomSheet>
 
       {/* Modal detectar bancos */}
-      <Modal visible={showDetectModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowDetectModal(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              padding: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 20),
-              maxHeight: '80%',
-            }]}
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: spacing.xs,
-            }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text, flex: 1, marginRight: spacing.sm }]}>
-                {t('accounts.detectedBanks')}
-              </Text>
-              <CloseButton onPress={() => setShowDetectModal(false)} />
-            </View>
-            <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
-              {t('accounts.detectedBanksHint')}
+      <BottomSheet
+        visible={showDetectModal}
+        title={t('accounts.detectedBanks')}
+        onClose={() => setShowDetectModal(false)}
+      >
+        <Text style={[typography.styles.bodySmall, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
+          {t('accounts.detectedBanksHint')}
+        </Text>
+
+        {detecting ? (
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />
+        ) : detected.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+            <Icon name="bank" size={40} color={colors.textTertiary} />
+            <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }]}>
+              {t('accounts.noBanksFound')}
             </Text>
-
-            {detecting ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />
-            ) : detected.length === 0 ? (
-              <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                <Icon name="bank" size={40} color={colors.textTertiary} />
-                <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }]}>
-                  {t('accounts.noBanksFound')}
-                </Text>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {detected.map(bank => (
-                  <TouchableOpacity
-                    key={bank.packageName}
-                    disabled={bank.alreadyRegistered}
-                    onPress={() => {
-                      setShowDetectModal(false);
-                      openCreate({
-                        name:     bank.name,
-                        bankName: bank.name,
-                        color:    bank.primaryColor,
-                        balance:  '',
-                        informedBalance: '',
-                      });
-                    }}
-                    style={[styles.detectRow, {
-                      backgroundColor: bank.alreadyRegistered
-                        ? colors.surfaceVariant
-                        : `${bank.primaryColor}15`,
-                      borderRadius: borderRadius.lg,
-                      padding: spacing.md,
-                      marginBottom: spacing.sm,
-                      opacity: bank.alreadyRegistered ? 0.6 : 1,
-                    }]}
-                  >
-                    {bank.iconUri ? (
-                      <Image
-                        source={{ uri: bank.iconUri }}
-                        style={styles.detectIcon}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={[styles.detectIconFallback, { backgroundColor: bank.primaryColor }]}>
-                        <Icon name="bank" size={18} color="#FFF" />
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
-                        {bank.name}
-                      </Text>
-                      <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
-                        {bank.appLabel}
-                      </Text>
-                    </View>
-                    {bank.alreadyRegistered ? (
-                      <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
-                        {t('accounts.registered')}
-                      </Text>
-                    ) : (
-                      <Icon name="add" size={20} color={bank.primaryColor} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-                {newBanks.length > 0 && (
-                  <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginTop: spacing.sm }]}>
-                    {t('accounts.tapToRegister')}
-                  </Text>
+          </View>
+        ) : (
+          <>
+            {detected.map(bank => (
+              <TouchableOpacity
+                key={bank.packageName}
+                disabled={bank.alreadyRegistered}
+                onPress={() => {
+                  setShowDetectModal(false);
+                  openCreate({
+                    name:     bank.name,
+                    bankName: bank.name,
+                    color:    bank.primaryColor,
+                    balance:  '',
+                    informedBalance: '',
+                  });
+                }}
+                style={[styles.detectRow, {
+                  backgroundColor: bank.alreadyRegistered
+                    ? colors.surfaceVariant
+                    : `${bank.primaryColor}15`,
+                  borderRadius: borderRadius.lg,
+                  padding: spacing.md,
+                  marginBottom: spacing.sm,
+                  opacity: bank.alreadyRegistered ? 0.6 : 1,
+                }]}
+              >
+                {bank.iconUri ? (
+                  <Image
+                    source={{ uri: bank.iconUri }}
+                    style={styles.detectIcon}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.detectIconFallback, { backgroundColor: bank.primaryColor }]}>
+                    <Icon name="bank" size={18} color="#FFF" />
+                  </View>
                 )}
-              </ScrollView>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typography.styles.titleSmall, { color: colors.text }]}>
+                    {bank.name}
+                  </Text>
+                  <Text style={[typography.styles.caption, { color: colors.textSecondary }]}>
+                    {bank.appLabel}
+                  </Text>
+                </View>
+                {bank.alreadyRegistered ? (
+                  <Text style={[typography.styles.labelSmall, { color: colors.textSecondary }]}>
+                    {t('accounts.registered')}
+                  </Text>
+                ) : (
+                  <Icon name="add" size={20} color={bank.primaryColor} />
+                )}
+              </TouchableOpacity>
+            ))}
+            {newBanks.length > 0 && (
+              <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginTop: spacing.sm }]}>
+                {t('accounts.tapToRegister')}
+              </Text>
             )}
+          </>
+        )}
 
-            <AppButton
-              label={t('common.close')}
-              variant="secondary"
-              onPress={() => setShowDetectModal(false)}
-              style={{ marginTop: spacing.md }}
-              fullWidth
-            />
-          </Animated.View>
-        </View>
-      </Modal>
+        <AppButton
+          label={t('common.close')}
+          variant="secondary"
+          onPress={() => setShowDetectModal(false)}
+          style={{ marginTop: spacing.md }}
+          fullWidth
+        />
+      </BottomSheet>
     </View>
   );
 }

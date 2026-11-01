@@ -1,13 +1,15 @@
 import React, { useEffect, memo } from 'react';
-import { Text, TextStyle } from 'react-native';
+import { StyleProp, Text, TextStyle } from 'react-native';
 import { formatCurrency } from '../utils/currency';
 
 interface AnimatedNumberProps {
   value:   number;
-  style?:  TextStyle;
+  style?:  StyleProp<TextStyle>;
   prefix?: string;
   formatFn?: (v: number) => string;
   duration?: number;
+  /** Reduz a fonte para caber em uma linha em vez de quebrar o valor. */
+  fit?: boolean;
 }
 
 /**
@@ -21,6 +23,7 @@ export const AnimatedNumber = memo(function AnimatedNumber({
   prefix = '',
   formatFn = formatCurrency,
   duration = 800,
+  fit = false,
 }: AnimatedNumberProps) {
   const [displayed, setDisplayed] = React.useState(value);
   const startRef = React.useRef(value);
@@ -51,5 +54,14 @@ export const AnimatedNumber = memo(function AnimatedNumber({
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
   }, [value, duration]);
 
-  return <Text style={style}>{prefix}{formatFn(displayed)}</Text>;
+  return (
+    <Text
+      style={style}
+      numberOfLines={fit ? 1 : undefined}
+      adjustsFontSizeToFit={fit}
+      minimumFontScale={fit ? 0.6 : undefined}
+    >
+      {prefix}{formatFn(displayed)}
+    </Text>
+  );
 });

@@ -1,10 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Alert,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { SlideInDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
@@ -14,7 +12,7 @@ import { useAccountStore } from '../../../store/accountStore';
 import { formatCurrency } from '../../../utils/currency';
 import { simulateAccountPlan, PlanResult } from '../../../services/AccountPlanService';
 import { AccountNamedPlanService, AccountNamedPlan } from '../../../services/AccountNamedPlanService';
-import { CloseButton } from '../../../components/CloseButton';
+import { BottomSheet }  from '../../../components/BottomSheet';
 import { Icon } from '../../../components/Icon';
 
 const HORIZON_PRESETS = [3, 6, 12, 24, 36] as const;
@@ -31,7 +29,6 @@ export function AccountPlanScreen({ route, navigation }: any) {
   const { accountId } = route.params as { accountId: number };
   const { t } = useTranslation();
   const { colors, spacing, borderRadius, typography } = useTheme();
-  const insets = useSafeAreaInsets();
   const bottomPad = useSafeBottomPadding(24);
   const account = useAccountStore(s => s.accounts.find(a => a.id === accountId));
 
@@ -250,7 +247,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
       <AppHeader
         title={viewing ? t('accountPlan.dashboardTitle') : t('accountPlan.title')}
         subtitle={account.name}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
         actions={viewing ? [
           {
             icon: 'edit',
@@ -530,151 +527,106 @@ export function AccountPlanScreen({ route, navigation }: any) {
       </ScrollView>
 
       {/* Modal para salvar/atualizar plano */}
-      <Modal visible={showSaveModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <BottomSheet
+        visible={showSaveModal}
+        title={currentPlanId ? t('accountPlan.updatePlan') : t('accountPlan.savePlan')}
+        onClose={() => { setShowSaveModal(false); setPlanName(''); }}
+      >
+        <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
+          {t('accountPlan.planName')}
+        </Text>
+        <TextInput
+          value={planName}
+          onChangeText={setPlanName}
+          placeholder={t('accountPlan.planNamePlaceholder')}
+          placeholderTextColor={colors.placeholder}
+          style={[{
+            backgroundColor: colors.inputBackground,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            color: colors.inputText,
+            marginBottom: spacing.lg,
+          }, typography.styles.bodyMedium]}
+        />
+
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
             onPress={() => { setShowSaveModal(false); setPlanName(''); }}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              paddingTop: spacing.xl,
-              paddingHorizontal: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 16),
-            }]}
+            style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                {currentPlanId ? t('accountPlan.updatePlan') : t('accountPlan.savePlan')}
-              </Text>
-              <CloseButton onPress={() => { setShowSaveModal(false); setPlanName(''); }} />
-            </View>
-
-            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, marginBottom: spacing.xs }]}>
-              {t('accountPlan.planName')}
+            <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
+              {t('common.cancel')}
             </Text>
-            <TextInput
-              value={planName}
-              onChangeText={setPlanName}
-              placeholder={t('accountPlan.planNamePlaceholder')}
-              placeholderTextColor={colors.placeholder}
-              style={[{
-                backgroundColor: colors.inputBackground,
-                borderRadius: borderRadius.lg,
-                padding: spacing.md,
-                color: colors.inputText,
-                marginBottom: spacing.lg,
-              }, typography.styles.bodyMedium]}
-            />
-
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => { setShowSaveModal(false); setPlanName(''); }}
-                style={[styles.btn, { backgroundColor: colors.surfaceVariant, flex: 1, borderRadius: borderRadius.full }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: colors.textSecondary, textAlign: 'center' }]}>
-                  {t('common.cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSavePlan}
-                disabled={saving}
-                style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
-              >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
-                  {saving ? '...' : t('common.save')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSavePlan}
+            disabled={saving}
+            style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
+          >
+            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+              {saving ? '...' : t('common.save')}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </BottomSheet>
 
       {/* Modal para listar planos salvos */}
-      <Modal visible={showPlansModal} transparent animationType="slide">
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setShowPlansModal(false)}
-          />
-          <Animated.View
-            entering={SlideInDown.duration(300)}
-            style={[styles.sheet, {
-              backgroundColor: colors.card,
-              borderTopLeftRadius: borderRadius['2xl'],
-              borderTopRightRadius: borderRadius['2xl'],
-              paddingTop: spacing.xl,
-              paddingHorizontal: spacing.xl,
-              paddingBottom: Math.max(insets.bottom, 16),
-              maxHeight: '80%',
-            }]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <Text style={[typography.styles.titleLarge, { color: colors.text }]}>
-                {t('accountPlan.savedPlans')}
-              </Text>
-              <CloseButton onPress={() => setShowPlansModal(false)} />
-            </View>
-
-            {savedPlans.length === 0 ? (
-              <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-                <Icon name="goal" size={48} color={colors.textTertiary} />
-                <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
-                  {t('accountPlan.noPlans')}{'\n'}{t('accountPlan.noPlansHint')}
-                </Text>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {savedPlans.map((plan) => (
+      <BottomSheet
+        visible={showPlansModal}
+        title={t('accountPlan.savedPlans')}
+        onClose={() => setShowPlansModal(false)}
+      >
+        {savedPlans.length === 0 ? (
+          <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+            <Icon name="goal" size={48} color={colors.textTertiary} />
+            <Text style={[typography.styles.bodyMedium, { color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }]}>
+              {t('accountPlan.noPlans')}{'\n'}{t('accountPlan.noPlansHint')}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {savedPlans.map((plan) => (
+              <TouchableOpacity
+                key={plan.id}
+                onPress={() => handleLoadPlan(plan)}
+                onLongPress={() => handleDeletePlan(plan)}
+                style={[{
+                  backgroundColor: currentPlanId === plan.id ? colors.surfaceVariant : colors.background,
+                  borderRadius: borderRadius.lg,
+                  padding: spacing.md,
+                  marginBottom: spacing.xs,
+                  borderLeftWidth: 3,
+                  borderLeftColor: currentPlanId === plan.id ? colors.primary : 'transparent',
+                }]}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.styles.labelLarge, { color: colors.text }]}>
+                      {plan.name}
+                    </Text>
+                    <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                      {t('accountPlan.planDetails', {
+                        months: plan.months,
+                        income: formatCurrency(plan.income),
+                        expense: formatCurrency(plan.expense),
+                      })}
+                    </Text>
+                  </View>
                   <TouchableOpacity
-                    key={plan.id}
-                    onPress={() => handleLoadPlan(plan)}
-                    onLongPress={() => handleDeletePlan(plan)}
-                    style={[{
-                      backgroundColor: currentPlanId === plan.id ? colors.surfaceVariant : colors.background,
-                      borderRadius: borderRadius.lg,
-                      padding: spacing.md,
-                      marginBottom: spacing.xs,
-                      borderLeftWidth: 3,
-                      borderLeftColor: currentPlanId === plan.id ? colors.primary : 'transparent',
-                    }]}
+                    onPress={() => handleDeletePlan(plan)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[typography.styles.labelLarge, { color: colors.text }]}>
-                          {plan.name}
-                        </Text>
-                        <Text style={[typography.styles.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                          {t('accountPlan.planDetails', {
-                            months: plan.months,
-                            income: formatCurrency(plan.income),
-                            expense: formatCurrency(plan.expense),
-                          })}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => handleDeletePlan(plan)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Icon name="delete" size={18} color={colors.textTertiary} />
-                      </TouchableOpacity>
-                    </View>
+                    <Icon name="delete" size={18} color={colors.textTertiary} />
                   </TouchableOpacity>
-                ))}
-                <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.sm, textAlign: 'center' }]}>
-                  {t('accountPlan.planActions')}
-                </Text>
-              </ScrollView>
-            )}
-          </Animated.View>
-        </View>
-      </Modal>
+                </View>
+              </TouchableOpacity>
+            ))}
+            <Text style={[typography.styles.caption, { color: colors.textTertiary, marginTop: spacing.sm, textAlign: 'center' }]}>
+              {t('accountPlan.planActions')}
+            </Text>
+          </>
+        )}
+      </BottomSheet>
     </View>
   );
 }

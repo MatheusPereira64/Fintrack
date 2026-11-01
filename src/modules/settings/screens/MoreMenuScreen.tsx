@@ -1,4 +1,4 @@
-﻿import React, { memo, useMemo, useCallback } from 'react';
+﻿import React, { memo, useEffect, useMemo, useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -13,6 +13,7 @@ import { AppHeader }         from '../../../components/AppHeader';
 import { Icon }              from '../../../components/Icon';
 import type { AppIconName }  from '../../../components/Icon';
 import { useTabListPadding } from '../../../hooks/useScreenPadding';
+import { UpdateService }     from '../../../services/UpdateService';
 
 interface MenuItem {
   icon:     AppIconName;
@@ -21,6 +22,11 @@ interface MenuItem {
   route:    string;
   badge?:   number | string;
   color?:   string;
+}
+
+interface MenuSection {
+  title: string;
+  items: MenuItem[];
 }
 
 const MenuRow = memo(function MenuRow({
@@ -32,10 +38,13 @@ const MenuRow = memo(function MenuRow({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={item.badge !== undefined ? `${item.label}, ${item.badge}` : item.label}
+      accessibilityHint={item.subtitle}
       style={[{
         backgroundColor: colors.card,
         borderRadius: borderRadius.xl,
-        padding: spacing.base,
+        padding: spacing.md,
         marginBottom: spacing.sm,
         flexDirection: 'row',
         alignItems: 'center',
@@ -47,7 +56,7 @@ const MenuRow = memo(function MenuRow({
       }]}
     >
       <View style={[{
-        width: 48, height: 48,
+        width: 44, height: 44,
         borderRadius: borderRadius.lg,
         backgroundColor: `${item.color ?? colors.primary}18`,
         justifyContent: 'center', alignItems: 'center',
@@ -88,6 +97,13 @@ export function MoreMenuScreen({ navigation }: any) {
   const pendingCount = useReviewStore(s => s.pendingCount);
   const unrecognizedCount = useReviewStore(s => s.unrecognizedCount);
   const refreshCounts = useReviewStore(s => s.refreshCounts);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    UpdateService.getLocalVersion()
+      .then(v => setAppVersion(v.versionName))
+      .catch(() => {});
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,16 +121,31 @@ export function MoreMenuScreen({ navigation }: any) {
     UnrecognizedInbox: unrecognizedCount > 0 ? unrecognizedCount : undefined,
   };
 
-  const menuItems: MenuItem[] = useMemo(() => [
-    { icon: 'goal',     label: t('moreMenu.goals'),         subtitle: t('moreMenu.goalsSubtitle'),         route: 'Goals',         color: '#059669' },
-    { icon: 'budget',   label: t('moreMenu.budgets'),       subtitle: t('moreMenu.budgetsSubtitle'),       route: 'Budget',        color: '#D97706' },
-    { icon: 'insights', label: t('moreMenu.insights'),      subtitle: t('moreMenu.insightsSubtitle'),      route: 'Insights',      color: '#7C3AED' },
-    { icon: 'bell',     label: t('moreMenu.notifications'), subtitle: t('moreMenu.notificationsSubtitle'), route: 'Notifications', color: '#2563EB' },
-    { icon: 'check-circle', label: t('moreMenu.reviewQueue'), subtitle: t('moreMenu.reviewQueueSubtitle'), route: 'ReviewQueue', color: '#0D9488' },
-    { icon: 'notification-dot', label: t('moreMenu.unrecognizedInbox'), subtitle: t('moreMenu.unrecognizedInboxSubtitle'), route: 'UnrecognizedInbox', color: '#EA580C' },
-    { icon: 'category', label: t('moreMenu.categories'),    subtitle: t('moreMenu.categoriesSubtitle'),    route: 'Categories',    color: '#0891B2' },
-    { icon: 'settings', label: t('moreMenu.settings'),      subtitle: t('moreMenu.settingsSubtitle'),      route: 'Settings',      color: '#6B7280' },
-    { icon: 'import',   label: t('moreMenu.import'),        subtitle: t('moreMenu.importSubtitle'),        route: 'Import',        color: '#059669' },
+  const sections: MenuSection[] = useMemo(() => [
+    {
+      title: t('moreMenu.sectionPlanning'),
+      items: [
+        { icon: 'goal',     label: t('moreMenu.goals'),    subtitle: t('moreMenu.goalsSubtitle'),    route: 'Goals',    color: '#059669' },
+        { icon: 'budget',   label: t('moreMenu.budgets'),  subtitle: t('moreMenu.budgetsSubtitle'),  route: 'Budget',   color: '#D97706' },
+        { icon: 'insights', label: t('moreMenu.insights'), subtitle: t('moreMenu.insightsSubtitle'), route: 'Insights', color: '#7C3AED' },
+      ],
+    },
+    {
+      title: t('moreMenu.sectionNotifications'),
+      items: [
+        { icon: 'check-circle', label: t('moreMenu.reviewQueue'), subtitle: t('moreMenu.reviewQueueSubtitle'), route: 'ReviewQueue', color: '#0D9488' },
+        { icon: 'notification-dot', label: t('moreMenu.unrecognizedInbox'), subtitle: t('moreMenu.unrecognizedInboxSubtitle'), route: 'UnrecognizedInbox', color: '#EA580C' },
+        { icon: 'bell',     label: t('moreMenu.notifications'), subtitle: t('moreMenu.notificationsSubtitle'), route: 'Notifications', color: '#2563EB' },
+      ],
+    },
+    {
+      title: t('moreMenu.sectionApp'),
+      items: [
+        { icon: 'category', label: t('moreMenu.categories'), subtitle: t('moreMenu.categoriesSubtitle'), route: 'Categories', color: '#0891B2' },
+        { icon: 'import',   label: t('moreMenu.import'),     subtitle: t('moreMenu.importSubtitle'),     route: 'Import',     color: '#059669' },
+        { icon: 'settings', label: t('moreMenu.settings'),   subtitle: t('moreMenu.settingsSubtitle'),   route: 'Settings',   color: '#6B7280' },
+      ],
+    },
   ], [t]);
 
   return (
@@ -125,28 +156,47 @@ export function MoreMenuScreen({ navigation }: any) {
         contentContainerStyle={{ padding: spacing.base, paddingBottom: listPad }}
         showsVerticalScrollIndicator={false}
       >
-        {menuItems.map((item, i) => (
-          <Animated.View key={item.route} entering={FadeInDown.delay(i * 50).duration(350)}>
-            <MenuRow
-              item={{ ...item, badge: badgeMap[item.route] }}
-              onPress={() => navigation.navigate(item.route)}
-            />
-          </Animated.View>
+        {sections.map((section, sectionIndex) => (
+          <View key={section.title} style={{ marginTop: sectionIndex === 0 ? 0 : spacing.base }}>
+            <Text
+              accessibilityRole="header"
+              style={[typography.styles.labelMedium, styles.sectionTitle, {
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }]}
+            >
+              {section.title}
+            </Text>
+            {section.items.map((item, i) => (
+              <Animated.View
+                key={item.route}
+                entering={FadeInDown.delay((sectionIndex * section.items.length + i) * 50).duration(350)}
+              >
+                <MenuRow
+                  item={{ ...item, badge: badgeMap[item.route] }}
+                  onPress={() => navigation.navigate(item.route)}
+                />
+              </Animated.View>
+            ))}
+          </View>
         ))}
 
         {/* Versão */}
-        <Text style={[typography.styles.caption, {
-          color: colors.textTertiary,
-          textAlign: 'center',
-          marginTop: spacing.xl,
-        }]}>
-          {t('moreMenu.version', { version: '2.0.0' })}
-        </Text>
+        {appVersion && (
+          <Text style={[typography.styles.caption, {
+            color: colors.textTertiary,
+            textAlign: 'center',
+            marginTop: spacing.xl,
+          }]}>
+            {t('moreMenu.version', { version: appVersion })}
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container:    { flex: 1 },
+  sectionTitle: { textTransform: 'uppercase', letterSpacing: 0.8 },
 });

@@ -106,7 +106,7 @@ export function UnrecognizedInboxScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title={t('unrecognizedInbox.title')}
-        onClose={() => navigation.goBack()}
+        onBack={() => navigation.goBack()}
       />
 
       <FlatList

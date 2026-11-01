@@ -54,7 +54,7 @@ export function InsightsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppHeader title={t('insights.title')} onClose={() => navigation.goBack()} />
+      <AppHeader title={t('insights.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.base, paddingBottom: bottomPad + 40 }}

@@ -2,13 +2,16 @@ import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { createNativeStackNavigator }     from '@react-navigation/native-stack';
 import { createBottomTabNavigator }        from '@react-navigation/bottom-tabs';
-import { NavigationContainer }             from '@react-navigation/native';
+import { NavigationContainer, getFocusedRouteNameFromRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme }        from '../hooks/useTheme';
 import { useTabBarInsets } from '../hooks/useTabBarInsets';
+import { useResponsive }   from '../hooks/useResponsive';
+import { useReviewStore }  from '../store/reviewStore';
+import { ContentColumn }   from '../components/ContentColumn';
 import { useSettingsStore } from '../store/settingsStore';
-import { Icon } from '../components/Icon';
+import { Icon, AppIconName } from '../components/Icon';
 
 // Stacks
 import { AppTabParamList, RootStackParamList, TransactionStackParamList, AccountStackParamList, MoreStackParamList } from './types';
@@ -47,7 +50,11 @@ function TransactionNavigator() {
     <TxStack.Navigator screenOptions={{ headerShown: false }}>
       <TxStack.Screen name="TransactionsList"  component={TransactionsScreen} />
       <TxStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
-      <TxStack.Screen name="AddTransaction"    component={AddTransactionScreen} />
+      <TxStack.Screen
+        name="AddTransaction"
+        component={AddTransactionScreen}
+        options={{ animation: 'slide_from_bottom' }}
+      />
     </TxStack.Navigator>
   );
 }
@@ -96,72 +103,85 @@ function TabLabel({ label, color }: { label: string; color: string }) {
   );
 }
 
+/** Formulários ocupam a tela toda: sem tab bar para não competir com o teclado e o salvar. */
+const ROUTES_WITHOUT_TAB_BAR = new Set(['AddTransaction', 'ReviewDetail', 'TeachPattern']);
+
+function isTabBarHidden(route: RouteProp<AppTabParamList>): boolean {
+  const focused = getFocusedRouteNameFromRoute(route);
+  return focused !== undefined && ROUTES_WITHOUT_TAB_BAR.has(focused);
+}
+
 function AppTabs() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { bottom: bottomInset, tabBarHeight } = useTabBarInsets();
+  const { useSideNav } = useResponsive();
+  const reviewCount = useReviewStore(s => s.pendingCount + s.unrecognizedCount);
+
+  const tabOptions = (label: string, icon: AppIconName, activeIcon: AppIconName) => ({
+    title: label,
+    tabBarAccessibilityLabel: label,
+    // Na barra lateral o rótulo padrão já acompanha o layout horizontal do item.
+    ...(useSideNav
+      ? {}
+      : { tabBarLabel: ({ color }: { color: string }) => <TabLabel label={label} color={color} /> }),
+    tabBarIcon: ({ focused, color }: { focused: boolean; color: string }) => (
+      <Icon name={focused ? activeIcon : icon} size={22} color={color} />
+    ),
+  });
 
   return (
     <Tab.Navigator
-      screenOptions={{
+      backBehavior="history"
+      screenLayout={({ children }) => <ContentColumn>{children}</ContentColumn>}
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor:   colors.tabBarActive,
         tabBarInactiveTintColor: colors.tabBarInactive,
-        tabBarStyle: {
-          backgroundColor: colors.tabBar,
-          borderTopColor:  colors.border,
-          borderTopWidth:  1,
-          paddingBottom:   bottomInset,
-          paddingTop:      6,
-          height:          tabBarHeight,
-        },
-        tabBarItemStyle: {
+        tabBarPosition: useSideNav ? 'left' : 'bottom',
+        tabBarVariant:  useSideNav ? 'material' : 'uikit',
+        tabBarStyle: useSideNav
+          ? { backgroundColor: colors.tabBar, borderRightColor: colors.border }
+          : {
+              backgroundColor: colors.tabBar,
+              borderTopColor:  colors.border,
+              borderTopWidth:  1,
+              paddingBottom:   bottomInset,
+              paddingTop:      6,
+              height:          tabBarHeight,
+              display:         isTabBarHidden(route) ? 'none' : 'flex',
+            },
+        tabBarItemStyle: useSideNav ? undefined : {
           paddingTop: 2,
         },
-        tabBarIconStyle: {
+        tabBarIconStyle: useSideNav ? undefined : {
           marginBottom: -2,
         },
         tabBarShowLabel: true,
-      }}
+      })}
     >
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{
-          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.dashboard')} color={color} />,
-          tabBarIcon: ({ focused, color }) => (
-            <Icon name={focused ? 'home-active' : 'home'} size={22} color={color} />
-          ),
-        }}
+        options={tabOptions(t('navigation.dashboard'), 'home', 'home-active')}
       />
       <Tab.Screen
         name="Transactions"
         component={TransactionNavigator}
-        options={{
-          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.transactions')} color={color} />,
-          tabBarIcon: ({ focused, color }) => (
-            <Icon name={focused ? 'transactions-active' : 'transactions'} size={22} color={color} />
-          ),
-        }}
+        options={tabOptions(t('navigation.transactions'), 'transactions', 'transactions-active')}
       />
       <Tab.Screen
         name="Accounts"
         component={AccountsNavigator}
-        options={{
-          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.accounts')} color={color} />,
-          tabBarIcon: ({ focused, color }) => (
-            <Icon name={focused ? 'accounts-active' : 'accounts'} size={22} color={color} />
-          ),
-        }}
+        options={tabOptions(t('navigation.accounts'), 'accounts', 'accounts-active')}
       />
       <Tab.Screen
         name="More"
         component={MoreNavigator}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label={t('navigation.more')} color={color} />,
-          tabBarIcon: ({ focused, color }) => (
-            <Icon name={focused ? 'more-active' : 'more'} size={22} color={color} />
-          ),
+          ...tabOptions(t('navigation.more'), 'more', 'more-active'),
+          tabBarBadge: reviewCount > 0 ? (reviewCount > 99 ? '99+' : reviewCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.error, color: '#FFF' },
         }}
       />
     </Tab.Navigator>
