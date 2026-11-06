@@ -2,6 +2,30 @@
 
 App Android nativo em React Native que monitora automaticamente suas finanças via notificações bancárias.
 
+## Prévias
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/inicio.png" width="200" alt="Tela inicial com patrimônio, receitas e despesas do mês"><br><sub>Início</sub></td>
+    <td align="center"><img src="docs/screenshots/transacoes.png" width="200" alt="Lista de transações do mês com busca e filtros"><br><sub>Transações</sub></td>
+    <td align="center"><img src="docs/screenshots/nova-transacao.png" width="200" alt="Formulário de nova transação"><br><sub>Nova transação</sub></td>
+    <td align="center"><img src="docs/screenshots/contas.png" width="200" alt="Contas bancárias, poupança e cartão de crédito"><br><sub>Contas</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/metas.png" width="200" alt="Metas financeiras com progresso"><br><sub>Metas</sub></td>
+    <td align="center"><img src="docs/screenshots/mais.png" width="200" alt="Menu Mais com planejamento e notificações do banco"><br><sub>Mais</sub></td>
+    <td align="center"><img src="docs/screenshots/inicio-escuro.png" width="200" alt="Tela inicial no tema escuro"><br><sub>Tema escuro</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/tablet.png" width="820" alt="Tela inicial em tablet com barra de navegação lateral"><br>
+  <sub>Tablet e modo paisagem: navegação lateral e conteúdo centralizado</sub>
+</p>
+
+> Telas renderizadas a partir do código do app (versão 1.0.6) com dados de demonstração.
+
 ## Como funciona
 
 1. O app solicita permissão de **Acesso a Notificações** do Android
