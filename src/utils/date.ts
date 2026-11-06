@@ -25,6 +25,16 @@ export function parseLocalISODate(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/**
+ * Converte string de data do app em Date. "AAAA-MM-DD" (sem hora) é lido no
+ * fuso local: new Date() o trataria como meia-noite UTC, que no Brasil cai no
+ * dia anterior.
+ */
+export function parseDate(value: string | Date): Date {
+  if (typeof value !== 'string') return value;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? parseLocalISODate(value) : new Date(value);
+}
+
 export function startOfMonth(date: Date = new Date()): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -49,7 +59,7 @@ export function formatDate(
   dateStr: string | Date,
   style: 'short' | 'medium' | 'long' | 'relative' = 'medium',
 ): string {
-  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  const date = parseDate(dateStr);
 
   if (style === 'relative') {
     return formatRelative(date);
@@ -65,7 +75,7 @@ export function formatDate(
 }
 
 export function formatTime(dateStr: string | Date): string {
-  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  const date = parseDate(dateStr);
   return new Intl.DateTimeFormat(currentLocale(), {
     hour:   '2-digit',
     minute: '2-digit',

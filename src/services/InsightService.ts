@@ -7,6 +7,7 @@ import { Insight, InsightType, NotificationSeverity } from '../models/types';
 import { TransactionRepository } from '../database/repositories/TransactionRepository';
 import { NotificationRepository } from '../database/repositories/NotificationRepository';
 import { formatCurrency } from '../utils/currency';
+import { parseDate } from '../utils/date';
 import i18n from '../i18n/config';
 
 function now(): { year: number; month: number } {
@@ -262,9 +263,9 @@ export const InsightService = {
     const isCurMonth  = (d: Date) => d.getFullYear() === cur.year  && d.getMonth() + 1 === cur.month;
     const isPrevMonth = (d: Date) => d.getFullYear() === prev.year && d.getMonth() + 1 === prev.month;
 
-    const curExpenses  = transactions.filter(t => isCurMonth(new Date(t.date))  && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
-    const prevExpenses = transactions.filter(t => isPrevMonth(new Date(t.date)) && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
-    const curIncome    = transactions.filter(t => isCurMonth(new Date(t.date))  && t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const curExpenses  = transactions.filter(t => isCurMonth(parseDate(t.date))  && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const prevExpenses = transactions.filter(t => isPrevMonth(parseDate(t.date)) && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const curIncome    = transactions.filter(t => isCurMonth(parseDate(t.date))  && t.amount > 0).reduce((s, t) => s + t.amount, 0);
 
     if (prevExpenses > 0) {
       const change = ((curExpenses - prevExpenses) / prevExpenses) * 100;
@@ -294,7 +295,7 @@ export const InsightService = {
     const catMap = new Map(categories.map(c => [c.id, c]));
     const catSpending = new Map<number, number>();
     transactions
-      .filter(t => isCurMonth(new Date(t.date)) && t.amount < 0 && t.categoryId)
+      .filter(t => isCurMonth(parseDate(t.date)) && t.amount < 0 && t.categoryId)
       .forEach(t => {
         const prev2 = catSpending.get(t.categoryId!) ?? 0;
         catSpending.set(t.categoryId!, prev2 + Math.abs(t.amount));

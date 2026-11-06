@@ -27,7 +27,7 @@ import { Modal, Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { BottomSheet } from '../src/components/BottomSheet';
 import { getResponsiveLayout, SIDE_NAV_MIN_WIDTH } from '../src/hooks/useResponsive';
-import { parseLocalISODate, toLocalISODate } from '../src/utils/date';
+import { formatDate, parseDate, parseLocalISODate, toLocalISODate } from '../src/utils/date';
 
 const ptBR = require('../src/i18n/locales/pt-BR.json');
 const en = require('../src/i18n/locales/en.json');
@@ -85,6 +85,12 @@ describe('BottomSheet', () => {
 describe('datas locais', () => {
   test('não adianta o dia à noite em fuso negativo', () => {
     expect(toLocalISODate(new Date(2026, 10, 1, 23, 30))).toBe('2026-11-01');
+  });
+
+  test('data sem hora é exibida no dia certo', () => {
+    expect(parseDate('2026-11-05').getDate()).toBe(5);
+    expect(formatDate('2026-11-05', 'short')).toBe('05/11/2026');
+    expect(formatDate('2026-11-01', 'short')).toBe('01/11/2026');
   });
 
   test('ida e volta preserva o dia', () => {
