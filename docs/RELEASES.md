@@ -46,6 +46,54 @@ Workflow **CI** (push/PR em `main` e `development`):
 - TypeScript (informativo)
 - Build `assembleRelease` + artifact
 
-## Keystore
+## Keystore de produção
 
-Hoje o release usa a keystore **debug** (ver `build.gradle`). Para distribuição séria, gere uma keystore de produção e configure `signingConfigs.release` + secrets no Actions — **sempre a mesma key** nas atualizações, senão o Android exige desinstalar (e apagar dados).
+O workflow **Release** só publica APK assinado com a keystore de produção: sem os secrets abaixo, ele falha em vez de cair na keystore de debug (que está no repositório e qualquer pessoa pode usar). O workflow **CI** e o build local continuam usando a debug quando a keystore não está configurada.
+
+> **Toda atualização precisa ser assinada com a mesma keystore.** Se ela for perdida, nenhum usuário consegue atualizar: será preciso desinstalar (apagando os dados) e instalar de novo. Guarde o arquivo `.jks` e as senhas fora do computador (gerenciador de senhas + cópia em outro lugar). Nunca faça commit da keystore.
+
+### 1. Gerar a keystore (uma vez só)
+
+Precisa de um JDK 17 (o `keytool` vem com ele):
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore fintrack-upload.jks -alias fintrack -keyalg RSA -keysize 4096 -validity 10000
+```
+
+O `keytool` pede a senha da keystore e os dados do certificado. Em PKCS12 a senha da chave é a mesma da keystore.
+
+### 2. Cadastrar os secrets no GitHub
+
+Em **Settings → Secrets and variables → Actions → Secrets**:
+
+| Secret | Valor |
+|---|---|
+| `FINTRACK_UPLOAD_KEYSTORE_BASE64` | conteúdo do `.jks` em base64 (comando abaixo) |
+| `FINTRACK_UPLOAD_STORE_PASSWORD` | senha da keystore |
+| `FINTRACK_UPLOAD_KEY_ALIAS` | `fintrack` (o `-alias` usado acima) |
+| `FINTRACK_UPLOAD_KEY_PASSWORD` | senha da chave (a mesma da keystore em PKCS12) |
+
+Para gerar o base64 no Windows (PowerShell), já copiando para a área de transferência:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("fintrack-upload.jks")) | Set-Clipboard
+```
+
+### 3. Travar o certificado (recomendado)
+
+No primeiro release assinado, o passo **Conferir assinatura do APK** mostra o SHA-256 do certificado e avisa para cadastrá-lo. Em **Settings → Secrets and variables → Actions → Variables**, crie `FINTRACK_UPLOAD_CERT_SHA256` com esse valor. A partir daí, um release assinado com outra keystore falha antes de ser publicado.
+
+### Build local assinado (opcional)
+
+Para gerar o APK de produção na sua máquina, coloque em `~/.gradle/gradle.properties` (fora do repositório):
+
+```properties
+FINTRACK_UPLOAD_STORE_FILE=C:/caminho/fintrack-upload.jks
+FINTRACK_UPLOAD_STORE_PASSWORD=...
+FINTRACK_UPLOAD_KEY_ALIAS=fintrack
+FINTRACK_UPLOAD_KEY_PASSWORD=...
+```
+
+### Migração de quem instalou até a 1.0.6
+
+As versões até a 1.0.6 foram assinadas com a keystore de debug. O Android recusa atualizar um app instalado com uma assinatura por um APK com outra, então o primeiro release com a keystore de produção **não instala por cima**: a atualização dentro do app vai falhar. Quem já usa o app precisa exportar os dados, desinstalar e instalar a versão nova. Avise isso nas notas desse release.

@@ -73,6 +73,28 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Keystore de produção. Os valores vêm de variáveis de ambiente (workflow de
+ * release) ou de ~/.gradle/gradle.properties (build local); nunca do repositório.
+ * Sem eles, o release local cai na keystore de debug. Com
+ * -PFINTRACK_REQUIRE_RELEASE_SIGNING=true o build falha em vez de cair na debug.
+ */
+def releaseSigningValue = { String name ->
+    def value = System.getenv(name) ?: project.findProperty(name)
+    return value ? value.toString() : null
+}
+def releaseStoreFile = releaseSigningValue('FINTRACK_UPLOAD_STORE_FILE')
+def hasReleaseKeystore = releaseStoreFile && file(releaseStoreFile).exists() &&
+    releaseSigningValue('FINTRACK_UPLOAD_STORE_PASSWORD') &&
+    releaseSigningValue('FINTRACK_UPLOAD_KEY_ALIAS') &&
+    releaseSigningValue('FINTRACK_UPLOAD_KEY_PASSWORD')
+
+if (!hasReleaseKeystore && releaseSigningValue('FINTRACK_REQUIRE_RELEASE_SIGNING') == 'true') {
+    throw new GradleException(
+        'Keystore de produção ausente: defina FINTRACK_UPLOAD_STORE_FILE, ' +
+        'FINTRACK_UPLOAD_STORE_PASSWORD, FINTRACK_UPLOAD_KEY_ALIAS e FINTRACK_UPLOAD_KEY_PASSWORD.')
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -93,15 +115,22 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseKeystore) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseSigningValue('FINTRACK_UPLOAD_STORE_PASSWORD')
+                keyAlias releaseSigningValue('FINTRACK_UPLOAD_KEY_ALIAS')
+                keyPassword releaseSigningValue('FINTRACK_UPLOAD_KEY_PASSWORD')
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Keystore de produção quando configurada; ver docs/RELEASES.md.
+            signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

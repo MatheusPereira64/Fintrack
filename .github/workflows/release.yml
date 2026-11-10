@@ -57,9 +57,45 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Preparar keystore de produção
+        env:
+          FINTRACK_UPLOAD_KEYSTORE_BASE64: ${{ secrets.FINTRACK_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$FINTRACK_UPLOAD_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret FINTRACK_UPLOAD_KEYSTORE_BASE64 não configurado (ver docs/RELEASES.md)."
+            exit 1
+          fi
+          echo "$FINTRACK_UPLOAD_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/fintrack-upload.jks"
+          echo "FINTRACK_UPLOAD_STORE_FILE=$RUNNER_TEMP/fintrack-upload.jks" >> "$GITHUB_ENV"
+
       - name: Assemble Release APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+        env:
+          FINTRACK_UPLOAD_STORE_PASSWORD: ${{ secrets.FINTRACK_UPLOAD_STORE_PASSWORD }}
+          FINTRACK_UPLOAD_KEY_ALIAS: ${{ secrets.FINTRACK_UPLOAD_KEY_ALIAS }}
+          FINTRACK_UPLOAD_KEY_PASSWORD: ${{ secrets.FINTRACK_UPLOAD_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon -PFINTRACK_REQUIRE_RELEASE_SIGNING=true
+
+      - name: Conferir assinatura do APK
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.FINTRACK_UPLOAD_CERT_SHA256 }}
+        run: |
+          APK=$(ls android/app/build/outputs/apk/release/*.apk | head -n 1)
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)apksigner
+          "$APKSIGNER" verify --print-certs "$APK" | tee signing.txt
+          ACTUAL=$(grep -m1 'certificate SHA-256 digest' signing.txt | awk '{print $NF}')
+          if [ -n "$EXPECTED_CERT_SHA256" ]; then
+            EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
+            if [ "$ACTUAL" != "$EXPECTED" ]; then
+              echo "::error::APK assinado com outro certificado ($ACTUAL). Os usuários não conseguiriam atualizar."
+              exit 1
+            fi
+          else
+            echo "::warning::Defina a variável FINTRACK_UPLOAD_CERT_SHA256=$ACTUAL para travar o certificado."
+          fi
+          rm -f "$FINTRACK_UPLOAD_STORE_FILE" signing.txt
 
       - name: Preparar APK
         run: |
