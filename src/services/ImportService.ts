@@ -157,11 +157,13 @@ function parseCSV(content: string, filename: string): ImportResult {
 
   const headers = splitCSV(lines[0]).map(h => h.toLowerCase().trim().replace(/['"]/g, ''));
   const bank    = detectBankFromCSV(headers, filename);
+  const amountIdx = headers.findIndex(h => AMOUNT_HEADERS.includes(h));
 
   for (let i = 1; i < lines.length; i++) {
     try {
       const cols = splitCSV(lines[i]).map(c => c.replace(/^["']|["']$/g, '').trim());
       if (cols.length < 2) continue;
+      rejoinSplitDecimal(cols, headers.length, amountIdx);
 
       const row: Record<string, string> = {};
       headers.forEach((h, idx) => { row[h] = cols[idx] ?? ''; });
@@ -174,6 +176,19 @@ function parseCSV(content: string, filename: string): ImportResult {
   }
 
   return { success: true, candidates, total: candidates.length, errors, fileType: 'csv' };
+}
+
+const AMOUNT_HEADERS = ['amount', 'valor', 'value'];
+
+/**
+ * O CSV exportado até a 1.0.6 gravava o valor sem aspas ("-42,90"), e a vírgula
+ * decimal virava uma coluna a mais. Com exatamente uma coluna sobrando e só
+ * centavos logo após o valor, junta as duas de volta.
+ */
+function rejoinSplitDecimal(cols: string[], headerCount: number, amountIdx: number): void {
+  if (amountIdx < 0 || cols.length !== headerCount + 1) return;
+  if (!/^-?\d+$/.test(cols[amountIdx]) || !/^\d{2}$/.test(cols[amountIdx + 1] ?? '')) return;
+  cols.splice(amountIdx, 2, `${cols[amountIdx]},${cols[amountIdx + 1]}`);
 }
 
 function parseCSVRow(row: Record<string, string>, bankName: string): ImportCandidate | null {

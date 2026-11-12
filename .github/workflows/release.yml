@@ -186,34 +186,49 @@ jobs:
       - name: Listar artefatos
         run: ls -lh dist/
 
+      # Notas específicas da versão (docs/release-notes/<tag>.md) vêm primeiro;
+      # o versionCode é lido do build.gradle, que o app usa para comparar versões.
+      - name: Montar notas da release
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          VERSION_CODE=$(grep -m1 -E '^\s*versionCode\s+[0-9]+' android/app/build.gradle | grep -oE '[0-9]+')
+          {
+            echo "## FinTrack $VERSION"
+            echo
+            if [ -f "docs/release-notes/$TAG.md" ]; then
+              cat "docs/release-notes/$TAG.md"
+              echo
+            fi
+            cat <<EOF
+          ### Android
+          Baixe **FinTrack-$VERSION.apk** e instale no aparelho.
+
+          O app também verifica esta release automaticamente ao abrir
+          (Configurações → Procurar atualizações).
+
+          ### iOS
+          Baixe **FinTrack-$VERSION.ipa** (pacote padrão do iOS).
+
+          A Apple não permite instalar um \`.ipa\` baixado da internet como no Android.
+          Use TestFlight, uma conta de desenvolvedor ou um sideload (AltStore / Sideloadly)
+          com certificado válido. Este IPA é o arquivo de distribuição; a instalação
+          em iPhone exige assinatura Apple.
+
+          \`\`\`
+          versionCode: $VERSION_CODE
+          \`\`\`
+          EOF
+          } | sed 's/^          //' > release-notes.md
+          cat release-notes.md
+
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           name: FinTrack ${{ needs.version.outputs.version }}
-          body: |
-            ## FinTrack ${{ needs.version.outputs.version }}
-
-            ### Android
-            Baixe **FinTrack-${{ needs.version.outputs.version }}.apk** e instale no aparelho.
-
-            O app também verifica esta release automaticamente ao abrir
-            (Configurações → Procurar atualizações).
-
-            ### iOS
-            Baixe **FinTrack-${{ needs.version.outputs.version }}.ipa** (pacote padrão do iOS).
-
-            A Apple não permite instalar um `.ipa` baixado da internet como no Android.
-            Use TestFlight, uma conta de desenvolvedor ou um sideload (AltStore / Sideloadly)
-            com certificado válido. Este IPA é o arquivo de distribuição; a instalação
-            em iPhone exige assinatura Apple.
-
-            ```
-            versionCode: 10
-            ```
-
-            **Dados do usuário (Android):** a atualização pelo mesmo pacote `com.fintrackapp`
-            e mesma assinatura **não apaga** o banco SQLite local.
+          body_path: release-notes.md
           files: |
             dist/FinTrack-${{ needs.version.outputs.version }}.apk
             dist/FinTrack-${{ needs.version.outputs.version }}.ipa

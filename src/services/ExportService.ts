@@ -1,5 +1,5 @@
 import { Transaction, Account } from '../models/types';
-import { formatDate } from '../utils/date';
+import { parseDate, toLocalISODate } from '../utils/date';
 import i18n from '../i18n/config';
 
 export const ExportService = {
@@ -20,9 +20,11 @@ export const ExportService = {
 
     const rows = transactions.map(tx => [
       tx.id,
-      `"${formatDate(tx.date, 'short')}"`,
+      // AAAA-MM-DD e valor entre aspas: a vírgula decimal não pode virar
+      // separador de coluna, e a data não pode depender do idioma ao reimportar.
+      toLocalISODate(parseDate(tx.date)),
       `"${tx.description.replace(/"/g, '""')}"`,
-      tx.amount.toFixed(2).replace('.', ','),
+      `"${tx.amount.toFixed(2).replace('.', ',')}"`,
       tx.type,
       `"${accountMap.get(tx.accountId) ?? ''}"`,
       `"${tx.bankName ?? ''}"`,
