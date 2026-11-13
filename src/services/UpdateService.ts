@@ -24,6 +24,18 @@ const GH_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
 export const RELEASES_API = `${GH_API}/releases/latest`;
 export const RELEASES_PAGE =
   `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
+/**
+ * Arquivo publicado em cada release pelo workflow. Fica em github.com (download
+ * comum), que não tem o limite de 60 consultas/hora por rede da API do GitHub.
+ */
+export const LATEST_MANIFEST_URL = `${RELEASES_PAGE}/latest/download/latest.json`;
+
+/** A API do GitHub recusou por limite de consultas da rede (403/429). */
+export class UpdateRateLimitError extends Error {
+  constructor(status: number) {
+    super(`GitHub API ${status}`);
+  }
+}
 
 const GH_HEADERS = {
   Accept: 'application/vnd.github+json',
@@ -72,6 +84,43 @@ interface GhRelease {
   html_url: string;
   published_at: string;
   assets: GhAsset[];
+}
+
+interface LatestManifest {
+  tag:          string;
+  version:      string;
+  versionCode:  number | null;
+  apkName:      string;
+  apkUrl:       string;
+  htmlUrl:      string;
+  publishedAt:  string;
+  notes?:       string;
+}
+
+function mapManifest(m: LatestManifest): RemoteRelease {
+  return {
+    tagName: m.tag,
+    versionName: parseVersionTag(m.version || m.tag),
+    versionCode: typeof m.versionCode === 'number' ? m.versionCode : null,
+    name: m.tag,
+    body: m.notes ?? '',
+    htmlUrl: m.htmlUrl,
+    apkUrl: m.apkUrl || null,
+    apkName: m.apkName || null,
+    publishedAt: m.publishedAt,
+  };
+}
+
+/** null quando o release mais recente ainda não publica o latest.json. */
+async function fetchManifest(): Promise<RemoteRelease | null> {
+  try {
+    const res = await fetch(LATEST_MANIFEST_URL, { headers: { 'Cache-Control': 'no-cache' } });
+    if (!res.ok) return null;
+    const data = (await res.json()) as LatestManifest;
+    return data?.tag && data?.apkUrl ? mapManifest(data) : null;
+  } catch {
+    return null;
+  }
 }
 
 function pickApkAsset(assets: GhAsset[]): GhAsset | null {
@@ -144,9 +193,16 @@ export const UpdateService = {
   },
 
   async fetchLatestRelease(): Promise<RemoteRelease | null> {
+    const manifest = await fetchManifest();
+    if (manifest) return manifest;
+
+    // Releases antigos não têm latest.json: cai na API, que tem limite por rede.
     const latest = await ghJson<GhRelease>('/releases/latest');
     if (latest.ok) return mapRelease(latest.data);
 
+    if (latest.status === 403 || latest.status === 429) {
+      throw new UpdateRateLimitError(latest.status);
+    }
     if (latest.status !== 404) {
       throw new Error(`GitHub API ${latest.status}`);
     }
@@ -155,6 +211,7 @@ export const UpdateService = {
     const listed = await ghJson<GhRelease[]>('/releases?per_page=10');
     if (!listed.ok) {
       if (listed.status === 404) return null;
+      if (listed.status === 403 || listed.status === 429) throw new UpdateRateLimitError(listed.status);
       throw new Error(`GitHub API ${listed.status}`);
     }
 
@@ -186,7 +243,10 @@ export const UpdateService = {
       return { status: 'up_to_date', local, remote };
     } catch (err) {
       Logger.warn('Update', 'Falha ao verificar atualização', err);
-      return { status: 'error', message: String(err) };
+      const message = err instanceof UpdateRateLimitError
+        ? i18n.t('updateService.rateLimited')
+        : String(err);
+      return { status: 'error', message };
     }
   },
 
@@ -352,6 +412,8 @@ export const UpdateService = {
           title: i18n.t('updateService.checkFailedTitle'),
           message: result.message,
           primaryLabel: i18n.t('common.ok'),
+          showGithub: true,
+          githubUrl: RELEASES_PAGE,
         });
         return result;
       }

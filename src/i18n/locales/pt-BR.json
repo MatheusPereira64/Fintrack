@@ -641,7 +641,8 @@
     "update": "Atualizar",
     "updateErrorTitle": "Erro na atualização",
     "noApkAttached": "Release sem APK anexado",
-    "downloadFailed": "Download falhou (HTTP {{status}})"
+    "downloadFailed": "Download falhou (HTTP {{status}})",
+    "rateLimited": "O GitHub limitou as consultas da sua rede por enquanto. Tente de novo em alguns minutos, ou baixe a versão nova na página de releases."
   },
   "insightService": {
     "averagesTitle": "Médias dos últimos meses",

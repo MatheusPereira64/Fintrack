@@ -641,7 +641,8 @@
     "update": "Actualizar",
     "updateErrorTitle": "Error en la actualización",
     "noApkAttached": "Release sin APK adjunto",
-    "downloadFailed": "Descarga fallida (HTTP {{status}})"
+    "downloadFailed": "Descarga fallida (HTTP {{status}})",
+    "rateLimited": "GitHub está limitando temporalmente las consultas de tu red. Inténtalo de nuevo en unos minutos o descarga la nueva versión en la página de releases."
   },
   "insightService": {
     "averagesTitle": "Medias de los últimos meses",

@@ -641,7 +641,8 @@
     "update": "Update",
     "updateErrorTitle": "Update error",
     "noApkAttached": "Release has no APK attached",
-    "downloadFailed": "Download failed (HTTP {{status}})"
+    "downloadFailed": "Download failed (HTTP {{status}})",
+    "rateLimited": "GitHub is temporarily limiting requests from your network. Try again in a few minutes, or download the new version from the releases page."
   },
   "insightService": {
     "averagesTitle": "Averages from recent months",

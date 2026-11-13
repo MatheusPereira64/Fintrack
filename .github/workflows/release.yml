@@ -222,6 +222,32 @@ jobs:
           } | sed 's/^          //' > release-notes.md
           cat release-notes.md
 
+      # O app consulta este arquivo em github.com/.../releases/latest/download/latest.json,
+      # que não passa pela API do GitHub (limitada a 60 consultas/hora por rede).
+      - name: Montar latest.json
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          export VERSION_CODE=$(grep -m1 -E '^\s*versionCode\s+[0-9]+' android/app/build.gradle | grep -oE '[0-9]+')
+          node -e '
+            const fs = require("fs");
+            const { TAG, VERSION, REPO, VERSION_CODE } = process.env;
+            const apkName = `FinTrack-${VERSION}.apk`;
+            fs.writeFileSync("dist/latest.json", JSON.stringify({
+              tag: TAG,
+              version: VERSION,
+              versionCode: Number(VERSION_CODE),
+              apkName,
+              apkUrl: `https://github.com/${REPO}/releases/download/${TAG}/${apkName}`,
+              htmlUrl: `https://github.com/${REPO}/releases/tag/${TAG}`,
+              publishedAt: new Date().toISOString(),
+              notes: fs.readFileSync("release-notes.md", "utf8"),
+            }, null, 2));
+          '
+          cat dist/latest.json
+
       - name: Criar GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -231,6 +257,7 @@ jobs:
           files: |
             dist/FinTrack-${{ needs.version.outputs.version }}.apk
             dist/FinTrack-${{ needs.version.outputs.version }}.ipa
+            dist/latest.json
           fail_on_unmatched_files: false
           draft: false
           prerelease: false
