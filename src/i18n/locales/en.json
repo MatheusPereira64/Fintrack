@@ -458,7 +458,18 @@
     "permissionGranted": "Permission granted!",
     "grantPermission": "Grant notification access",
     "start": "Get started",
-    "next": "Next →"
+    "next": "Next",
+    "skip": "Skip",
+    "stepCounter": "Step {{current}} of {{total}}",
+    "welcomeFeature1": "Records transfers, purchases and payments on its own",
+    "welcomeFeature2": "Your data stays on your phone",
+    "welcomeFeature3": "Charts, goals and budgets in one place",
+    "banksMore": "and other banks",
+    "insightsFeature1": "Spending by category",
+    "insightsFeature2": "Projection of how the month will end",
+    "insightsFeature3": "Alert when a budget is exceeded",
+    "privacyNote": "FinTrack only reads notifications from banking apps, and nothing leaves your phone.",
+    "permissionPending": "Turn FinTrack on in the list and come back to the app."
   },
   "moreMenu": {
     "title": "More",

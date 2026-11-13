@@ -445,7 +445,7 @@
   "onboarding": {
     "step1Title": "Bem-vindo ao FinTrack",
     "step1Subtitle": "Seu monitor financeiro inteligente",
-    "step1Description": "Acompanhe automaticamente suas finanças monitorando as notificações dos seus aplicativos bancários. Sem cadastrar nada na mão.",
+    "step1Description": "Acompanhe suas finanças a partir das notificações dos seus apps de banco, sem digitar nada.",
     "step2Title": "Monitoramento automático",
     "step2Subtitle": "Basta receber a notificação do banco",
     "step2Description": "O FinTrack lê as notificações do Nubank, Inter, Itaú, Bradesco e outros. Cada Pix, compra ou transferência é registrado automaticamente.",
@@ -458,7 +458,18 @@
     "permissionGranted": "Permissão concedida!",
     "grantPermission": "Conceder acesso às notificações",
     "start": "Começar",
-    "next": "Próximo →"
+    "next": "Próximo",
+    "skip": "Pular",
+    "stepCounter": "Passo {{current}} de {{total}}",
+    "welcomeFeature1": "Registra Pix, compras e transferências sozinho",
+    "welcomeFeature2": "Seus dados ficam só no seu celular",
+    "welcomeFeature3": "Gráficos, metas e orçamentos em um só lugar",
+    "banksMore": "e outros bancos",
+    "insightsFeature1": "Gastos separados por categoria",
+    "insightsFeature2": "Projeção de como o mês vai fechar",
+    "insightsFeature3": "Aviso quando um orçamento estoura",
+    "privacyNote": "O FinTrack só lê notificações de apps de banco, e nada sai do seu celular.",
+    "permissionPending": "Ative o FinTrack na lista e volte para o app."
   },
   "moreMenu": {
     "title": "Mais",

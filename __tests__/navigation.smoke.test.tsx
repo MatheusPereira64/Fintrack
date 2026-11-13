@@ -194,13 +194,20 @@ describe.each(SIZES)('navegador em %s', (_name, width, height) => {
     }));
     const tree = await mount();
     expect(textOf(tree)).toContain('onboarding.step1Title');
-    const next = tree.root.findAll(
-      n => n.props.accessibilityRole === 'button' && typeof n.props.onPress === 'function',
+    const buttonWith = (text: string) => tree.root.findAll(
+      n => n.props.accessibilityRole === 'button' && typeof n.props.onPress === 'function' &&
+        n.findAllByType(Text).some(t => t.props.children === text),
     )[0];
-    ReactTestRenderer.act(() => next.props.onPress());
+    ReactTestRenderer.act(() => buttonWith('onboarding.next').props.onPress());
     await flush();
     expect(textOf(tree)).toContain('onboarding.step2Title');
-    expect(textOf(tree)).toContain('common.back');
+    expect(tree.root.findAll(n => n.props.accessibilityLabel === 'common.back').length).toBeGreaterThan(0);
+
+    // "Pular" leva ao passo da permissão, que não pode ser ignorado sem ser visto.
+    ReactTestRenderer.act(() => buttonWith('onboarding.skip').props.onPress());
+    await flush();
+    expect(textOf(tree)).toContain('onboarding.step4Title');
+    expect(textOf(tree)).toContain('onboarding.start');
     ReactTestRenderer.act(() => tree.unmount());
   });
 });
