@@ -17,6 +17,7 @@ import { useAccountStore }      from '../../../store/accountStore';
 import { useCategoryStore }     from '../../../store/categoryStore';
 import { Transaction, TransactionType } from '../../../models/types';
 import { formatDate, parseLocalISODate, toLocalISODate } from '../../../utils/date';
+import { onColor } from '../../../utils/contrast';
 
 const TYPES: Array<{ key: TransactionType; labelKey: string; icon: AppIconName }> = [
   { key: 'expense', labelKey: 'addTransaction.expense', icon: 'expense' },
@@ -38,6 +39,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   const addTransaction    = useTransactionStore(s => s.addTransaction);
   const updateTransaction = useTransactionStore(s => s.updateTransaction);
   const accounts          = useAccountStore(s => s.accounts);
+  const loadAccounts      = useAccountStore(s => s.loadAccounts);
   const categories        = useCategoryStore(s => s.categories);
 
   const [type,        setType]        = useState<TransactionType>(existing?.type ?? 'expense');
@@ -99,6 +101,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
 
       if (existing) {
         await updateTransaction(existing.id, {
+          accountId,
           amount: finalAmount, description: description.trim(),
           categoryId, date, type, isRecurring,
           installmentCurrent: showInstallments ? instCurrent : null,
@@ -117,6 +120,8 @@ export function AddTransactionScreen({ navigation, route }: Props) {
           installmentTotal: showInstallments ? instTotal : undefined,
         });
       }
+      // Saldos das contas mudam ao lançar, editar valor ou trocar de conta.
+      await loadAccounts();
       navigation.goBack();
     } catch {
       Alert.alert(t('common.error'), t('addTransaction.saveError'));
@@ -126,7 +131,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
   }, [
     existing, isValid, parsedAmount, type, description, categoryId, date, accountId,
     isRecurring, showInstallments, installmentCurrent, installmentTotal,
-    addTransaction, updateTransaction, navigation, t,
+    addTransaction, updateTransaction, loadAccounts, navigation, t,
   ]);
 
   const filteredCategories = useMemo(() =>
@@ -170,7 +175,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
               paddingVertical: spacing.sm,
             }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: isValid ? '#FFF' : colors.textTertiary }]}>
+            <Text style={[typography.styles.labelLarge, { color: isValid ? colors.onPrimary : colors.textTertiary }]}>
               {isSaving ? '...' : t('common.save')}
             </Text>
           </TouchableOpacity>
@@ -345,11 +350,6 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 />
               </View>
             )}
-            {existing && (
-              <Text style={[typography.styles.caption, { color: colors.textTertiary, marginBottom: spacing.xs }]}>
-                {t('addTransaction.accountLockedHint')}
-              </Text>
-            )}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -360,11 +360,9 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   key={acc.id}
                   onPress={() => setAccountId(acc.id)}
-                  disabled={!!existing}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: accountId === acc.id, disabled: !!existing }}
+                  accessibilityState={{ selected: accountId === acc.id }}
                   style={[{
-                    opacity: existing && accountId !== acc.id ? 0.4 : 1,
                     backgroundColor: accountId === acc.id ? acc.color : colors.card,
                     borderRadius: borderRadius.lg,
                     padding: spacing.md,
@@ -375,9 +373,9 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                     borderColor: accountId === acc.id ? acc.color : colors.borderLight,
                   }]}
                 >
-                  <Icon name="bank" size={18} color={accountId === acc.id ? '#FFF' : colors.textSecondary} />
+                  <Icon name="bank" size={18} color={accountId === acc.id ? onColor(acc.color) : colors.textSecondary} />
                   <Text style={[typography.styles.labelSmall, {
-                    color: accountId === acc.id ? '#FFF' : colors.text,
+                    color: accountId === acc.id ? onColor(acc.color) : colors.text,
                     marginTop: 4, textAlign: 'center',
                   }]} numberOfLines={1}>
                     {acc.name}
@@ -406,7 +404,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                   marginRight: spacing.sm,
                 }]}
               >
-                <Text style={[typography.styles.labelMedium, { color: !categoryId ? '#FFF' : colors.textSecondary }]}>
+                <Text style={[typography.styles.labelMedium, { color: !categoryId ? colors.onPrimary : colors.textSecondary }]}>
                   {t('addTransaction.none')}
                 </Text>
               </TouchableOpacity>
@@ -422,7 +420,7 @@ export function AddTransactionScreen({ navigation, route }: Props) {
                 >
                   <Text style={{ fontSize: 14 }}>{cat.icon ?? '📦'}</Text>
                   <Text style={[typography.styles.labelSmall, {
-                    color: categoryId === cat.id ? '#FFF' : colors.textSecondary,
+                    color: categoryId === cat.id ? onColor(cat.color) : colors.textSecondary,
                     marginLeft: 4,
                   }]}>
                     {cat.name}

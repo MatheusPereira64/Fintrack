@@ -28,15 +28,21 @@ jobs:
       - name: ESLint
         run: npm run lint
 
-      - name: Unit tests
+      - name: Unit tests (UTC)
+        run: npx jest --ci --coverage=false
+
+      # Datas sem hora caem no dia anterior em fusos negativos; o runner roda em UTC
+      # e não pega esse tipo de bug sozinho.
+      - name: Unit tests (fuso do Brasil)
+        env:
+          TZ: America/Sao_Paulo
         run: npx jest --ci --coverage=false
 
       - name: Detectar código duplicado (jscpd)
         run: npx jscpd src --min-lines 12 --min-tokens 60 --threshold 8 --reporters console
 
-      - name: TypeScript (informativo)
+      - name: TypeScript
         run: npm run typecheck
-        continue-on-error: true
 
   android-build:
     name: Build Android (assembleRelease)

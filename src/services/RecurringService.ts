@@ -61,7 +61,7 @@ export const RecurringService = {
             month: getMonthName(month),
             year,
           }),
-          metadata: JSON.stringify({ month, year, count: created }),
+          metadata: { month, year, count: created },
         });
       }
     } catch (e) {

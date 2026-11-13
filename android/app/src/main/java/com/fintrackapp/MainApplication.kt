@@ -8,6 +8,7 @@ import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.fintrackapp.notification.NotificationPackage
 import com.fintrackapp.update.UpdatePackage
+import com.fintrackapp.device.DevicePackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -18,6 +19,7 @@ class MainApplication : Application(), ReactApplication {
         PackageList(this).packages.apply {
           add(NotificationPackage())
           add(UpdatePackage())
+          add(DevicePackage())
         },
     )
   }

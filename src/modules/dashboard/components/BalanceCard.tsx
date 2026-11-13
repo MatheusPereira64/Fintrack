@@ -6,6 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme }     from '../../../hooks/useTheme';
+import { palette }      from '../../../theme/colors';
 import { Icon }         from '../../../components/Icon';
 import { AnimatedNumber } from '../../../components/AnimatedNumber';
 import { formatMonthYear } from '../../../utils/date';
@@ -25,7 +26,7 @@ export const BalanceCard = memo(function BalanceCard({
   totalBalance, income, expense, count, currentDate, onPrevMonth, onNextMonth, canGoNext = true,
 }: BalanceCardProps) {
   const { t } = useTranslation();
-  const { colors, spacing, borderRadius, typography } = useTheme();
+  const { colors, spacing, borderRadius, typography, isDark } = useTheme();
   const scale = useSharedValue(0.95);
   const opacity = useSharedValue(0);
 
@@ -49,7 +50,9 @@ export const BalanceCard = memo(function BalanceCard({
       <View style={[
         styles.card,
         {
-          backgroundColor: colors.primary,
+          // No tema escuro o roxo principal é claro; o cartão usa um tom escuro
+          // para manter o texto branco legível.
+          backgroundColor: isDark ? palette.purple800 : colors.primary,
           borderRadius:     borderRadius['2xl'],
           marginHorizontal: spacing.base,
           padding:          spacing.xl,

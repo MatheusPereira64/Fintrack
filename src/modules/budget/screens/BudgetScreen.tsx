@@ -235,7 +235,7 @@ export function BudgetScreen({ navigation }: any) {
               borderRadius: borderRadius.full, marginRight: spacing.sm,
             }]}
           >
-            <Text style={[typography.styles.labelMedium, { color: !catId ? '#FFF' : colors.textSecondary }]}>
+            <Text style={[typography.styles.labelMedium, { color: !catId ? colors.onPrimary : colors.textSecondary }]}>
               {t('budget.general')}
             </Text>
           </TouchableOpacity>
@@ -250,7 +250,7 @@ export function BudgetScreen({ navigation }: any) {
             >
               <Text style={{ fontSize: 14 }}>{c.icon ?? '📦'}</Text>
               <Text style={[typography.styles.labelSmall, {
-                color: catId === c.id ? '#FFF' : colors.textSecondary, marginLeft: 4,
+                color: catId === c.id ? colors.onPrimary : colors.textSecondary, marginLeft: 4,
               }]}>
                 {c.name}
               </Text>
@@ -272,7 +272,7 @@ export function BudgetScreen({ navigation }: any) {
             disabled={saving}
             style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+            <Text style={[typography.styles.labelLarge, { color: colors.onPrimary, textAlign: 'center' }]}>
               {saving ? '...' : t('common.create')}
             </Text>
           </TouchableOpacity>

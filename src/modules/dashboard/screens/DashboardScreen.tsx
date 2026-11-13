@@ -19,6 +19,7 @@ import { BalanceCard }    from '../components/BalanceCard';
 import { SpendingChart }  from '../components/SpendingChart';
 import { CategoryChart }  from '../components/CategoryChart';
 import { FinanceSnapshotCard } from '../components/FinanceSnapshotCard';
+import { CategoryComparisonCard } from '../components/CategoryComparisonCard';
 import { TransactionItem } from '../../../components/TransactionItem';
 import { Icon } from '../../../components/Icon';
 import { AppButton } from '../../../components/AppButton';
@@ -151,12 +152,12 @@ export function DashboardScreen({ navigation }: any) {
             },
           ]}
         >
-          <Icon name="auto" size={20} color="#FFF" />
+          <Icon name="auto" size={20} color={colors.onPrimary} />
           <View style={{ flex: 1, marginLeft: spacing.sm }}>
-            <Text style={[typography.styles.labelLarge, { color: '#FFF' }]}>
+            <Text style={[typography.styles.labelLarge, { color: colors.onPrimary }]}>
               {t('dashboard.transactionRegistered')}
             </Text>
-            <Text style={[typography.styles.bodySmall, { color: 'rgba(255,255,255,0.85)' }]} numberOfLines={1}>
+            <Text style={[typography.styles.bodySmall, { color: colors.onPrimary, opacity: 0.85 }]} numberOfLines={1}>
               {toast.message} · {formatCurrency(toast.amount)}
             </Text>
           </View>
@@ -245,6 +246,11 @@ export function DashboardScreen({ navigation }: any) {
             <CategoryChart data={categorySpending} />
           </View>
         )}
+
+        {/* Variação por categoria em relação ao mês anterior */}
+        <View style={{ marginTop: spacing.base }}>
+          <CategoryComparisonCard current={categorySpending} currentDate={currentDate} refreshKey={snapKey} />
+        </View>
 
         {/* Insights */}
         {insights.length > 0 && (
@@ -408,7 +414,7 @@ export function DashboardScreen({ navigation }: any) {
           ...shadows.lg,
         }]}
       >
-        <Icon name="add" size={28} color="#FFF" />
+        <Icon name="add" size={28} color={colors.onPrimary} />
       </Pressable>
     </View>
   );

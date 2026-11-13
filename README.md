@@ -26,6 +26,18 @@ App Android nativo em React Native que monitora automaticamente suas finanças v
 
 > Telas renderizadas a partir do código do app (versão 1.0.6) com dados de demonstração.
 
+## Android e iOS
+
+O monitoramento automático só existe no **Android**: é lá que o app pode ler as notificações dos apps de banco. O **iOS não permite** que um app leia notificações de outros apps, então no iPhone o FinTrack funciona apenas com lançamentos manuais e importação de extratos (OFX/CSV). O onboarding avisa isso no iOS.
+
+## Seus dados
+
+Tudo fica no SQLite do próprio celular; o app só acessa a internet para procurar atualizações no GitHub.
+
+- **Backup completo:** em *Mais → Configurações → Backup e Segurança → Fazer backup*, o app gera um arquivo JSON com contas, transações, categorias, metas, orçamentos, padrões ensinados e preferências, e abre o compartilhamento do Android para salvar onde você quiser (Drive, Arquivos...).
+- **Restaurar:** no mesmo menu, ou já na primeira tela do onboarding, escolha o arquivo do backup. Os dados do aparelho são substituídos pelos do backup.
+- **Bloqueio do app:** em *Backup e Segurança*, ative o bloqueio para pedir digital, rosto ou o PIN do aparelho ao abrir o app e ao voltar para ele depois de um minuto fora.
+
 ## Como funciona
 
 1. O app solicita permissão de **Acesso a Notificações** do Android

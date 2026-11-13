@@ -197,7 +197,7 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
                 }}
               >
                 <Text style={[typography.styles.bodySmall, {
-                  color: active ? '#FFF' : colors.text,
+                  color: active ? colors.onPrimary : colors.text,
                   fontWeight: '600',
                 }]}>
                   {t(item.labelKey)}
@@ -280,7 +280,7 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
                 }}
               >
                 <Text style={{
-                  color: active ? '#FFF' : colors.text,
+                  color: active ? colors.onPrimary : colors.text,
                   fontSize: 13,
                   fontWeight: '500',
                 }}>
@@ -303,7 +303,7 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
             opacity: saving ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.onPrimary, fontWeight: '700', fontSize: 16 }}>
             {t('reviewQueue.accept')}
           </Text>
         </TouchableOpacity>

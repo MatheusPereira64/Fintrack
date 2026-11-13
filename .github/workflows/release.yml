@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag da release (ex: v1.0.7)'
+        description: 'Tag da release (ex: v1.2.3)'
         required: true
-        default: 'v1.0.7'
 
 permissions:
   contents: write
@@ -154,7 +153,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath ios/build/FinTrack.xcarchive \
             MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION=11 \
+            CURRENT_PROJECT_VERSION="$(grep -m1 -E '^\s*versionCode\s+[0-9]+' android/app/build.gradle | grep -oE '[0-9]+')" \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \

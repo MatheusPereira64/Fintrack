@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert,
+  Alert, Switch,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,9 @@ import { BottomSheet }  from '../../../components/BottomSheet';
 import { useSafeBottomPadding } from '../../../hooks/useScreenPadding';
 import { UpdateService, RELEASES_PAGE } from '../../../services/UpdateService';
 import { AppLanguage } from '../../../models/types';
+import appPackage from '../../../../package.json';
+import { useBackupActions } from '../../../hooks/useBackupActions';
+import { DeviceService } from '../../../services/DeviceService';
 
 import { Share, NativeModules, Linking, ActivityIndicator } from 'react-native';
 
@@ -119,6 +122,9 @@ export function SettingsScreen({ navigation }: any) {
   const settings = useSettingsStore(s => s.settings);
   const setTheme = useSettingsStore(s => s.setTheme);
   const setLanguage = useSettingsStore(s => s.setLanguage);
+  const updateSettings = useSettingsStore(s => s.updateSettings);
+  const { busy: backupBusy, createBackup, restoreBackup } = useBackupActions();
+  const [lockAvailable, setLockAvailable] = useState(false);
   const txCount = useTransactionStore(s => s.summary.count);
   const accounts = useAccountStore(s => s.accounts);
 
@@ -127,7 +133,7 @@ export function SettingsScreen({ navigation }: any) {
   const [showLangModal, setShowLangModal]   = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
-  const [appVersion, setAppVersion] = useState('1.0.7');
+  const [appVersion, setAppVersion] = useState<string>(appPackage.version);
   const bottomPad = useSafeBottomPadding(24);
 
   useEffect(() => {
@@ -226,19 +232,23 @@ export function SettingsScreen({ navigation }: any) {
     );
   }, [t]);
 
-  const handleBackup = useCallback(async () => {
-    try {
-      const txs = await TransactionRepository.findAll(2000, 0);
-      const backupData = ExportService.toJSON(txs, accounts);
-      await Share.share({
-        title:   `FinTrack_Backup_${new Date().toISOString().split('T')[0]}.json`,
-        message: backupData,
-      });
-      Logger.info('Settings', 'Backup gerado', { transactions: txs.length, accounts: accounts.length });
-    } catch {
-      Alert.alert(t('common.error'), t('settings.backupError'));
+  useEffect(() => {
+    DeviceService.canAuthenticate().then(setLockAvailable);
+  }, []);
+
+  const handleToggleLock = useCallback(async (enable: boolean) => {
+    if (!enable) {
+      await updateSettings({ biometricEnabled: false });
+      return;
     }
-  }, [accounts, t]);
+    if (!(await DeviceService.canAuthenticate())) {
+      Alert.alert(t('lock.setting'), t('lock.unavailable'));
+      return;
+    }
+    // Só ativa depois de confirmar que a pessoa consegue desbloquear.
+    const ok = await DeviceService.authenticate(t('lock.confirmTitle'), t('lock.promptSubtitle'), t('common.cancel'));
+    if (ok) await updateSettings({ biometricEnabled: true });
+  }, [t, updateSettings]);
 
   const handleClearLogs = useCallback(() => {
     Alert.alert(t('settings.clearLogsTitle'), t('settings.clearLogsMessage'), [
@@ -396,9 +406,32 @@ export function SettingsScreen({ navigation }: any) {
             <SettingsRow
               icon="upload" title={t('settings.backup')}
               subtitle={t('settings.backupSubtitle')}
-              onPress={handleBackup}
+              onPress={createBackup}
+              disabled={backupBusy}
               first
             />
+            <SettingsRow
+              icon="download" title={t('backup.restore')}
+              subtitle={t('backup.restoreSubtitle')}
+              onPress={() => { void restoreBackup(); }}
+              disabled={backupBusy}
+            />
+            {DeviceService.isAvailable() && (
+              <SettingsRow
+                icon="lock" title={t('lock.setting')}
+                subtitle={lockAvailable ? t('lock.settingSubtitle') : t('lock.unavailable')}
+                onPress={() => { void handleToggleLock(!settings.biometricEnabled); }}
+                right={
+                  <Switch
+                    value={settings.biometricEnabled}
+                    onValueChange={v => { void handleToggleLock(v); }}
+                    trackColor={{ false: colors.borderLight, true: `${colors.primary}60` }}
+                    thumbColor={settings.biometricEnabled ? colors.primary : colors.border}
+                    accessibilityLabel={t('lock.setting')}
+                  />
+                }
+              />
+            )}
             <SettingsRow
               icon="lock" title={t('settings.privacy')}
               subtitle={t('settings.privacySubtitle')}

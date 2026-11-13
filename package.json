@@ -11,7 +11,8 @@
     "test": "jest",
     "ci": "npm run lint && npm test && npm run duplicates",
     "start": "react-native start",
-    "postinstall": "patch-package && node scripts/patch-android-cpp-link.js"
+    "postinstall": "patch-package && node scripts/patch-android-cpp-link.js",
+    "version:bump": "node scripts/bump-version.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.7",

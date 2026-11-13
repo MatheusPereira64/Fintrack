@@ -113,7 +113,7 @@ export function TransactionDetailScreen({ route, navigation }: any) {
               paddingVertical: 4,
               marginTop: spacing.sm,
             }]}>
-              <Text style={[typography.styles.labelSmall, { color: '#FFF' }]}>
+              <Text style={[typography.styles.labelSmall, { color: colors.onPrimary }]}>
                 🤖 {t('transactionDetail.autoRegistered')}
               </Text>
             </View>

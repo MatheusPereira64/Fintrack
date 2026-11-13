@@ -78,7 +78,7 @@ const MenuRow = memo(function MenuRow({
           justifyContent: 'center', alignItems: 'center',
           paddingHorizontal: 6, marginRight: spacing.sm,
         }]}>
-          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>
+          <Text style={{ color: colors.onPrimary, fontSize: 11, fontWeight: '700' }}>
             {item.badge}
           </Text>
         </View>

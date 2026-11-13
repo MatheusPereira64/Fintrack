@@ -17,33 +17,34 @@
 
 ## Publicar uma nova versão (mantenedor)
 
-1. Atualize a versão em:
-   - `package.json` → `"version"`
-   - `android/app/build.gradle` → `versionName` e **incremente** `versionCode`
-2. Commit na branch desejada.
-3. Crie e envie um tag:
+1. Na `main` atualizada, suba a versão em todos os lugares de uma vez (package.json,
+   package-lock.json, `versionName`/`versionCode` do Android e versão do iOS):
 
 ```bash
-git tag v2.0.1
-git push origin v2.0.1
+npm run version:bump -- 1.0.8
 ```
 
-4. O workflow **Release** gera o APK e cria a GitHub Release com o arquivo anexado.
+2. Preencha as novidades em `docs/release-notes/v1.0.8.md`, criado pelo script. Esse texto
+   abre as notas da release no GitHub.
+3. Faça o commit e envie a tag:
 
-No corpo da release, inclua (o app também lê isso):
-
-```text
-versionCode: 3
+```bash
+git commit -am "release: FinTrack 1.0.8"
+git tag v1.0.8
+git push origin main v1.0.8
 ```
+
+4. O workflow **Release** gera o APK assinado e cria a GitHub Release. O `versionCode` que o
+   app usa para comparar versões entra nas notas automaticamente.
 
 ## CI/CD
 
 Workflow **CI** (push/PR em `main` e `development`):
 
 - ESLint
-- Jest
+- Jest (em UTC e no fuso America/Sao_Paulo)
 - jscpd (código duplicado; falha se acima do limiar)
-- TypeScript (informativo)
+- TypeScript (bloqueia o merge se houver erro)
 - Build `assembleRelease` + artifact
 
 ## Keystore de produção

@@ -457,8 +457,8 @@ export function AccountsScreen({ navigation }: { navigation?: any }) {
                 flexDirection: 'row', alignItems: 'center', gap: 5,
               }}
             >
-              <Icon name={typeOpt.icon} size={14} color={sel ? '#FFF' : colors.textSecondary} />
-              <Text style={[typography.styles.labelSmall, { color: sel ? '#FFF' : colors.textSecondary }]}>
+              <Icon name={typeOpt.icon} size={14} color={sel ? colors.onPrimary : colors.textSecondary} />
+              <Text style={[typography.styles.labelSmall, { color: sel ? colors.onPrimary : colors.textSecondary }]}>
                 {t(`accounts.types.${typeOpt.typeKey}`)}
               </Text>
             </TouchableOpacity>

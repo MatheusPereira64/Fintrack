@@ -345,7 +345,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
             alignItems: 'center',
           }]}
         >
-          <Text style={[typography.styles.labelLarge, { color: '#FFF' }]}>
+          <Text style={[typography.styles.labelLarge, { color: colors.onPrimary }]}>
             {currentPlanId ? t('accountPlan.updatePlan') : t('accountPlan.savePlan')}
           </Text>
         </TouchableOpacity>
@@ -383,7 +383,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
                   alignItems: 'center',
                 }}
               >
-                <Text style={[typography.styles.labelLarge, { color: sel ? '#FFF' : colors.textSecondary }]}>
+                <Text style={[typography.styles.labelLarge, { color: sel ? colors.onPrimary : colors.textSecondary }]}>
                   {h}m
                 </Text>
               </TouchableOpacity>
@@ -563,7 +563,7 @@ export function AccountPlanScreen({ route, navigation }: any) {
             disabled={saving}
             style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+            <Text style={[typography.styles.labelLarge, { color: colors.onPrimary, textAlign: 'center' }]}>
               {saving ? '...' : t('common.save')}
             </Text>
           </TouchableOpacity>

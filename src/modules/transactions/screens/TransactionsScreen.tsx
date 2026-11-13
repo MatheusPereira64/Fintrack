@@ -18,6 +18,7 @@ import { Icon }                 from '../../../components/Icon';
 import { BottomSheet }  from '../../../components/BottomSheet';
 import { useTabListPadding }    from '../../../hooks/useScreenPadding';
 import { useResponsive }        from '../../../hooks/useResponsive';
+import { TransactionRepository, SEARCH_LIMIT } from '../../../database/repositories/TransactionRepository';
 import { AppButton }            from '../../../components/AppButton';
 import type { AppIconName }     from '../../../components/Icon';
 import { Transaction }           from '../../../models/types';
@@ -26,6 +27,7 @@ import {
   formatDate, groupByDate,
 } from '../../../utils/date';
 import { formatCurrency } from '../../../utils/currency';
+import { onColor } from '../../../utils/contrast';
 
 type FilterType  = 'all' | 'income' | 'expense';
 type SortOrder   = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
@@ -50,6 +52,7 @@ export function TransactionsScreen({ navigation }: any) {
   const currentMonth  = useTransactionStore(s => s.currentMonth);
   const loadByMonth   = useTransactionStore(s => s.loadByMonth);
   const loadMore      = useTransactionStore(s => s.loadMore);
+  const storeVersion  = useTransactionStore(s => s.transactions);
   const hasMore       = useTransactionStore(s => s.hasMore);
   const truncated     = useTransactionStore(s => s.truncated);
   const categories    = useCategoryStore(s => s.categories);
@@ -68,6 +71,10 @@ export function TransactionsScreen({ navigation }: any) {
   const [tempBank,   setTempBank]   = useState('');
   const [tempMin,    setTempMin]    = useState('');
   const [tempMax,    setTempMax]    = useState('');
+
+  // Com busca ou filtro avançado, os resultados vêm de todo o histórico.
+  const [historyResults, setHistoryResults] = useState<Transaction[] | null>(null);
+  const [searchingHistory, setSearchingHistory] = useState(false);
 
   const currentDate = useMemo(
     () => new Date(currentMonth.year, currentMonth.month - 1, 1),
@@ -93,7 +100,7 @@ export function TransactionsScreen({ navigation }: any) {
 
   // ── Filtragem e ordenação ─────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    let list = [...transactions];
+    let list = [...(historyResults ?? transactions)];
 
     // Tipo
     if (typeFilter === 'income')  list = list.filter(tx => tx.amount > 0);
@@ -125,7 +132,7 @@ export function TransactionsScreen({ navigation }: any) {
     });
 
     return list;
-  }, [transactions, typeFilter, search, advanced, sort]);
+  }, [transactions, historyResults, typeFilter, search, advanced, sort]);
 
   // ── Lista virtualizada (header de dia + transação, sem .map interno) ──────
   type ListRow =
@@ -158,11 +165,25 @@ export function TransactionsScreen({ navigation }: any) {
   const isFiltering = !!search.trim() || hasActiveFilters || typeFilter !== 'all';
   const canGoNext = addMonths(currentDate, 1) <= new Date();
 
+  const historyMode = !!search.trim() || hasActiveFilters;
+
   useEffect(() => {
-    if ((search.trim() || hasActiveFilters) && hasMore) {
-      loadMore();
+    if (!historyMode) {
+      setHistoryResults(null);
+      return;
     }
-  }, [search, hasActiveFilters, hasMore, loadMore]);
+    let active = true;
+    setSearchingHistory(true);
+    // Espera a pessoa parar de digitar antes de consultar o banco.
+    const timer = setTimeout(() => {
+      TransactionRepository.search({ query: search, ...advanced })
+        .then(rows => { if (active) setHistoryResults(rows); })
+        .catch(() => { if (active) setHistoryResults([]); })
+        .finally(() => { if (active) setSearchingHistory(false); });
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+    // storeVersion: refaz a busca quando uma transação é criada, editada ou excluída.
+  }, [historyMode, search, advanced, storeVersion]);
 
   const applyAdvancedFilters = () => {
     setAdvanced({
@@ -324,12 +345,12 @@ export function TransactionsScreen({ navigation }: any) {
                   <Icon
                     name={f.icon}
                     size={14}
-                    color={selected ? '#FFF' : colors.textSecondary}
+                    color={selected ? onColor(f.color) : colors.textSecondary}
                     style={{ marginRight: 4 }}
                   />
                 ) : null}
                 <Text numberOfLines={1} style={[typography.styles.labelMedium, {
-                  color: selected ? '#FFF' : colors.textSecondary,
+                  color: selected ? onColor(f.color) : colors.textSecondary,
                 }]}>
                   {f.label}
                 </Text>
@@ -359,10 +380,31 @@ export function TransactionsScreen({ navigation }: any) {
         maxToRenderPerBatch={12}
         windowSize={8}
         initialNumToRender={12}
-        onEndReached={() => { if (hasMore) loadMore(); }}
+        onEndReached={() => { if (hasMore && !historyMode) loadMore(); }}
         onEndReachedThreshold={0.4}
+        ListHeaderComponent={
+          historyMode ? (
+            <View style={[styles.historyBanner, {
+              backgroundColor: `${colors.primary}14`,
+              borderRadius: borderRadius.lg,
+              padding: spacing.md,
+              marginBottom: spacing.xs,
+            }]}>
+              {searchingHistory
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Icon name="search" size={16} color={colors.primary} />}
+              <Text style={[typography.styles.labelLarge, { color: colors.primary, marginLeft: spacing.sm, flex: 1 }]}>
+                {searchingHistory
+                  ? t('transactions.searchingHistory')
+                  : (historyResults?.length ?? 0) >= SEARCH_LIMIT
+                    ? t('transactions.historyLimit', { count: SEARCH_LIMIT })
+                    : t('transactions.historyResults', { count: filtered.length })}
+              </Text>
+            </View>
+          ) : null
+        }
         ListFooterComponent={
-          isLoadingMore ? (
+          historyMode ? null : isLoadingMore ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
           ) : truncated ? (
             <Text style={[typography.styles.caption, { color: colors.textTertiary, textAlign: 'center', marginVertical: spacing.sm }]}>
@@ -465,7 +507,7 @@ export function TransactionsScreen({ navigation }: any) {
               marginRight: spacing.sm,
             }]}
           >
-            <Text style={[typography.styles.labelMedium, { color: tempCat === undefined ? '#FFF' : colors.textSecondary }]}>
+            <Text style={[typography.styles.labelMedium, { color: tempCat === undefined ? colors.onPrimary : colors.textSecondary }]}>
               {t('common.all')}
             </Text>
           </TouchableOpacity>
@@ -481,7 +523,7 @@ export function TransactionsScreen({ navigation }: any) {
             >
               <Text style={{ fontSize: 13 }}>{c.icon ?? '📦'}</Text>
               <Text style={[typography.styles.labelSmall, {
-                color: tempCat === c.id ? '#FFF' : colors.textSecondary,
+                color: tempCat === c.id ? colors.onPrimary : colors.textSecondary,
               }]}>
                 {' '}{c.name}
               </Text>
@@ -503,7 +545,7 @@ export function TransactionsScreen({ navigation }: any) {
                   borderRadius: borderRadius.full, marginRight: spacing.sm,
                 }]}
               >
-                <Text style={[typography.styles.labelMedium, { color: !tempBank ? '#FFF' : colors.textSecondary }]}>
+                <Text style={[typography.styles.labelMedium, { color: !tempBank ? colors.onPrimary : colors.textSecondary }]}>
                   {t('transactions.allBanks')}
                 </Text>
               </TouchableOpacity>
@@ -517,7 +559,7 @@ export function TransactionsScreen({ navigation }: any) {
                   }]}
                 >
                   <Text style={[typography.styles.labelMedium, {
-                    color: tempBank === bank ? '#FFF' : colors.textSecondary,
+                    color: tempBank === bank ? colors.onPrimary : colors.textSecondary,
                   }]}>
                     {bank}
                   </Text>
@@ -581,7 +623,7 @@ export function TransactionsScreen({ navigation }: any) {
               borderRadius:    borderRadius.full, flex: 1,
             }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+            <Text style={[typography.styles.labelLarge, { color: colors.onPrimary, textAlign: 'center' }]}>
               {t('common.apply')}
             </Text>
           </TouchableOpacity>
@@ -611,6 +653,7 @@ const styles = StyleSheet.create({
     minHeight:         36,
   },
   empty:         { alignItems: 'center' },
+  historyBanner: { flexDirection: 'row', alignItems: 'center' },
   modalOverlay:  { flex: 1, justifyContent: 'flex-end' },
   bottomSheet:   {},
   sortOption:    {},

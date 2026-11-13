@@ -322,7 +322,11 @@
     "clearFilters": "Limpiar filtros",
     "showingRecent": "Mostrando las {{count}} más recientes de este mes",
     "noneFound": "No se encontraron transacciones",
-    "noneThisMonth": "Sin transacciones este mes"
+    "noneThisMonth": "Sin transacciones este mes",
+    "searchingHistory": "Buscando en todo el historial...",
+    "historyLimit": "Mostrando los {{count}} más recientes de todo el historial",
+    "historyResults_one": "{{count}} resultado en todo el historial",
+    "historyResults_other": "{{count}} resultados en todo el historial"
   },
   "transactionDetail": {
     "title": "Detalle",
@@ -369,8 +373,7 @@
     "date": "Fecha",
     "noAccountsTitle": "Ninguna cuenta registrada",
     "noAccountsHint": "Crea una cuenta para registrar esta transacción.",
-    "goToAccounts": "Crear cuenta",
-    "accountLockedHint": "La cuenta no se puede cambiar al editar."
+    "goToAccounts": "Crear cuenta"
   },
   "swipeableTransaction": {
     "deleteTitle": "Eliminar transacción",
@@ -469,7 +472,8 @@
     "insightsFeature2": "Proyección de cómo cerrará el mes",
     "insightsFeature3": "Aviso cuando un presupuesto se excede",
     "privacyNote": "FinTrack solo lee notificaciones de apps bancarias y nada sale de tu celular.",
-    "permissionPending": "Activa FinTrack en la lista y vuelve a la app."
+    "permissionPending": "Activa FinTrack en la lista y vuelve a la app.",
+    "iosNotice": "En iPhone, iOS no permite que las apps lean notificaciones de otras apps. Aquí FinTrack funciona con registros manuales e importación de extractos."
   },
   "moreMenu": {
     "title": "Más",
@@ -537,7 +541,7 @@
     "exportJsonError": "No se pudo exportar el JSON.",
     "groupBackup": "Copia de seguridad",
     "backup": "Hacer copia de seguridad",
-    "backupSubtitle": "Exporta todos los datos en formato JSON",
+    "backupSubtitle": "Cuentas, transacciones, metas, presupuestos y preferencias en un archivo",
     "backupError": "No se pudo generar la copia de seguridad.",
     "privacy": "Privacidad",
     "privacySubtitle": "Todos los datos se almacenan localmente",
@@ -762,5 +766,37 @@
     "deleteItem": "Eliminar",
     "markAllRead": "Marcar todas como leídas",
     "monitorStatus": "Monitoreo de notificaciones: {{status}}"
+  },
+  "backup": {
+    "shareTitle": "Guardar copia de FinTrack",
+    "restore": "Restaurar copia",
+    "restoreSubtitle": "Reemplaza los datos de este dispositivo por los del archivo",
+    "restoreTitle": "¿Restaurar copia?",
+    "restoreMessage": "Los datos actuales de este dispositivo se reemplazarán por la copia del {{date}}. No se puede deshacer.",
+    "restoreAction": "Restaurar",
+    "restoredTitle": "Copia restaurada",
+    "restoredMessage": "Se restauraron {{count}} registros.",
+    "restoreError": "No se pudo restaurar la copia. Tus datos no se modificaron.",
+    "invalidFile": "Este archivo no es una copia de FinTrack.",
+    "newerVersion": "Esta copia fue hecha por una versión más nueva de FinTrack. Actualiza la app e inténtalo de nuevo.",
+    "onboardingRestore": "¿Ya usas FinTrack? Restaurar una copia"
+  },
+  "lock": {
+    "setting": "Bloqueo de la app",
+    "settingSubtitle": "Pide huella, rostro o el PIN del dispositivo al abrir",
+    "unavailable": "Registra una huella o un bloqueo de pantalla en el dispositivo para usar el bloqueo de la app.",
+    "confirmTitle": "Confirma para activar el bloqueo",
+    "title": "FinTrack bloqueado",
+    "subtitle": "Usa tu huella, rostro o el PIN del dispositivo para ver tus finanzas.",
+    "unlock": "Desbloquear",
+    "promptTitle": "Desbloquear FinTrack",
+    "promptSubtitle": "Confirma que eres tú"
+  },
+  "categoryComparison": {
+    "title": "Comparado con el mes anterior",
+    "subtitle": "Categorías que más cambiaron",
+    "new": "nuevo",
+    "fromTo": "{{previous}} → {{current}}",
+    "rowA11y": "{{name}}: {{current}} este mes, {{previous}} el mes anterior"
   }
 }

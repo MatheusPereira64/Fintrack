@@ -7,6 +7,15 @@ const TX_COLS = `id, account_id, category_id, cost_center_id, date, amount, desc
 
 export const MONTH_PAGE_SIZE = 500;
 export const MONTH_HARD_CAP = 2000;
+export const SEARCH_LIMIT = 500;
+
+export interface TransactionSearch {
+  query?:      string;
+  categoryId?: number;
+  bankName?:   string;
+  minAmount?:  number;
+  maxAmount?:  number;
+}
 
 function rowToTransaction(r: any): Transaction {
   return {
@@ -88,6 +97,32 @@ export const TransactionRepository = {
     return collectRows(r);
   },
 
+  /** Busca em todo o histórico, não só no mês aberto. Mais recentes primeiro. */
+  async search(filters: TransactionSearch, limit = SEARCH_LIMIT): Promise<Transaction[]> {
+    const db = await getDatabase();
+    const where: string[] = [];
+    const params: unknown[] = [];
+    const query = filters.query?.trim();
+    if (query) {
+      // "!" escapa % e _ digitados pelo usuário, que no LIKE seriam curingas.
+      const like = `%${query.replace(/[!%_]/g, c => `!${c}`)}%`;
+      where.push("(description LIKE ? ESCAPE '!' OR bank_name LIKE ? ESCAPE '!')");
+      params.push(like, like);
+    }
+    if (filters.categoryId !== undefined) { where.push('category_id = ?'); params.push(filters.categoryId); }
+    if (filters.bankName)                 { where.push('bank_name = ?');   params.push(filters.bankName); }
+    if (filters.minAmount !== undefined)  { where.push('ABS(amount) >= ?'); params.push(filters.minAmount); }
+    if (filters.maxAmount !== undefined)  { where.push('ABS(amount) <= ?'); params.push(filters.maxAmount); }
+
+    const [r] = await db.executeSql(
+      `SELECT ${TX_COLS} FROM transactions
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY date DESC, id DESC LIMIT ?`,
+      [...params, limit] as any[],
+    );
+    return collectRows(r);
+  },
+
   async findById(id: number): Promise<Transaction | null> {
     const db = await getDatabase();
     const [r] = await db.executeSql(
@@ -160,16 +195,25 @@ export const TransactionRepository = {
     const current = await this.findById(id);
     if (!current) throw new Error(`Transaction ${id} not found`);
 
-    if (data.amount !== undefined && data.amount !== current.amount) {
-      const diff = data.amount - current.amount;
-      await db.executeSql(
-        `UPDATE accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?`,
-        [diff, current.accountId],
-      );
+    const newAmount = data.amount ?? current.amount;
+    const newAccountId = data.accountId ?? current.accountId;
+    const adjustBalance = (delta: number, accountId: number) => db.executeSql(
+      `UPDATE accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?`,
+      [delta, accountId],
+    );
+
+    if (newAccountId !== current.accountId) {
+      // Trocou de conta: o valor antigo sai da conta antiga e o novo entra na nova.
+      await adjustBalance(-current.amount, current.accountId);
+      await adjustBalance(newAmount, newAccountId);
+    } else if (newAmount !== current.amount) {
+      await adjustBalance(newAmount - current.amount, current.accountId);
     }
 
     const fields: string[] = [];
     const values: unknown[] = [];
+
+    if (newAccountId !== current.accountId) { fields.push('account_id = ?'); values.push(newAccountId); }
 
     if (data.description         !== undefined) { fields.push('description = ?'); values.push(data.description); }
     if (data.amount              !== undefined) { fields.push('amount = ?');      values.push(data.amount); }

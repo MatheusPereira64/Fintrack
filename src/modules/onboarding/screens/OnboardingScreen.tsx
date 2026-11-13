@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  NativeModules, StatusBar, AppState,
+  NativeModules, StatusBar, AppState, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { useAccountStore } from '../../../store/accountStore';
 import { Logo } from '../../../components/Logo';
 import { Icon, AppIconName } from '../../../components/Icon';
 import { BANKS } from '../../../constants/banks';
+import { useBackupActions } from '../../../hooks/useBackupActions';
 
 const { NotificationModule } = NativeModules;
 
@@ -43,6 +44,9 @@ export function OnboardingScreen() {
   const completeOnboarding        = useSettingsStore(s => s.completeOnboarding);
   const setNotificationPermission = useSettingsStore(s => s.setNotificationPermission);
   const loadAccounts               = useAccountStore(s => s.loadAccounts);
+  const { busy: restoring, restoreBackup } = useBackupActions();
+  // O iOS não permite ler notificações de outros apps: lá o FinTrack é manual.
+  const isIOS = Platform.OS === 'ios';
 
   const steps: Step[] = useMemo(() => [
     {
@@ -123,6 +127,10 @@ export function OnboardingScreen() {
       completeOnboarding(),
       loadAccounts(),
     ]);
+  };
+
+  const handleRestore = async () => {
+    if (await restoreBackup()) await handleFinish();
   };
 
   const goNext = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
@@ -219,6 +227,36 @@ export function OnboardingScreen() {
           </View>
         )}
 
+        {isFirst && (
+          <Pressable
+            onPress={handleRestore}
+            disabled={restoring}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={({ pressed }) => [styles.restoreLink, { marginTop: spacing.base, opacity: pressed || restoring ? 0.6 : 1 }]}
+          >
+            <Icon name="download" size={18} color={colors.primary} />
+            <Text style={[typography.styles.labelLarge, { color: colors.primary, marginLeft: spacing.sm }]}>
+              {t('backup.onboardingRestore')}
+            </Text>
+          </Pressable>
+        )}
+
+        {isIOS && (step.showBanks || step.isPermissionStep) && (
+          <View style={[styles.card, styles.featureRow, {
+            backgroundColor: `${colors.warning}14`,
+            borderColor: colors.warning,
+            borderRadius: borderRadius.xl,
+            marginTop: spacing.xl,
+            padding: spacing.base,
+          }]}>
+            <Icon name="info" size={22} color={colors.warning} />
+            <Text style={[typography.styles.bodyMedium, styles.featureText, { color: colors.text, marginLeft: spacing.md }]}>
+              {t('onboarding.iosNotice')}
+            </Text>
+          </View>
+        )}
+
         {step.showBanks && (
           <View style={[styles.banks, { marginTop: spacing.xl, gap: spacing.sm }]}>
             {banks.map(bank => (
@@ -240,7 +278,7 @@ export function OnboardingScreen() {
           </View>
         )}
 
-        {step.isPermissionStep && (
+        {step.isPermissionStep && !isIOS && (
           <>
             <View style={[styles.card, styles.featureRow, {
               backgroundColor: colors.card,
@@ -320,13 +358,13 @@ export function OnboardingScreen() {
             opacity: pressed ? 0.85 : 1,
           }]}
         >
-          <Text style={[typography.styles.titleMedium, { color: '#FFFFFF' }]}>
+          <Text style={[typography.styles.titleMedium, { color: colors.onPrimary }]}>
             {isLast ? t('onboarding.start') : t('onboarding.next')}
           </Text>
           <Icon
             name={isLast ? 'check' : 'forward'}
             size={20}
-            color="#FFFFFF"
+            color={colors.onPrimary}
             style={{ marginLeft: spacing.xs }}
           />
         </Pressable>
@@ -362,6 +400,7 @@ const styles = StyleSheet.create({
   bankChip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   bankDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   banksMore: { paddingHorizontal: 4 },
+  restoreLink: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
   permissionBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5 },
   actions: { flexDirection: 'row' },
   backBtn: { width: BUTTON_HEIGHT, height: BUTTON_HEIGHT, alignItems: 'center', justifyContent: 'center' },

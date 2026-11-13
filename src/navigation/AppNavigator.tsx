@@ -38,6 +38,7 @@ import { ExportScreen }          from '../modules/settings/screens/ExportScreen'
 import { MoreMenuScreen }        from '../modules/settings/screens/MoreMenuScreen';
 import { CategoriesScreen }     from '../modules/categories/screens/CategoriesScreen';
 import { ImportScreen }         from '../modules/settings/screens/ImportScreen';
+import { onColor } from '../utils/contrast';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab       = createBottomTabNavigator<AppTabParamList>();
@@ -181,7 +182,7 @@ function AppTabs() {
         options={{
           ...tabOptions(t('navigation.more'), 'more', 'more-active'),
           tabBarBadge: reviewCount > 0 ? (reviewCount > 99 ? '99+' : reviewCount) : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.error, color: '#FFF' },
+          tabBarBadgeStyle: { backgroundColor: colors.error, color: onColor(colors.error) },
         }}
       />
     </Tab.Navigator>

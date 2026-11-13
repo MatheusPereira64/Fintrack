@@ -79,7 +79,7 @@ export function UnrecognizedInboxScreen({ navigation }: any) {
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 13 }}>
+            <Text style={{ color: colors.onPrimary, fontWeight: '600', fontSize: 13 }}>
               {t('unrecognizedInbox.teach')}
             </Text>
           </TouchableOpacity>

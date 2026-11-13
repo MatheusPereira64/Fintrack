@@ -15,6 +15,7 @@ import { useReviewStore }         from './store/reviewStore';
 import { AppNavigator }           from './navigation/AppNavigator';
 import { Logger }                 from './services/LoggerService';
 import { Logo }                   from './components/Logo';
+import { AppLock }                from './components/AppLock';
 import { NotificationManager }    from './services/NotificationManager';
 import { RecurringService }       from './services/RecurringService';
 import { UpdateService }          from './services/UpdateService';
@@ -113,7 +114,9 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppNavigator />
+      <AppLock>
+        <AppNavigator />
+      </AppLock>
     </GestureHandlerRootView>
   );
 }

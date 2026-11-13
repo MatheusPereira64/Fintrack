@@ -109,7 +109,7 @@ export const lightColors = {
   shimmer:          palette.gray200,
 } as const;
 
-export const darkColors: typeof lightColors = {
+export const darkColors: ColorScheme = {
   primary:          palette.purple400,
   primaryLight:     palette.purple900,
   primaryDark:      palette.purple200,
@@ -156,4 +156,4 @@ export const darkColors: typeof lightColors = {
   shimmer:          palette.dark500,
 } as const;
 
-export type ColorScheme = typeof lightColors;
+export type ColorScheme = { [K in keyof typeof lightColors]: string };

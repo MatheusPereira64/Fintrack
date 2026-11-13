@@ -325,7 +325,7 @@ export function GoalsScreen({ navigation }: any) {
                 disabled={saving}
                 style={[styles.btn, { backgroundColor: colors.primary, flex: 1, borderRadius: borderRadius.full }]}
               >
-                <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+                <Text style={[typography.styles.labelLarge, { color: colors.onPrimary, textAlign: 'center' }]}>
                   {saving ? '...' : t('common.create')}
                 </Text>
               </TouchableOpacity>

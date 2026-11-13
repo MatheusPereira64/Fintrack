@@ -231,7 +231,7 @@ export function CategoriesScreen({ navigation }: any) {
             disabled={saving}
             style={[{ flex: 1, backgroundColor: colors.primary, borderRadius: borderRadius.full, padding: 12 }]}
           >
-            <Text style={[typography.styles.labelLarge, { color: '#FFF', textAlign: 'center' }]}>
+            <Text style={[typography.styles.labelLarge, { color: colors.onPrimary, textAlign: 'center' }]}>
               {saving ? '...' : t('common.create')}
             </Text>
           </TouchableOpacity>

@@ -322,7 +322,11 @@
     "clearFilters": "Limpar filtros",
     "showingRecent": "Exibindo as {{count}} mais recentes deste mês",
     "noneFound": "Nenhuma transação encontrada",
-    "noneThisMonth": "Sem transações neste mês"
+    "noneThisMonth": "Sem transações neste mês",
+    "searchingHistory": "Buscando em todo o histórico...",
+    "historyLimit": "Mostrando os {{count}} mais recentes de todo o histórico",
+    "historyResults_one": "{{count}} resultado em todo o histórico",
+    "historyResults_other": "{{count}} resultados em todo o histórico"
   },
   "transactionDetail": {
     "title": "Detalhe",
@@ -369,8 +373,7 @@
     "date": "Data",
     "noAccountsTitle": "Nenhuma conta cadastrada",
     "noAccountsHint": "Crie uma conta para registrar esta transação.",
-    "goToAccounts": "Criar conta",
-    "accountLockedHint": "A conta não pode ser alterada ao editar."
+    "goToAccounts": "Criar conta"
   },
   "swipeableTransaction": {
     "deleteTitle": "Excluir transação",
@@ -469,7 +472,8 @@
     "insightsFeature2": "Projeção de como o mês vai fechar",
     "insightsFeature3": "Aviso quando um orçamento estoura",
     "privacyNote": "O FinTrack só lê notificações de apps de banco, e nada sai do seu celular.",
-    "permissionPending": "Ative o FinTrack na lista e volte para o app."
+    "permissionPending": "Ative o FinTrack na lista e volte para o app.",
+    "iosNotice": "No iPhone, o iOS não deixa apps lerem notificações de outros apps. Aqui o FinTrack funciona com lançamentos manuais e importação de extratos."
   },
   "moreMenu": {
     "title": "Mais",
@@ -537,7 +541,7 @@
     "exportJsonError": "Não foi possível exportar o JSON.",
     "groupBackup": "Backup e Segurança",
     "backup": "Fazer backup",
-    "backupSubtitle": "Exporta todos os dados em formato JSON",
+    "backupSubtitle": "Contas, transações, metas, orçamentos e preferências em um arquivo",
     "backupError": "Não foi possível gerar o backup.",
     "privacy": "Privacidade",
     "privacySubtitle": "Todos os dados são armazenados localmente",
@@ -762,5 +766,37 @@
     "deleteItem": "Excluir",
     "markAllRead": "Marcar todas como lidas",
     "monitorStatus": "Monitoramento de notificações: {{status}}"
+  },
+  "backup": {
+    "shareTitle": "Salvar backup do FinTrack",
+    "restore": "Restaurar backup",
+    "restoreSubtitle": "Substitui os dados deste aparelho pelos do arquivo",
+    "restoreTitle": "Restaurar backup?",
+    "restoreMessage": "Os dados atuais deste aparelho serão substituídos pelos do backup de {{date}}. Isso não pode ser desfeito.",
+    "restoreAction": "Restaurar",
+    "restoredTitle": "Backup restaurado",
+    "restoredMessage": "{{count}} registros foram restaurados.",
+    "restoreError": "Não foi possível restaurar o backup. Seus dados não foram alterados.",
+    "invalidFile": "Esse arquivo não é um backup do FinTrack.",
+    "newerVersion": "Esse backup foi feito por uma versão mais nova do FinTrack. Atualize o app e tente de novo.",
+    "onboardingRestore": "Já usa o FinTrack? Restaurar um backup"
+  },
+  "lock": {
+    "setting": "Bloqueio do app",
+    "settingSubtitle": "Pede digital, rosto ou o PIN do aparelho ao abrir",
+    "unavailable": "Cadastre uma digital ou um bloqueio de tela no aparelho para usar o bloqueio do app.",
+    "confirmTitle": "Confirme para ativar o bloqueio",
+    "title": "FinTrack bloqueado",
+    "subtitle": "Use a digital, o rosto ou o PIN do aparelho para ver suas finanças.",
+    "unlock": "Desbloquear",
+    "promptTitle": "Desbloquear o FinTrack",
+    "promptSubtitle": "Confirme que é você"
+  },
+  "categoryComparison": {
+    "title": "Comparado ao mês anterior",
+    "subtitle": "Categorias que mais mudaram",
+    "new": "novo",
+    "fromTo": "{{previous}} → {{current}}",
+    "rowA11y": "{{name}}: {{current}} neste mês, {{previous}} no mês anterior"
   }
 }

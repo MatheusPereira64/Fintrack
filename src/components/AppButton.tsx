@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Icon, AppIconName } from './Icon';
+import { onColor } from '../utils/contrast';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size    = 'sm' | 'md' | 'lg';
@@ -35,10 +36,10 @@ export const AppButton = memo(function AppButton({
   };
 
   const fg: Record<Variant, string> = {
-    primary:   '#FFFFFF',
+    primary:   colors.onPrimary,
     secondary: colors.text,
     ghost:     colors.primary,
-    danger:    '#FFFFFF',
+    danger:    onColor(colors.error),
   };
 
   const pad: Record<Size, { paddingVertical: number; paddingHorizontal: number }> = {
